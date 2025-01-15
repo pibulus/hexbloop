@@ -219,13 +219,10 @@ struct ContentView: View {
 
     private func setupDirectory() {
         do {
-            try FileManager.default.createDirectory(
-                at: outputDirectory,
-                withIntermediateDirectories: true
-            )
-            print("✨ Directory created successfully: \(outputDirectory.path)")
+            try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+            print("✨ Directory created successfully at: \(outputDirectory.path)")
         } catch {
-            print("Error creating directory: \(error)")
+            print("❌ Error creating directory: \(error)")
         }
     }
 
@@ -236,18 +233,23 @@ struct ContentView: View {
                 isProcessing = true
                 pentagramRotation += 360
 
+                // Generate a name for the file
                 let generatedName = nameGenerator.generateName()
+
+                // Create the output URL by appending the file name to the output directory
                 let outputURL = outputDirectory.appendingPathComponent("\(generatedName).m4a")
 
+                // Process the input file and save it to the output directory
                 if let inputURL = try await provider.loadFileURL() {
                     try await audioConverter.processAudio(at: inputURL, to: outputURL)
+
                     withAnimation {
                         processedFiles.append(generatedName)
                         showSuccessFeedback()
                     }
                 }
             } catch {
-                print("Error processing file: \(error)")
+                print("❌ Error processing file: \(error)")
             }
         }
         isProcessing = false
