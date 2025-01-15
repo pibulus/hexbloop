@@ -27,8 +27,8 @@ class AudioPlayer: ObservableObject {
 // MARK: - NameGenerator
 class NameGenerator: ObservableObject {
     func generateName() -> String {
-        let prefixes = ["GLITTER", "CRYPT", "LUNAR", "SHADOW", "FROST"]
-        let suffixes = ["RITUAL", "MACHINE", "VECTOR", "CIPHER", "NOISE"]
+        let prefixes = ["GLITTER", "CRYPT", "LUNAR", "SHADOW", "FROST", "NEBULA", "PHANTOM", "SOLAR", "TWILIGHT", "EMBER"]
+        let suffixes = ["RITUAL", "MACHINE", "VECTOR", "CIPHER", "NOISE", "SPECTRUM", "ECHO", "WAVE", "SPHERE", "FLARE"]
         return "\(prefixes.randomElement() ?? "HEX")\(suffixes.randomElement() ?? "PULSE")\(Int.random(in: 1000...9999))"
     }
 }
