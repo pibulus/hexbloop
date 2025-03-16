@@ -2,9 +2,6 @@ import SwiftUI
 import AVFoundation
 import UniformTypeIdentifiers
 import CoreImage.CIFilterBuiltins
-import GameKit
-// Add FFmpegKit import when dependency is added
-// import FFmpegKit
 
 // MARK: - AudioPlayer: Ambient Audio Loop
 class AudioPlayer: ObservableObject {
@@ -35,370 +32,35 @@ class AudioPlayer: ObservableObject {
     }
 }
 
-// MARK: - NameGenerator with Enhanced Word Lists
-class NameGenerator: ObservableObject {
-    // Core word lists for name generation
-    private let prefixes = [
-        "GLITTER", "CRYPT", "LUNAR", "SHADOW", "FROST", "NEBULA", "PHANTOM", "SOLAR", 
-        "TWILIGHT", "EMBER", "CYBER", "DIGITAL", "VIRTUAL", "NEURAL", "BINARY", "ATOMIC", 
-        "VECTOR", "MATRIX", "CIRCUIT", "SYNTHETIC", "ARTIFICIAL", "MECHANICAL", "ELECTRONIC", 
-        "BIONIC", "TECHNO", "NANO", "MEGA", "HYPER", "ULTRA", "PROTO", "NEO", "POST",
-        "DARK", "BLACK", "SHADOW", "NIGHT", "OCCULT", "MYSTIC", "ARCANE", "ESOTERIC", 
-        "HERMETIC", "DEMONIC", "DIABOLIC", "INFERNAL", "ABYSSAL", "STYGIAN", "FORBIDDEN", 
-        "HIDDEN", "SECRET", "VEILED", "OBSCURE", "CRYPTIC", "STORM", "THUNDER", "LIGHTNING"
-    ]
-    
-    private let suffixes = [
-        "RITUAL", "MACHINE", "VECTOR", "CIPHER", "NOISE", "SPECTRUM", "ECHO", "WAVE", 
-        "SPHERE", "FLARE", "DEATH", "BLOOD", "VOID", "GHOST", "WITCH", "STORM", "DOOM", 
-        "DEMON", "DRAGON", "SHADOW", "MOON", "STAR", "SUN", "WOLF", "SNAKE", "CROW", 
-        "CIRCUIT", "SYSTEM", "MATRIX", "CODE", "DATA", "SIGNAL", "VIRUS", "NETWORK", 
-        "BINARY", "MACHINE", "ROBOT", "CYBER", "DIGITAL", "VIRTUAL", "NEURAL", "QUANTUM"
-    ]
-    
-    private let verbStarters = [
-        "CRUSHING", "BURNING", "DESTROYING", "SMASHING", "BREAKING", "SHATTERING",
-        "RIPPING", "TEARING", "BLASTING", "EXPLODING", "DECIMATING", "SLAYING",
-        "GLITCHING", "CORRUPTING", "PROCESSING", "COMPUTING", "PROGRAMMING", "CODING",
-        "HACKING", "SCANNING", "LOADING", "BUFFERING", "COMPILING", "ENCRYPTING"
-    ]
-    
-    private let witchHouseSymbols = ["†", "‡", "✟", "✞", "☨", "✝", "✠", "✚", "▲", "△"]
-    
-    // Get current hour to influence naming
-    private var hourOfDay: Int {
-        Calendar.current.component(.hour, from: Date())
-    }
-    
-    func generateName() -> String {
-        let useDarkMode = hourOfDay >= 20 || hourOfDay <= 6
-        let useVerb = Int.random(in: 1...100) <= 30
-        
-        // Choose prefix based on time and randomness
-        let prefix: String
-        if useVerb {
-            prefix = verbStarters.randomElement() ?? "GLITCHING"
-        } else {
-            prefix = prefixes.randomElement() ?? "CYBER"
-        }
-        
-        let suffix = suffixes.randomElement() ?? "PULSE"
-        let number = Int.random(in: 1000...9999)
-        
-        // Add witch house symbols at night
-        let name: String
-        if useDarkMode && Int.random(in: 1...100) <= 40 {
-            let symbol = witchHouseSymbols.randomElement() ?? "†"
-            name = "\(symbol)\(prefix)\(suffix)\(number)\(symbol)"
-        } else {
-            name = "\(prefix)\(suffix)\(number)"
-        }
-        
-        return name
-    }
-}
-
-// MARK: - AudioConverter with FFmpeg Integration and Moon Phase Influence
-class AudioConverter {
-    var useFFmpeg = false  // Set to true when FFmpegKit is available
-    // Calculate moon phase (0-100%)
-    private func calculateMoonPhase() -> Int {
-        // Lunar period in seconds (29.53 days)
-        let lunarPeriodSeconds: TimeInterval = 29.53 * 24 * 60 * 60
-        
-        // Known new moon reference date (January 6, 2022 18:33 UTC)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.timeZone = TimeZone(abbreviation: "UTC")
-        let referenceNewMoon = formatter.date(from: "2022-01-06 18:33")!
-        
-        // Calculate time since reference new moon
-        let timeSinceReference = Date().timeIntervalSince(referenceNewMoon)
-        
-        // Calculate current phase percentage (0-100)
-        let phase = (timeSinceReference.truncatingRemainder(dividingBy: lunarPeriodSeconds)) / lunarPeriodSeconds * 100
-        
-        return Int(phase)
-    }
-    
-    // Get current moon phase description
-    private var moonPhaseDescription: String {
-        let phase = calculateMoonPhase()
-        if phase >= 95 || phase <= 5 {
-            return "Full Moon"
-        } else if phase >= 45 && phase <= 55 {
-            return "New Moon"
-        } else if phase > 5 && phase < 45 {
-            return "Waxing Moon"
-        } else {
-            return "Waning Moon"
-        }
-    }
-    
-    // Get current hour of day (0-23)
-    private var hourOfDay: Int {
-        Calendar.current.component(.hour, from: Date())
-    }
-    
-    // Get day of month (1-31)
-    private var dayOfMonth: Int {
-        Calendar.current.component(.day, from: Date())
-    }
-    
-    // Generate a seeded random source based on natural factors
-    private func createRandomSource() -> GKMersenneTwisterRandomSource {
-        let moonPhase = calculateMoonPhase()
-        let hour = hourOfDay
-        let day = dayOfMonth
-        
-        // Create a deterministic seed based on natural factors
-        let seed = UInt64((moonPhase * 100) + (hour * 10) + day)
-        return GKMersenneTwisterRandomSource(seed: seed)
-    }
-    
-    // Generate FFmpeg processing parameters based on natural influences
-    func generateProcessingParameters() -> ProcessingParameters {
-        let moonPhase = calculateMoonPhase()
-        let randomSource = createRandomSource()
-        
-        // Base parameters that will be influenced by natural factors
-        var params = ProcessingParameters()
-        
-        // Moon phase influences the overall processing style
-        if moonPhase >= 95 || moonPhase <= 5 {
-            // Full Moon - Bright, clear, ethereal
-            params.highPassFreq = Float(randomSource.nextInt(upperBound: 100) + 100) // 100-200 Hz
-            params.lowPassFreq = 16000 // High frequency ceiling
-            params.reverb = 0.2 // Light reverb
-            params.delay = 0.0 // No delay
-            params.compression = 2.0 // Light compression
-            params.gainDb = 3.0 // Slight boost
-        } else if moonPhase >= 45 && moonPhase <= 55 {
-            // New Moon - Dark, mysterious, heavy
-            params.highPassFreq = Float(randomSource.nextInt(upperBound: 50) + 20) // 20-70 Hz
-            params.lowPassFreq = Float(randomSource.nextInt(upperBound: 2000) + 6000) // 6000-8000 Hz
-            params.reverb = 0.8 // Heavy reverb
-            params.delay = 0.3 // Medium delay
-            params.compression = 5.0 // Heavy compression
-            params.gainDb = -1.0 // Slight reduction
-        } else if moonPhase > 5 && moonPhase < 45 {
-            // Waxing Moon - Growing, building intensity
-            params.highPassFreq = Float(randomSource.nextInt(upperBound: 60) + 40) // 40-100 Hz
-            params.lowPassFreq = Float(randomSource.nextInt(upperBound: 4000) + 8000) // 8000-12000 Hz
-            params.reverb = 0.4 // Medium reverb
-            params.delay = 0.1 // Light delay
-            params.compression = 3.0 // Medium compression
-            params.gainDb = 2.0 // Medium boost
-        } else {
-            // Waning Moon - Receding, mellower
-            params.highPassFreq = Float(randomSource.nextInt(upperBound: 80) + 60) // 60-140 Hz
-            params.lowPassFreq = Float(randomSource.nextInt(upperBound: 3000) + 7000) // 7000-10000 Hz
-            params.reverb = 0.5 // Medium reverb
-            params.delay = 0.2 // Medium delay
-            params.compression = 3.5 // Medium-heavy compression
-            params.gainDb = 0.0 // Neutral gain
-        }
-        
-        // Time of day influences specific effects
-        if hourOfDay >= 22 || hourOfDay < 6 {
-            // Night - Darker, heavier processing
-            params.reverb += 0.2
-            params.lowPassFreq -= 1000 // Reduce high frequencies
-            params.saturation = 1.5 // More saturation
-        } else if hourOfDay >= 6 && hourOfDay < 12 {
-            // Morning - Clearer, brighter
-            params.reverb -= 0.1
-            params.highPassFreq += 20 // Less low end
-            params.gainDb += 1.0 // Slightly brighter
-        }
-        
-        // Day of month influences subtle randomness
-        let dayInfluence = Float(dayOfMonth) / 31.0
-        params.pitchShift = (dayInfluence * 2.0) - 1.0 // -1.0 to 1.0
-        
-        return params
-    }
-    
-    func processAudio(at inputURL: URL, to outputURL: URL) async throws {
-        // Let the moon phase influence processing parameters
-        let moonPhase = calculateMoonPhase()
-        print("🌙 Processing under \(moonPhaseDescription) (\(moonPhase)%)")
-        
-        // Check if FFmpegKit is available (will be false until the package is added)
-        let ffmpegAvailable = false // Change to true after importing FFmpegKit
-        
-        if ffmpegAvailable && useFFmpeg {
-            try await processWithFFmpeg(inputURL: inputURL, outputURL: outputURL)
-        } else {
-            if useFFmpeg && !ffmpegAvailable {
-                print("⚠️ FFmpeg processing requested but FFmpegKit is not available. Falling back to AVFoundation.")
-            }
-            // Fallback to AVFoundation
-            try await processWithAVFoundation(inputURL: inputURL, outputURL: outputURL)
-        }
-    }
-    
-    // Process audio with AVFoundation (basic conversion)
-    private func processWithAVFoundation(inputURL: URL, outputURL: URL) async throws {
-        let asset = AVURLAsset(url: inputURL)
-        
-        guard let exportSession = AVAssetExportSession(
-            asset: asset,
-            presetName: AVAssetExportPresetAppleM4A
-        ) else {
-            throw NSError(domain: "AudioProcessing", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not create export session"]) as Error
-        }
-
-        exportSession.outputURL = outputURL
-        exportSession.outputFileType = .m4a
-
-        print("🎵 Starting basic conversion (FFmpeg not available)...")
-        await exportSession.export()
-
-        if let error = exportSession.error {
-            print("❌ Export error: \(error.localizedDescription)")
-            throw error as Error
-        }
-
-        print("✨ Basic conversion complete: \(outputURL.lastPathComponent)")
-    }
-    
-    // Process audio with FFmpeg (advanced processing)
-    private func processWithFFmpeg(inputURL: URL, outputURL: URL) async throws {
-        print("🎛️ Starting FFmpeg advanced processing...")
-        
-        // Generate processing parameters based on natural influences
-        let params = generateProcessingParameters()
-        print("📊 Processing parameters: \(params)")
-        
-        // For now just log the parameters - FFmpegKit implementation will be added later
-        // This would be replaced with actual FFmpegKit code when the package is added
-        /* 
-        // Example of how the FFmpegKit implementation would look:
-        let ffmpegCommand = buildFFmpegCommand(
-            inputURL: inputURL,
-            outputURL: outputURL,
-            params: params
-        )
-        
-        let session = FFmpegKit.executeAsync(ffmpegCommand) { session in
-            guard let returnCode = session?.getReturnCode() else {
-                print("❌ FFmpegKit session error: No return code")
-                return
-            }
-            
-            if ReturnCode.isSuccess(returnCode) {
-                print("✨ FFmpeg processing complete: \(outputURL.lastPathComponent)")
-            } else {
-                print("❌ FFmpeg processing error: \(session?.getFailStackTrace() ?? "Unknown error")")
-            }
-        }
-        
-        // Wait for FFmpeg processing to complete
-        await withCheckedContinuation { continuation in
-            session.setCompleteCallback {
-                continuation.resume()
-            }
-        }
-        */
-        
-        // Until FFmpegKit is added, fall back to basic AVFoundation processing
-        try await processWithAVFoundation(inputURL: inputURL, outputURL: outputURL)
-    }
-    
-    // Build FFmpeg command with the processing parameters
-    private func buildFFmpegCommand(inputURL: URL, outputURL: URL, params: ProcessingParameters) -> String {
-        // Two-stage processing: first add vintage character, then mastering
-        
-        // Stage 1: Add vintage character with filters based on natural influences
-        let vintageFX = [
-            // High-pass filter to remove rumble
-            "highpass=f=\(params.highPassFreq)",
-            
-            // Low-pass filter to roll off highs (vintage character)
-            "lowpass=f=\(params.lowPassFreq)",
-            
-            // Add subtle pitch shift based on day of month
-            "rubberband=pitch=\(1.0 + params.pitchShift/12.0)",
-            
-            // Add vintage saturation/distortion
-            "volume=\(1.0 + params.saturation)",
-            
-            // Add tape-like compression
-            "compand=0.3|0.3:1|1:-90/-\(params.compression)|-30/-\(params.compression)|-16/-16|0/-6|20/0:6:0.2:0:0"
-        ].joined(separator: ",")
-        
-        // Stage 2: Mastering chain
-        let masteringFX = [
-            // Reverb based on natural influences
-            "aecho=0.8:\(params.reverb):1000|\(Int(500 + params.reverb * 1000)):0.5",
-            
-            // Delay if applicable
-            params.delay > 0 ? "adelay=\(Int(params.delay * 1000))|all=1" : "",
-            
-            // Multiband compression for master bus
-            "compand=0.3|0.3:1|1:-90/-900|-70/-70|-30/-9|-20/-6|0/-3|20/0:6:0:0:0",
-            
-            // Final gain adjustment
-            "volume=\(params.gainDb)dB"
-        ].filter { !$0.isEmpty }.joined(separator: ",")
-        
-        // Construct full FFmpeg command with both processing stages
-        let command = "-i \"\(inputURL.path)\" -filter_complex \"[0:a]\(vintageFX)[vintage]; [vintage]\(masteringFX)[out]\" -map \"[out]\" -c:a aac -b:a 256k \"\(outputURL.path)\""
-        
-        return command
-    }
-}
-
-// Structure to hold audio processing parameters
-struct ProcessingParameters: CustomStringConvertible {
-    var highPassFreq: Float = 80.0  // High-pass filter frequency (Hz)
-    var lowPassFreq: Float = 12000.0 // Low-pass filter frequency (Hz)
-    var reverb: Float = 0.3         // Reverb amount (0.0-1.0)
-    var delay: Float = 0.0          // Delay amount (0.0-1.0)
-    var compression: Float = 3.0    // Compression amount (1.0-6.0)
-    var saturation: Float = 0.5     // Saturation/distortion amount (0.0-2.0)
-    var pitchShift: Float = 0.0     // Pitch shift in semitones (-1.0 to 1.0)
-    var gainDb: Float = 0.0         // Output gain in dB
-    
-    var description: String {
-        return "HighPass: \(highPassFreq)Hz, LowPass: \(lowPassFreq)Hz, Reverb: \(reverb), " +
-               "Delay: \(delay), Compression: \(compression), Saturation: \(saturation), " +
-               "PitchShift: \(pitchShift), Gain: \(gainDb)dB"
-    }
-}
-
 // MARK: - ContentView
 struct ContentView: View {
+    // MARK: - Services and State Objects
     @StateObject private var audioPlayer = AudioPlayer()
     @StateObject private var nameGenerator = NameGenerator()
+    @StateObject private var audioProcessor = AudioProcessorService()
+    @StateObject private var artGenerator = ArtGenerator()
+    
+    // MARK: - Processing State
     @State private var processedFiles: [String] = []
     @State private var isProcessing = false
     @State private var showSuccess = false
     @State private var successOpacity = 0.0
     @State private var pentagramRotation = 0.0
     @State private var showProcessingParams = false
-    @State private var lastProcessingParams: ProcessingParameters?
-    @State private var useFFmpegProcessing = false // Will be used when FFmpegKit is available
+    @State private var configuration = Configuration()
+    @State private var processingParameters = ProcessingParameters()
 
+    // MARK: - UI State
     @State private var isHoveringOverHex = false
-
     @State private var backgroundColors: [Color] = [Color.black.opacity(0.9), Color.gray.opacity(0.8), Color.blue.opacity(0.7)]
     @State private var hexagonColors: [Color] = [Color.purple.opacity(0.7), Color.pink.opacity(0.6)]
     @State private var innerHexagonColors: [Color] = [Color.yellow.opacity(0.5), Color.orange.opacity(0.5)]
-
     @State private var glowPulse1 = false
     @State private var glowPulse2 = false
     @State private var glowPulse3 = false
 
     private let backgroundColor = Color(red: 0.05, green: 0.05, blue: 0.1)
-
-    private let audioConverter = AudioConverter()
-
-    private var outputDirectory: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("HexbloopOutput", isDirectory: true)
-    }
+    private let fileManager = HexbloopFileManager.shared
 
     var body: some View {
         ZStack {
@@ -412,12 +74,12 @@ struct ContentView: View {
             .ignoresSafeArea()
             .blur(radius: 60)
 
-            // Grain Texture Overlay
-            Image("grain")
-                .resizable()
-                .ignoresSafeArea()
-                .blendMode(.overlay)
-                .opacity(0.2)
+            // Background texture (commented out as image may not exist)
+            // Image("grain")
+            //     .resizable()
+            //     .ignoresSafeArea()
+            //     .blendMode(.overlay)
+            //     .opacity(0.2)
 
             // MARK: - Glowing Hexagons and Pentagram
             ZStack {
@@ -481,37 +143,30 @@ struct ContentView: View {
                 }
             }
 
-            // MARK: - Controls and FFmpeg Toggle
+            // MARK: - Processing parameters display
             VStack {
-                // Add when FFmpeg is available
-                HStack {
-                    Toggle("FFmpeg Processing", isOn: $useFFmpegProcessing)
-                        .foregroundColor(.white.opacity(0.7))
-                        .font(.system(size: 14, weight: .medium))
-                        .disabled(true) // Enable this when FFmpegKit is added
-                        .padding(.horizontal, 20)
-                }
-                .padding(.top, 10)
-                .opacity(0.6) // Dim until FFmpeg is available
-                
                 Spacer()
                 
-                // Processing parameters display
-                if showProcessingParams, let params = lastProcessingParams {
+                // Display current processing parameters
+                if showProcessingParams {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Processing Parameters:")
                             .foregroundColor(.white.opacity(0.8))
                             .font(.system(size: 12, weight: .bold))
                         
-                        Text("Compression: \(String(format: "%.1f", params.compression))")
+                        Text("Distortion: \(String(format: "%.1f", processingParameters.distortionAmount)) (\(processingParameters.distortionPreset.rawValue))")
                             .foregroundColor(.white.opacity(0.7))
                             .font(.system(size: 10))
                         
-                        Text("Filters: \(Int(params.highPassFreq))Hz - \(Int(params.lowPassFreq))Hz")
+                        Text("Compression: \(String(format: "%.1f", processingParameters.compressionRatio)):1")
                             .foregroundColor(.white.opacity(0.7))
                             .font(.system(size: 10))
                         
-                        Text("Reverb: \(String(format: "%.1f", params.reverb)) • Delay: \(String(format: "%.1f", params.delay))")
+                        Text("Filters: HP \(Int(processingParameters.highPassFreq))Hz - LP \(Int(processingParameters.lowPassFreq))Hz")
+                            .foregroundColor(.white.opacity(0.7))
+                            .font(.system(size: 10))
+                        
+                        Text("Reverb: \(String(format: "%.1f", processingParameters.reverbAmount)) • Delay: \(String(format: "%.1f", processingParameters.delayTime))s")
                             .foregroundColor(.white.opacity(0.7))
                             .font(.system(size: 10))
                     }
@@ -581,15 +236,40 @@ struct ContentView: View {
                         }
                     }
             }
+            
+            // MARK: - Progress Overlay
+            if audioProcessor.isProcessing {
+                VStack {
+                    ProgressView(value: audioProcessor.progress)
+                        .progressViewStyle(LinearProgressViewStyle())
+                        .frame(width: 200)
+                        .tint(.purple)
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(10)
+                        .padding()
+                    
+                    Text("Processing audio...")
+                        .foregroundColor(.white)
+                        .font(.caption)
+                        .padding(.top, 5)
+                }
+                .background(Color.black.opacity(0.3))
+                .cornerRadius(15)
+                .padding()
+            }
         }
-        .onDrop(of: [UTType.fileURL.identifier], isTargeted: $isHoveringOverHex) { providers in
+        .onDrop(of: ["public.file-url"], isTargeted: $isHoveringOverHex) { providers in
+            // Drop handling with better error capture
             Task {
-                await processDrop(providers: providers)
+                do {
+                    await processDrop(providers: providers)
+                } catch {
+                    print("Error handling drop: \(error)")
+                }
             }
             return true
         }
         .onAppear {
-            setupDirectory()
             audioPlayer.startAmbientLoop()
             glowPulse1.toggle()
             glowPulse2.toggle()
@@ -597,50 +277,163 @@ struct ContentView: View {
         }
     }
 
-    private func setupDirectory() {
-        do {
-            try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
-            print("✨ Directory created successfully at: \(outputDirectory.path)")
-        } catch {
-            print("❌ Error creating directory: \(error)")
-        }
-    }
+    // MARK: - Audio Processing
 
     @MainActor
     private func processDrop(providers: [NSItemProvider]) async {
+        // Don't process if already processing
+        guard !isProcessing else {
+            print("🚫 Already processing a file, please wait")
+            return
+        }
+        
+        // Track overall processing state
+        isProcessing = true
+        pentagramRotation += 360
+        
+        // Process each file
         for provider in providers {
             do {
-                isProcessing = true
-                pentagramRotation += 360
-
                 // Generate a name for the file
                 let generatedName = nameGenerator.generateName()
-
-                // Create the output URL by appending the file name to the output directory
-                let outputURL = outputDirectory.appendingPathComponent("\(generatedName).m4a")
-
-                // Process the input file and save it to the output directory
-                if let inputURL = try await provider.loadFileURL() {
-                    // Set the FFmpeg processing flag (will work when FFmpegKit is added and enabled)
-                    audioConverter.useFFmpeg = useFFmpegProcessing
-                    
-                    // Generate and capture processing parameters
-                    lastProcessingParams = audioConverter.generateProcessingParameters()
-                    showProcessingParams = true
-                    
-                    // Process the audio
-                    try await audioConverter.processAudio(at: inputURL, to: outputURL)
-
+                let glitchedName = nameGenerator.applyGlitchEffects(to: generatedName)
+                
+                // Generate processing parameters with natural influences
+                processingParameters = ProcessingParameters.generateWithMoonPhaseInfluence()
+                showProcessingParams = true
+                
+                // Load file URL with simplified validation
+                var inputURL: URL?
+                let fileURLType = "public.file-url"
+                
+                if provider.hasItemConformingToTypeIdentifier(fileURLType) {
+                    inputURL = try await withCheckedThrowingContinuation { continuation in
+                        provider.loadItem(forTypeIdentifier: fileURLType, options: nil) { item, error in
+                            if let error = error {
+                                continuation.resume(throwing: error)
+                                return
+                            }
+                            
+                            if let url = item as? URL {
+                                continuation.resume(returning: url)
+                            } else if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
+                                continuation.resume(returning: url)
+                            } else {
+                                continuation.resume(throwing: NSError(domain: "HexbloopError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Could not load file URL"]))
+                            }
+                        }
+                    }
+                }
+                
+                guard let inputURL = inputURL else {
                     withAnimation {
-                        processedFiles.append(generatedName)
-                        showSuccessFeedback()
+                        processedFiles.append("Error: Invalid file")
+                    }
+                    continue
+                }
+                
+                // Check if it's an audio file by extension
+                let validExtensions = ["mp3", "wav", "m4a", "aac", "aif", "aiff", "flac"]
+                guard validExtensions.contains(inputURL.pathExtension.lowercased()) else {
+                    withAnimation {
+                        processedFiles.append("Error: Not an audio file")
+                    }
+                    continue
+                }
+                
+                // Create output file path
+                let outputExtension = "m4a" // Using m4a for better quality and metadata support
+                let finalOutputURL = fileManager.generateUniqueOutputPath(
+                    baseName: glitchedName,
+                    fileExtension: outputExtension
+                )
+                
+                // Generate artwork for the processed file
+                let artworkURL = artGenerator.generateArtwork(
+                    for: glitchedName,
+                    to: fileManager.outputDirectory
+                )
+                
+                // Process audio using our enhanced MacAudioEngine
+                do {
+                    // Apply audio effects and convert using the MacAudioEngine
+                    let engine = MacAudioEngine()
+                    let success = try await engine.processAudioFile(
+                        at: inputURL,
+                        to: finalOutputURL,
+                        with: processingParameters
+                    ) { progress in
+                        // Update our progress on the main actor
+                        Task { @MainActor in
+                            audioProcessor.progress = progress
+                        }
+                    }
+                    
+                    if success {
+                        // Generate PNG version of SVG for embedding
+                        var artworkPNGURL: URL? = nil
+                        if let svgURL = artworkURL {
+                            // Convert SVG to PNG using NSImage
+                            if let image = NSImage(contentsOf: svgURL) {
+                                let pngURL = svgURL.deletingPathExtension().appendingPathExtension("png")
+                                if let pngData = image.pngData() {
+                                    try pngData.write(to: pngURL)
+                                    artworkPNGURL = pngURL
+                                }
+                            }
+                        }
+                        
+                        // Apply metadata with artwork
+                        try await engine.applyMetadataAndArtwork(
+                            to: finalOutputURL,
+                            artistName: "HEX_BLOOP_\(Calendar.current.component(.year, from: Date()))",
+                            albumName: "CYBER_GRIMOIRE_\(dateToYYYYMMDD(Date()))",
+                            trackName: glitchedName,
+                            artworkURL: artworkPNGURL
+                        )
+                        
+                        // Show success feedback
+                        withAnimation {
+                            processedFiles.append(glitchedName)
+                            showSuccessFeedback()
+                            
+                            // Open Finder to show the output
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                fileManager.revealInFinder(url: finalOutputURL)
+                            }
+                        }
+                    } else {
+                        throw NSError(domain: "HexbloopError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to process audio"])
+                    }
+                } catch {
+                    print("❌ Audio processing failed: \(error.localizedDescription)")
+                    
+                    // Show error to the user
+                    withAnimation {
+                        let errorMsg = "Error: Processing failed"
+                        processedFiles.append(errorMsg)
                     }
                 }
             } catch {
-                print("❌ Error processing file: \(error)")
+                print("❌ Error processing file: \(error.localizedDescription)")
+                
+                // Show error to the user
+                withAnimation {
+                    let errorMsg = "Error: Could not process file"
+                    processedFiles.append(errorMsg)
+                }
             }
         }
+        
+        // Reset processing state
         isProcessing = false
+    }
+    
+    // Helper to convert Date to YYYYMMDD format
+    private func dateToYYYYMMDD(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        return formatter.string(from: date)
     }
 
     private func showSuccessFeedback() {
@@ -656,22 +449,13 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Helper Methods
+    
     /// Get current natural influences text
     private func getNaturalInfluencesText() -> String {
-        let moonPhase = calculateMoonPhase()
+        let moonPhase = ProcessingParameters.getMoonPhaseDescription()
         let hourOfDay = Calendar.current.component(.hour, from: Date())
         let dayOfMonth = Calendar.current.component(.day, from: Date())
-        
-        let moonDesc: String
-        if moonPhase >= 95 || moonPhase <= 5 {
-            moonDesc = "Full Moon"
-        } else if moonPhase >= 45 && moonPhase <= 55 {
-            moonDesc = "New Moon"
-        } else if moonPhase > 5 && moonPhase < 45 {
-            moonDesc = "Waxing Moon"
-        } else {
-            moonDesc = "Waning Moon"
-        }
         
         let timeDesc: String
         if hourOfDay >= 5 && hourOfDay < 12 {
@@ -684,37 +468,89 @@ struct ContentView: View {
             timeDesc = "Night"
         }
         
-        return "\(moonDesc) • \(timeDesc) • Day \(dayOfMonth)"
+        return "\(moonPhase) • \(timeDesc) • Day \(dayOfMonth)"
     }
     
-    /// Calculate current moon phase (0-100%)
-    private func calculateMoonPhase() -> Int {
-        // Lunar period in seconds (29.53 days)
-        let lunarPeriodSeconds: TimeInterval = 29.53 * 24 * 60 * 60
+    // Load file URL from provider with better error handling
+    private func loadFileURL(from provider: NSItemProvider) async throws -> URL {
+        // Use simple string identifier instead of UTType
+        let fileURLType = "public.file-url"
         
-        // Known new moon reference date (January 6, 2022 18:33 UTC)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.timeZone = TimeZone(abbreviation: "UTC")
-        let referenceNewMoon = formatter.date(from: "2022-01-06 18:33")!
-        
-        // Calculate time since reference new moon
-        let timeSinceReference = Date().timeIntervalSince(referenceNewMoon)
-        
-        // Calculate current phase percentage (0-100)
-        let phase = (timeSinceReference.truncatingRemainder(dividingBy: lunarPeriodSeconds)) / lunarPeriodSeconds * 100
-        
-        return Int(phase)
+        return try await withCheckedThrowingContinuation { continuation in
+            // Check if provider can load this type
+            guard provider.hasItemConformingToTypeIdentifier(fileURLType) else {
+                continuation.resume(throwing: NSError(
+                    domain: "HexbloopError",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "Dropped item is not a file URL"]
+                ))
+                return
+            }
+            
+            provider.loadItem(forTypeIdentifier: fileURLType, options: nil) { item, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                // Handle different item types
+                if let url = item as? URL {
+                    continuation.resume(returning: url)
+                } else if let data = item as? Data {
+                    // Try to recover URL from data
+                    if let urlString = String(data: data, encoding: .utf8),
+                       let url = URL(string: urlString) {
+                        continuation.resume(returning: url)
+                    } else if let url = URL(dataRepresentation: data, relativeTo: nil) {
+                        continuation.resume(returning: url)
+                    } else {
+                        continuation.resume(throwing: NSError(
+                            domain: "HexbloopError",
+                            code: 2,
+                            userInfo: [NSLocalizedDescriptionKey: "Could not convert data to URL"]
+                        ))
+                    }
+                } else {
+                    continuation.resume(throwing: NSError(
+                        domain: "HexbloopError",
+                        code: 3,
+                        userInfo: [NSLocalizedDescriptionKey: "Unknown item type from drop operation"]
+                    ))
+                }
+            }
+        }
     }
 }
 
+// MARK: - Helper Extensions
+
+@MainActor
 extension NSItemProvider {
     func loadFileURL() async throws -> URL? {
-        guard let urlData = try await loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) as? Data,
-              let url = URL(dataRepresentation: urlData, relativeTo: nil) else {
+        guard let urlData = try await withCheckedThrowingContinuation({ (continuation: CheckedContinuation<Any?, Error>) in
+            self.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume(returning: item)
+            }
+        }) as? Data,
+        let url = URL(dataRepresentation: urlData, relativeTo: nil) else {
             throw NSError(domain: "FileProcessing", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid file data"]) as Error
         }
         return url
+    }
+}
+
+// Extension to convert NSImage to PNG data
+extension NSImage {
+    func pngData() -> Data? {
+        guard let tiffRepresentation = self.tiffRepresentation,
+              let bitmapImage = NSBitmapImageRep(data: tiffRepresentation) else {
+            return nil
+        }
+        return bitmapImage.representation(using: .png, properties: [:])
     }
 }
 

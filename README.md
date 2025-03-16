@@ -7,96 +7,86 @@ Hexbloop is a creative audio processing app that enhances your audio files with 
 - Drag and drop interface with mesmerizing visuals
 - Audio processing influenced by moon phases, time of day, and other natural factors
 - Unique naming system that creates mystical, glitchy names for your files
+- Procedural artwork generation for each processed file
+- Mac App Store compliant processing using native AVAudioEngine
 - Easy export of processed files
 
-## Setup
+## Architecture
 
-### Required Frameworks
+Hexbloop is built with a modular architecture:
 
-For full functionality, Hexbloop requires:
-
-1. **FFmpegKit** - For advanced audio processing
-
-### Installing FFmpegKit
-
-To add FFmpegKit to the project:
-
-1. Add via Swift Package Manager:
-   - In Xcode: File > Add Packages...
-   - Enter URL: https://github.com/kewlbear/FFmpeg-iOS.git
-   - Select main branch
-
-Alternatively, you can use CocoaPods:
-
-```
-pod 'ffmpeg-kit-macos-full', '~> 5.1'
-```
+1. **Configuration System** - Central configuration with nature-influenced parameters
+2. **NameGenerator** - Procedural band name creation with glitch effects
+3. **AudioProcessor** - AVAudioEngine-based audio processing chain
+4. **ArtGenerator** - SVG-based artwork generation
+5. **HexbloopFileManager** - Sandboxed file handling system
 
 ### Project Structure
 
-Hexbloop follows MVVM architecture:
-
 ```
 Hexbloop/
-├── App/ 
-│   └── HexbloopApp.swift
-├── Views/
-│   ├── ContentView.swift
-│   ├── Components/
-│   │   └── HexagonShape.swift
-├── Models/
-│   └── ProcessedFile.swift
-├── ViewModels/
-│   └── AudioProcessingViewModel.swift
-├── Services/
-│   ├── AudioPlayerService.swift
-│   ├── AudioProcessorService.swift
-│   └── NameGeneratorService.swift
-├── Utilities/
-│   ├── NaturalInfluences.swift
-│   └── Extensions/
-│       └── NSItemProviderExtension.swift
+├── Configuration.swift       # Central parameters management
+├── NameGenerator.swift       # Procedural name creation
+├── AudioProcessor.swift      # AVAudioEngine processing chain
+├── ArtGenerator.swift        # SVG artwork generation
+├── HexbloopFileManager.swift # File management
+├── ContentView.swift         # Main UI
+├── HexbloopApp.swift         # App entry point
 ├── Resources/
-│   ├── Assets.xcassets
-│   └── ambient_loop.mp3
+│   └── ambient_loop.mp3      # Background ambient loop
 ```
 
-## Using FFmpeg Processing
+## Audio Processing Chain
 
-Hexbloop now includes a framework for FFmpeg-based audio processing with the following features:
+Hexbloop uses a native AVAudioEngine processing chain for Mac App Store compliance:
 
-1. **Two-stage processing pipeline:**
-   - Stage 1: Adds vintage character with filters influenced by natural factors
-   - Stage 2: Applies mastering chain for professional sound quality
+1. **Input Stage**
+   - File loading and format conversion
 
-2. **Natural influences on audio processing:**
-   - Moon phase affects the overall processing style
-   - Time of day influences specific effects
-   - Day of month adds subtle randomness to pitch
+2. **Distortion Stage** 
+   - AVAudioUnitDistortion with various presets (overdrive, ring modulator, etc.)
+   - Controlled by moon phase and time of day
 
-3. **Processing parameters include:**
-   - High-pass and low-pass frequency filters
-   - Vintage saturation/distortion
-   - Tape-like compression
-   - Reverb and delay
-   - Pitch shifting
-   - Output gain
+3. **Equalization Stage**
+   - High-pass filter to remove rumble
+   - Low-pass filter for vintage warmth
+   - Mid-frequency boost for character
 
-To enable FFmpeg processing:
+4. **Dynamics Processing**
+   - First compressor for vintage character (3:1 - 4:1 ratio)
+   - Second compressor for mastering (6:1 - 8:1 ratio)
+   - Limiter to prevent clipping
 
-1. **Add FFmpegKit** using one of the methods in the Setup section
-2. **Enable FFmpeg in the code:**
-   - Uncomment the FFmpegKit import at the top of ContentView.swift
-   - Change `ffmpegAvailable` to `true` in the AudioConverter class
-   - Rebuild the app
+5. **Effects Stage**
+   - Reverb with natural influence control
+   - Delay with feedback control
 
-3. **Toggle FFmpeg processing** in the UI when processing files
+## Natural Influences
+
+Hexbloop's unique feature is how natural factors influence audio processing:
+
+1. **Moon Phase**
+   - Full Moon: Bright, clear, ethereal sound (light compression, high frequency ceiling)
+   - New Moon: Dark, mysterious, heavy sound (heavy compression, filtered highs)
+   - Waxing Moon: Growing intensity (medium settings, building character)
+   - Waning Moon: Receding, mellower sound (medium-light settings, softer character)
+
+2. **Time of Day**
+   - Night (10PM-6AM): Darker, heavier processing
+   - Morning (6AM-12PM): Clearer, brighter sound
+   - Afternoon/Evening: Neutral influence
+
+3. **Day of Month**
+   - Influences distortion preset selection
+   - Subtle randomness in processing parameters
 
 ## Development Roadmap
 
-- ✅ Implement FFmpeg-based audio processing with vintage character and mastering 
-- Enhance audio processing with additional filters and effects
-- Add visual processing of images and videos
+- ✅ Replace FFmpeg with AVAudioEngine for Mac App Store compliance
+- ✅ Implement modular architecture with separation of concerns
+- ✅ Create procedural artwork generation
+- Add parameter preset system
+- Improve visualization with audio reactivity
+- Add batch processing capabilities
 - Expand natural influence factors (weather API integration, etc.)
-- Create visualizations that react to audio playback
-- Add preset system for saving favorite processing combinations
+- Create companion iOS version
