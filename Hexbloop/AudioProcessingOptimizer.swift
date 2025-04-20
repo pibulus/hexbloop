@@ -44,10 +44,11 @@ class AudioProcessingOptimizer {
         os_log("Preparing audio system", log: logger, type: .info)
         
         // Run platform-specific optimizations
+        // This will handle model detection and apply fixes only when needed
         fixPlatformUtilitiesIssue()
         
-        // Warm up audio system with silent audio
-        initializeAudioEngine()
+        // Note: initializeAudioEngine is now only called for non-Mac14,15 models
+        // to prevent crashes - see fixPlatformUtilitiesIssue method
         
         // Configure buffer sizes for optimal performance
         configureOptimalBufferSizes()
@@ -75,11 +76,14 @@ class AudioProcessingOptimizer {
             if let model = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
                 os_log("Detected hardware model: %{public}s", log: logger, type: .debug, model)
                 
-                // For Mac14,15 models, we need special handling
+                // For Mac14,15 models, we skip special handling as it causes crashes
                 if model.contains("Mac14,15") {
-                    os_log("Detected Mac14,15 model - applying specific optimizations", log: logger, type: .info)
-                    // Initialize core audio more carefully on this model
-                    initializeCoreAudioForNewModels()
+                    os_log("Detected Mac14,15 model - skipping audio optimization to prevent crash", log: logger, type: .info)
+                    // Skip special audio initialization on this model
+                } else {
+                    // Only for other models, do the standard initialization
+                    os_log("Standard audio initialization for non-Mac14,15 model", log: logger, type: .debug)
+                    initializeAudioEngine()
                 }
             }
         } catch {
