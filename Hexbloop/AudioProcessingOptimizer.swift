@@ -231,6 +231,20 @@ class AudioProcessingOptimizer {
             print("Safe mode enabled via environment variable")
             return true
         }
+        
+        // First check for a user preference that can override detection
+        if UserDefaults.standard.bool(forKey: "DisableHardwareSpecificOptimizations") {
+            print("Hardware-specific optimizations disabled by user preference")
+            return false
+        }
+        
+        // List of actual problematic models (more precise than just Mac14,15)
+        let knownProblematicModels = [
+            "Mac14,15", // Only include specific problematic models
+            // Add others if verified problematic
+        ]
+        
+        // Improved hardware detection with verification
         var size = 0
         var hwModel: [CChar] = Array(repeating: 0, count: 256)
         var sizeOfModel = size_t(hwModel.count)
@@ -238,17 +252,40 @@ class AudioProcessingOptimizer {
         let result = sysctlbyname("hw.model", &hwModel, &sizeOfModel, nil, 0)
         if result == 0 {
             let model = String(cString: hwModel)
-            // Mac14,15 is known to have audio issues - expand list if other models have problems
-            if model.contains("Mac14,15") {
-                print("Detected problematic hardware model: \(model)")
+            
+            // Verification step - also check for CPU info 
+            let isM2orNewer = checkForM2Processor()
+            
+            // If model reports as Mac14,15 but we detect M2, it's likely a false identification
+            if knownProblematicModels.contains(where: { model.contains($0) }) {
+                if isM2orNewer {
+                    print("Model reports as \(model) but M2 processor detected - likely false identification")
+                    // Save this to UserDefaults to avoid repeated false detection
+                    UserDefaults.standard.set(true, forKey: "DisableHardwareSpecificOptimizations")
+                    return false
+                }
+                
+                print("Confirmed problematic hardware model: \(model)")
                 return true
             }
         }
         
-        // Fallback to process-based detection
+        // Check for sufficient memory regardless of model
+        let systemUsage = checkMemoryUsage()
+        if systemUsage.available < 256 * 1024 * 1024 { // Less than 256MB available
+            print("Critical memory pressure detected, using optimized audio processing")
+            return true
+        }
+        
+        return false
+    }
+    
+    // Helper to check for M2 processor
+    private func checkForM2Processor() -> Bool {
+        // Run sysctl to get CPU info
         let process = Process()
-        process.launchPath = "/usr/sbin/sysctl"
-        process.arguments = ["-n", "hw.model"]
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/sysctl")
+        process.arguments = ["-n", "machdep.cpu.brand_string"]
         
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -257,24 +294,15 @@ class AudioProcessingOptimizer {
             try process.run()
             process.waitUntilExit()
             
-            // Read hardware model
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let model = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
-                if model.contains("Mac14,15") {
-                    print("Detected problematic hardware model: \(model)")
-                    return true
-                }
+            if let cpuInfo = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                // Check for Apple CPU info that suggests M2 or newer
+                return cpuInfo.contains("Apple M2") || 
+                       cpuInfo.contains("Apple M3") ||
+                       cpuInfo.contains("Apple M4")
             }
         } catch {
-            // Ignore errors, assume false
-        }
-        
-        // Check for specific error patterns that suggest we should use optimized mode
-        // Check for system audio memory pressure
-        let systemUsage = checkMemoryUsage()
-        if systemUsage.available < 512 * 1024 * 1024 { // Less than 512MB available
-            print("Low system memory detected, using optimized audio processing")
-            return true
+            print("Error checking CPU info: \(error)")
         }
         
         return false

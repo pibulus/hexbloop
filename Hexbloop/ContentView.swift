@@ -846,6 +846,36 @@ struct ContentView: View {
             // Initialize in the background to avoid blocking UI
             let optimizer = AudioProcessingOptimizer.shared
             
+            // For M2 Macs that might be detected incorrectly
+            #if DEBUG
+            // For testing only - force disable model-specific optimizations for M2 models
+            if !UserDefaults.standard.bool(forKey: "DisableHardwareSpecificOptimizationsSet") {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/sbin/sysctl")
+                process.arguments = ["-n", "machdep.cpu.brand_string"]
+                
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    if let cpuInfo = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                        // If M2 processor is detected, automatically disable optimizations
+                        if cpuInfo.contains("Apple M2") || cpuInfo.contains("Apple M3") {
+                            print("M2/M3 processor detected - disabling potentially incorrect hardware optimizations")
+                            UserDefaults.standard.set(true, forKey: "DisableHardwareSpecificOptimizations")
+                            UserDefaults.standard.set(true, forKey: "DisableHardwareSpecificOptimizationsSet")
+                        }
+                    }
+                } catch {
+                    print("Error checking CPU info: \(error)")
+                }
+            }
+            #endif
+            
             // Log initialization
             if #available(macOS 10.12, *) {
                 let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Initialization")
