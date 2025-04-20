@@ -562,7 +562,7 @@ class MacAudioEngine {
         configureEQ(eqNode, with: parameters)
         
         // Configure distortion with safety checks
-        let distortionPreset = AVAudioUnitDistortionPreset(rawValue: parameters.distortionPreset.audioUnitPreset) ?? .distortion
+        let distortionPreset = AVAudioUnitDistortionPreset(rawValue: parameters.distortionPreset.audioUnitPreset) ?? AVAudioUnitDistortionPreset.distortion
         distortionNode.loadFactoryPreset(distortionPreset)
         distortionNode.wetDryMix = min(max(parameters.distortionAmount * 100.0, 0.0), 100.0) // Ensure within 0-100
         

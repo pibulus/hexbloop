@@ -139,7 +139,7 @@ class AudioProcessingOptimizer {
     }
     
     // Configure optimal buffer sizes for current hardware
-    private func configureOptimalBufferSizes() -> (input: Int, processing: Int) {
+    func configureOptimalBufferSizes() -> (input: Int, processing: Int) {
         // Default sizes that work well across devices
         var inputSize = Constants.defaultBufferSize
         var processingSize = Constants.defaultBufferSize / 2
