@@ -94,9 +94,23 @@ class AudioProcessingOptimizer {
         // This is just a placeholder - the real work is done in the silent audio initialization
         os_log("Initializing Core Audio for newer Mac models", log: logger, type: .debug)
         
-        // Use direct path to hardware model information rather than using AVAudioSession
-        // Set up temporary audio engine to force hardware detection
+        // Create a minimal audio engine with required nodes to avoid exceptions
         let tempEngine = AVAudioEngine()
+        
+        // Create a dummy output node - required to prevent "required condition is false" exception
+        let mixer = tempEngine.mainMixerNode
+        
+        // Generate a short silent buffer
+        let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2)!
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024)!
+        buffer.frameLength = 1024
+        
+        // Create a player node and add to engine
+        let playerNode = AVAudioPlayerNode()
+        tempEngine.attach(playerNode)
+        tempEngine.connect(playerNode, to: mixer, format: format)
+        
+        // Now that we have nodes, prepare and start
         tempEngine.prepare()
         
         do {
@@ -111,28 +125,60 @@ class AudioProcessingOptimizer {
     
     // Initialize audio engine with silent audio to warmup the system
     private func initializeAudioEngine() {
-        let engine = AVAudioEngine()
-        let mixer = engine.mainMixerNode
+        os_log("Initializing audio engine with silent audio warmup", log: logger, type: .debug)
         
-        // Generate a short silent buffer
-        let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2)!
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024)!
+        // Audio engine setup - with defensive coding to prevent node exceptions
+        let engine = AVAudioEngine()
+        
+        // Ensure format is compatible across all macOS versions
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2) else {
+            os_log("Failed to create audio format", log: logger, type: .error)
+            return
+        }
+        
+        // Create a short silent buffer - with nil checks
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024) else {
+            os_log("Failed to create audio buffer", log: logger, type: .error)
+            return
+        }
         buffer.frameLength = 1024
+        
+        // Get main mixer node and ensure it exists
+        let mixer = engine.mainMixerNode
         
         // Create a player node and add to engine
         let playerNode = AVAudioPlayerNode()
         engine.attach(playerNode)
         engine.connect(playerNode, to: mixer, format: format)
         
+        // We need to prepare before starting (connects all nodes)
+        engine.prepare()
+        
         do {
             try engine.start()
+            
+            // Schedule buffer with completion handler
             playerNode.scheduleBuffer(buffer, at: nil, options: .interrupts) {
-                engine.stop()
+                // Ensure we stop the engine when done
+                if engine.isRunning {
+                    engine.stop()
+                }
             }
+            
+            // Start playback
             playerNode.play()
             
             // Run for a very short time
             Thread.sleep(forTimeInterval: 0.1)
+            
+            // Make sure everything is stopped
+            if playerNode.isPlaying {
+                playerNode.stop()
+            }
+            if engine.isRunning {
+                engine.stop()
+            }
+            
         } catch {
             os_log("Audio engine warmup failed: %{public}s", log: logger, type: .error, error.localizedDescription)
         }
