@@ -342,6 +342,13 @@ class NameGenerator: ObservableObject {
         case 2: // Binary glitch
             let binaryVal = String(Int.random(in: 0...15), radix: 2).padding(toLength: 4, withPad: "0", startingAt: 0)
             result = "\(text)_\(binaryVal)"
+            
+        default: // Default fallback (should never happen with 0...2 range)
+            // Simple character replacement
+            result = text.replacingOccurrences(of: "a", with: "4")
+                         .replacingOccurrences(of: "e", with: "3")
+                         .replacingOccurrences(of: "i", with: "1")
+                         .replacingOccurrences(of: "o", with: "0")
         }
         
         return result
