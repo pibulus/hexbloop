@@ -162,6 +162,9 @@ class MacAudioEngine {
         with parameters: ProcessingParameters,
         progressHandler: @escaping ProgressHandler
     ) async throws -> Bool {
+        // Initialize audio system to prevent HALC errors
+        AudioOptimizer.prepareAudioSession()
+        
         // Log at beginning with os_log for better performance
         if #available(macOS 10.12, *) {
             let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Processing")
@@ -257,10 +260,10 @@ class MacAudioEngine {
         format: AVFileType,
         with parameters: ProcessingParameters
     ) async throws -> URL {
-        // Create an export session
-        guard let exportSession = AVAssetExportSession(
-            asset: asset,
-            presetName: AVAssetExportPresetAppleM4A
+        // Create an export session using our optimized creator to avoid HALC errors
+        guard let exportSession = AudioOptimizer.createOptimizedExportSession(
+            for: asset,
+            preset: AVAssetExportPresetAppleM4A
         ) else {
             throw AudioProcessingError.conversionFailed("Unable to create export session")
         }

@@ -79,7 +79,10 @@ class PerformanceOptimizer {
         
         // Manage cache size
         if cachedAssets.count >= maxCachedAssets {
-            cachedAssets.removeFirst()
+            // Remove the first key to keep cache size in check
+            if let firstKey = cachedAssets.keys.first {
+                cachedAssets.removeValue(forKey: firstKey)
+            }
         }
         
         // Store in cache
