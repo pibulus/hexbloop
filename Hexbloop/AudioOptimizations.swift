@@ -7,17 +7,37 @@ import AVFoundation
 class AudioOptimizer {
     // Configure optimal audio settings for AVFoundation
     static func configureAudioSystem() {
-        // Set audio session category and options for Mac
+        // macOS doesn't use AVAudioSession like iOS does
+        // For macOS, we need to use different approaches
+        
         #if os(macOS)
-        // Mac-specific settings (no explicit audio session on Mac)
-        #else
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default)
-            try session.setActive(true)
-        } catch {
-            print("Error configuring audio session: \(error.localizedDescription)")
+        // Mac-specific audio initializations
+        // Init a small silent engine to warm up Core Audio
+        let engine = AVAudioEngine()
+        let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2)!
+        
+        if let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024) {
+            buffer.frameLength = 1024 // Set a valid frame length
+            
+            let player = AVAudioPlayerNode()
+            engine.attach(player)
+            engine.connect(player, to: engine.mainMixerNode, format: format)
+            
+            do {
+                try engine.start()
+                player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+                player.play()
+                
+                // Run briefly then stop
+                Thread.sleep(forTimeInterval: 0.1)
+                player.stop()
+                engine.stop()
+            } catch {
+                print("Note: Core Audio warmup failed - \(error.localizedDescription)")
+            }
         }
+        #else
+        // iOS/tvOS specific code would go here but is not needed for macOS
         #endif
     }
     
@@ -72,9 +92,14 @@ class AudioOptimizer {
         throw lastError ?? NSError(domain: "AudioOptimizer", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load audio file after multiple attempts"])
     }
     
-    // Fix for the "AddInstanceForFactory" errors with HALC
+    // Fix for the "AddInstanceForFactory" errors with HALC and other related errors
     static func prepareAudioSession() {
         // For Mac App Store, we need to ensure audio system is ready before processing
+        
+        #if os(macOS)
+        // Add specific workaround for Mac14,15 hardware issues
+        fixPlatformUtilitiesIssue()
+        #endif
         
         // Dummy silent sound to initialize audio system
         let silentAudioURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("silent.wav")
@@ -100,6 +125,52 @@ class AudioOptimizer {
             } catch {
                 print("Error playing silent audio: \(error.localizedDescription)")
             }
+        }
+    }
+    
+    // Fix for PlatformUtilities errors related to Mac14,15 model
+    private static func fixPlatformUtilitiesIssue() {
+        // This is a workaround for the "PlatformUtilities::CopyHardwareModelFullName() returns unknown value" error
+        // For macOS, we need a different approach than iOS's AVAudioSession
+        
+        // Force a hardware model detection
+        let process = Process()
+        process.launchPath = "/usr/sbin/sysctl"
+        process.arguments = ["-n", "hw.model"]
+        
+        // Redirect output
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        // Try to run but don't fail if we can't
+        do {
+            if #available(macOS 10.13, *) {
+                try process.run()
+                process.waitUntilExit()
+                
+                // Read model information
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let model = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                    print("Detected hardware model: \(model)")
+                    
+                    // For Mac14,15 models that have reported issues, do special initialization
+                    if model.contains("Mac14,15") {
+                        print("Detected Mac14,15 model - applying specific optimizations")
+                        // Initialize a temporary audio engine to force hardware detection
+                        let tempEngine = AVAudioEngine()
+                        do {
+                            try tempEngine.start()
+                            Thread.sleep(forTimeInterval: 0.05)
+                            tempEngine.stop()
+                        } catch {
+                            print("Warning during audio engine initialization: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            }
+        } catch {
+            // Ignore errors - this is just a detection mechanism
+            print("Hardware detection note: \(error.localizedDescription)")
         }
     }
     

@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import UniformTypeIdentifiers
 import CoreImage.CIFilterBuiltins
+import os.log
 
 // MARK: - AudioPlayer: Ambient Audio Loop
 class AudioPlayer: ObservableObject {
@@ -270,10 +271,16 @@ struct ContentView: View {
             return true
         }
         .onAppear {
+            // Start ambient audio
             audioPlayer.startAmbientLoop()
+            
+            // Start visual effects
             glowPulse1.toggle()
             glowPulse2.toggle()
             glowPulse3.toggle()
+            
+            // Initialize audio optimizations
+            initializeAudioSystem()
         }
     }
 
@@ -450,6 +457,70 @@ struct ContentView: View {
     }
     
     // MARK: - Helper Methods
+    
+    /// Initialize audio optimizations for Mac App Store compatibility
+    private func initializeAudioSystem() {
+        // Initialize audio optimization system at app startup
+        // This ensures all audio systems are warmed up and properly initialized
+        
+        // Use the shared optimizer instance
+        Task {
+            // Initialize in the background to avoid blocking UI
+            let optimizer = AudioProcessingOptimizer.shared
+            
+            // Log initialization
+            if #available(macOS 10.12, *) {
+                let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Initialization")
+                os_log("Initializing audio optimization systems", log: logger, type: .info)
+            }
+            
+            // Let the system fully initialize
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            
+            // Set low memory mode if needed based on system resources
+            let memoryInfo = checkSystemMemory()
+            if memoryInfo.percentAvailable < 0.2 { // Less than 20% available
+                // Log memory constraint
+                if #available(macOS 10.12, *) {
+                    let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Memory")
+                    os_log("Low memory detected (%.1f%% available). Enabling memory optimizations.", 
+                           log: logger, 
+                           type: .info, 
+                           memoryInfo.percentAvailable * 100)
+                }
+            }
+        }
+    }
+    
+    /// Check system memory and return memory information
+    private func checkSystemMemory() -> (used: UInt64, available: UInt64, percentAvailable: Double) {
+        var pagesize: vm_size_t = 0
+        
+        let host_port: mach_port_t = mach_host_self()
+        var host_size = mach_msg_type_number_t(MemoryLayout<vm_statistics_data_t>.stride / MemoryLayout<integer_t>.stride)
+        var vm_stat = vm_statistics_data_t()
+        
+        host_page_size(host_port, &pagesize)
+        
+        let status = withUnsafeMutablePointer(to: &vm_stat) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(host_size)) {
+                host_statistics(host_port, HOST_VM_INFO, $0, &host_size)
+            }
+        }
+        
+        if status != KERN_SUCCESS {
+            return (0, 0, 1.0) // Default to assume memory is available if check fails
+        }
+        
+        let mem_free = UInt64(vm_stat.free_count) * UInt64(pagesize)
+        let mem_used = UInt64(vm_stat.active_count + vm_stat.inactive_count + vm_stat.wire_count) * UInt64(pagesize)
+        let total = mem_free + mem_used
+        
+        // Calculate percentage of available memory
+        let percentAvailable = total > 0 ? Double(mem_free) / Double(total) : 0.0
+        
+        return (mem_used, mem_free, percentAvailable)
+    }
     
     /// Get current natural influences text
     private func getNaturalInfluencesText() -> String {

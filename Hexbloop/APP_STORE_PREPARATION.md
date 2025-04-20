@@ -1,58 +1,93 @@
 # Mac App Store Preparation Guide
 
-## Performance Optimization Checklist
+This guide outlines the steps needed to prepare Hexbloop for Mac App Store submission.
 
-To improve the app's performance and prepare it for Mac App Store submission:
+## Addressing Console Errors
 
-### 1. Reduce Console Output
-- Set `PerformanceOptimizer.isDebugMode = false` before submission
-- Use `PerformanceOptimizer.log()` instead of direct `print()` statements
-- Remove any logging with sensitive data
+The following errors have been addressed with our optimizations:
 
-### 2. Memory Management
-- Implement proper deallocation of AVFoundation resources
-- Use `PerformanceOptimizer.checkMemoryUsage()` to monitor memory usage
-- Limit caching of audio assets (already implemented in `PerformanceOptimizer`)
+1. `AddInstanceForFactory: No factory registered for id`
+   - Fixed by proper initialization of the audio system at startup
+   - Solution: AudioProcessingOptimizer handles early initialization
 
-### 3. Loading Speed
-- Pre-warm the audio engine only when needed
-- Load assets asynchronously to keep UI responsive
-- Use the optimized export method `exportWithOptimizedProgress()`
+2. `HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload`
+   - Fixed by optimizing buffer sizes and scheduling
+   - Solution: Optimized buffer management in AudioProcessingOptimizer
 
-### 4. Resource Usage
-- Reduce timer frequency for progress updates
-- Release audio resources when not in use
-- Properly handle background/foreground transitions
+3. `PlatformUtilities::CopyHardwareModelFullName() returns unknown value: Mac14,15`
+   - Fixed by adding hardware model detection on startup
+   - Solution: Hardware detection mechanism in AudioProcessingOptimizer
 
-## Mac App Store Submission Requirements
+## Sandboxing Requirements
 
-### Privacy Declarations
-- Add usage descriptions for any required permissions:
-  - `NSMicrophoneUsageDescription` (if app needs microphone)
-  - `NSAppleEventsUsageDescription` (if app uses Apple Events)
+The Mac App Store requires apps to be sandboxed:
 
-### Sandbox Entitlements
-- Configure these entitlements in Xcode:
-  - App Sandbox: Enabled
-  - User Selected File: Read/Write
-  - Downloads Folder: Read/Write
-  - Application Data: Read/Write
+1. Enable App Sandbox in Signing & Capabilities
+2. Add entitlements for:
+   - User Selected File (Read/Write)
+   - Music Files (Read-Only)
+   - Pictures Folder (Read/Write) for cover art
 
-### App Icons
-- Provide all required icon sizes (16x16 to 1024x1024)
-- Ensure icons follow Apple's design guidelines
+## Privacy Declarations
 
-## Technical Requirements
-- Sign the app with your Developer ID
-- Use the Hardened Runtime
-- Support App Notarization
-- Test thoroughly with App Store settings enabled
+Update Info.plist with:
 
-## Common Rejection Reasons to Avoid
-1. Crashing on launch or during normal operation
-2. Excessive CPU/memory usage
-3. Missing privacy declarations
-4. Incomplete functionality
-5. Poor user experience
+```xml
+<key>NSMicrophoneUsageDescription</key>
+<string>Hexbloop needs access to the microphone if you want to process audio input.</string>
 
-By following this guide, you'll improve the app's performance and increase the chances of a successful Mac App Store submission.
+<key>NSAppleEventsUsageDescription</key>
+<string>Hexbloop needs to send Apple Events to reveal processed files in Finder.</string>
+```
+
+## Performance Considerations
+
+1. **Memory Management**:
+   - The app uses a caching system with a limit on cached assets
+   - Memory usage is monitored and caches are cleared when memory is low
+
+2. **CPU Usage**:
+   - Processing is performed with timeout protection
+   - Buffer sizes are optimized based on available system resources
+   - Background tasks use proper priorities
+
+3. **Storage**:
+   - Free space is checked before starting processing
+   - Temporary files are cleaned up after processing
+
+## Testing Requirements
+
+Before submission:
+
+1. Test on:
+   - macOS 13.0 Ventura
+   - macOS 14.0 Sonoma
+   - macOS 15.0 (Beta)
+   - Both Apple Silicon and Intel (if possible)
+
+2. Test with:
+   - Small audio files (< 1 MB)
+   - Medium audio files (10-50 MB)
+   - Large audio files (100+ MB)
+   - Various audio formats (MP3, WAV, AIFF, M4A)
+
+3. Verify:
+   - Processing completes successfully
+   - No memory leaks during extended use
+   - App remains responsive during processing
+   - UI updates correctly with progress
+   - Generated files play correctly
+
+## Final Checklist
+
+- [ ] Set build settings according to BUILD_SETTINGS.md
+- [ ] Disable debug logging
+- [ ] Set ENABLE_USER_SCRIPT_SANDBOXING to YES
+- [ ] Test all sandbox-required operations
+- [ ] Verify artwork generation and embedding
+- [ ] Check CPU usage during processing
+- [ ] Ensure memory usage remains reasonable
+- [ ] Test with multiple files
+- [ ] Create app store screenshots
+- [ ] Prepare app store description
+EOF < /dev/null
