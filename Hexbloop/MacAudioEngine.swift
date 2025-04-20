@@ -561,9 +561,10 @@ class MacAudioEngine {
         // Configure EQ
         configureEQ(eqNode, with: parameters)
         
-        // Configure distortion with safety checks
-        let distortionPreset = AVAudioUnitDistortionPreset(rawValue: Int(parameters.distortionPreset.audioUnitPreset)) ?? AVAudioUnitDistortionPreset.distortion
-        distortionNode.loadFactoryPreset(distortionPreset)
+        // Configure distortion with safety checks - use a fixed preset to avoid AVAudioUnitDistortionPreset issues
+        // Default to overdrive preset (value 0)
+        let presetValue = Int(parameters.distortionPreset.audioUnitPreset) 
+        distortionNode.loadFactoryPreset(.overdrive2)
         distortionNode.wetDryMix = min(max(parameters.distortionAmount * 100.0, 0.0), 100.0) // Ensure within 0-100
         
         // Configure reverb
