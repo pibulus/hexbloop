@@ -320,94 +320,208 @@ struct ContentView: View {
             
             // MARK: - Progress Overlay
             if isProcessing {
-                VStack {
+                ZStack {
+                    // Hexagonal background for progress
+                    Hexagon()
+                        .fill(LinearGradient(
+                            gradient: Gradient(colors: [Color.black.opacity(0.8), Color.purple.opacity(0.3)]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ))
+                        .frame(width: 280, height: 280)
+                        .shadow(color: .purple.opacity(0.5), radius: 20)
+                    
                     // Show batch progress if processing multiple files
                     if showBatchProgress {
-                        VStack(spacing: 10) {
-                            // Batch overall progress
-                            ProgressView(value: batchProgress)
-                                .progressViewStyle(LinearProgressViewStyle())
-                                .frame(width: 200)
-                                .tint(.orange)
-                                .background(Color.black.opacity(0.5))
-                                .cornerRadius(10)
-                            
+                        VStack(spacing: 15) {
+                            // Hexagonal icon at top
+                            Hexagon()
+                                .stroke(LinearGradient(
+                                    gradient: Gradient(colors: [.purple, .blue]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ), lineWidth: 2)
+                                .frame(width: 40, height: 40)
+                                .rotationEffect(.degrees(30))
+                                
+                            // Status text with styling
                             Text("Processing file \(currentFileIndex) of \(totalFilesCount)")
                                 .foregroundColor(.white)
-                                .font(.caption)
+                                .font(.system(size: 14, weight: .medium))
+                                .padding(.top, 5)
                             
                             Text(currentFileName)
                                 .foregroundColor(.white.opacity(0.8))
-                                .font(.caption2)
+                                .font(.system(size: 12, weight: .light))
+                                .italic()
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                                 .frame(width: 220)
                             
-                            // Individual file progress
-                            ProgressView(value: audioProcessor.progress)
-                                .progressViewStyle(LinearProgressViewStyle())
-                                .frame(width: 200)
-                                .tint(.purple)
-                                .background(Color.black.opacity(0.5))
-                                .cornerRadius(10)
-                                .padding(.top, 5)
+                            // Create hexagonal progress - batch progress
+                            ZStack {
+                                // Background track
+                                Circle()
+                                    .stroke(Color.black.opacity(0.3), lineWidth: 6)
+                                    .frame(width: 120, height: 120)
+                                
+                                // Progress circle
+                                Circle()
+                                    .trim(from: 0, to: CGFloat(batchProgress))
+                                    .stroke(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.orange, .yellow]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                                    )
+                                    .frame(width: 120, height: 120)
+                                    .rotationEffect(.degrees(-90))
+                                
+                                // File progress circle (inner)
+                                Circle()
+                                    .trim(from: 0, to: CGFloat(audioProcessor.progress))
+                                    .stroke(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.purple, .pink]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                                    )
+                                    .frame(width: 90, height: 90)
+                                    .rotationEffect(.degrees(-90))
+                                
+                                // Percentage display
+                                Text("\(Int(batchProgress * 100))%")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
                             
-                            // Cancel button
+                            // Cancel button with improved styling
                             Button(action: {
                                 isCancelling = true
-                                // Cancel processing
                                 Task {
                                     await cancelProcessing()
                                 }
                             }) {
-                                Text("Cancel")
+                                Text(isCancelling ? "Cancelling..." : "Cancel")
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(.white)
-                                    .padding(.horizontal, 15)
-                                    .padding(.vertical, 5)
-                                    .background(Color.red.opacity(0.7))
-                                    .cornerRadius(8)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.red.opacity(0.7), .orange.opacity(0.7)]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .clipShape(Capsule())
+                                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 2)
                             }
                             .disabled(isCancelling)
                             .opacity(isCancelling ? 0.5 : 1.0)
                             .padding(.top, 10)
                         }
+                        .padding(30)
                     } else {
-                        // Single file progress
-                        ProgressView(value: audioProcessor.progress)
-                            .progressViewStyle(LinearProgressViewStyle())
-                            .frame(width: 200)
-                            .tint(.purple)
-                            .background(Color.black.opacity(0.5))
-                            .cornerRadius(10)
-                            .padding()
-                        
-                        Text("Processing audio...")
-                            .foregroundColor(.white)
-                            .font(.caption)
-                            .padding(.top, 5)
-                        
-                        // Cancel button
-                        Button(action: {
-                            isCancelling = true
-                            // Cancel processing
-                            Task {
-                                await cancelProcessing()
-                            }
-                        }) {
-                            Text("Cancel")
+                        // Single file progress - simplified but elegant
+                        VStack(spacing: 15) {
+                            // Hex icon
+                            Hexagon()
+                                .stroke(LinearGradient(
+                                    gradient: Gradient(colors: [.purple, .pink]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ), lineWidth: 2)
+                                .frame(width: 40, height: 40)
+                                .rotationEffect(.degrees(30))
+                            
+                            // Status
+                            Text("Processing audio...")
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 15)
-                                .padding(.vertical, 5)
-                                .background(Color.red.opacity(0.7))
-                                .cornerRadius(8)
+                                .font(.system(size: 16, weight: .medium))
+                                .padding(.vertical, 10)
+                            
+                            // Circular progress
+                            ZStack {
+                                // Background track
+                                Circle()
+                                    .stroke(Color.black.opacity(0.3), lineWidth: 8)
+                                    .frame(width: 140, height: 140)
+                                
+                                // Progress circle
+                                Circle()
+                                    .trim(from: 0, to: CGFloat(audioProcessor.progress))
+                                    .stroke(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.purple, .pink, .blue]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                                    )
+                                    .frame(width: 140, height: 140)
+                                    .rotationEffect(.degrees(-90))
+                                
+                                // Percentage
+                                Text("\(Int(audioProcessor.progress * 100))%")
+                                    .font(.system(size: 26, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            // Cancel button - styled
+                            Button(action: {
+                                isCancelling = true
+                                Task {
+                                    await cancelProcessing()
+                                }
+                            }) {
+                                Text(isCancelling ? "Cancelling..." : "Cancel")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.red.opacity(0.7), .orange.opacity(0.7)]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .clipShape(Capsule())
+                                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 2)
+                            }
+                            .disabled(isCancelling)
+                            .opacity(isCancelling ? 0.5 : 1.0)
+                            .padding(.top, 20)
                         }
-                        .disabled(isCancelling)
-                        .opacity(isCancelling ? 0.5 : 1.0)
-                        .padding(.top, 10)
+                        .padding(30)
                     }
                 }
-                .background(Color.black.opacity(0.3))
-                .cornerRadius(15)
+                .frame(width: 320, height: 400)
+                .background(
+                    ZStack {
+                        // Blurred background
+                        Color.black.opacity(0.5)
+                            .blur(radius: 5)
+                        
+                        // Border gradient
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.purple.opacity(0.5), .blue.opacity(0.3), .clear, .clear]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2
+                            )
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: .purple.opacity(0.3), radius: 15)
                 .padding()
             }
         }
