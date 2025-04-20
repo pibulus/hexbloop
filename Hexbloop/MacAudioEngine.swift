@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import GameKit
+import os.log // For improved logging
 
 // MARK: - Processing Parameters
 struct ProcessingParameters {
@@ -154,16 +155,22 @@ class MacAudioEngine {
     // Progress reporting
     typealias ProgressHandler = (Float) -> Void
     
-    // Process audio file with AVAssetExportSession
+    // Process audio file with AVAssetExportSession (optimized for Mac App Store)
     func processAudioFile(
         at sourceURL: URL,
         to destinationURL: URL,
         with parameters: ProcessingParameters,
         progressHandler: @escaping ProgressHandler
     ) async throws -> Bool {
-        // 1. Validate input file
+        // Log at beginning with os_log for better performance
+        if #available(macOS 10.12, *) {
+            let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Processing")
+            os_log("Starting audio processing", log: logger, type: .info)
+        }
+        
+        // 1. Validate input file - use more specific error message
         guard FileManager.default.fileExists(atPath: sourceURL.path) else {
-            throw AudioProcessingError.inputFileError("Input file does not exist")
+            throw AudioProcessingError.inputFileError("Input file does not exist at path: \(sourceURL.path)")
         }
         
         // Show initial progress
@@ -176,15 +183,31 @@ class MacAudioEngine {
                 withIntermediateDirectories: true
             )
             
-            // 2. Create an AVAsset from the input file using compatibility helper
-            let asset = AVAsset.compatibleAsset(url: sourceURL)
+            // 2. Create an AVAsset from the input file using optimized loading
+            // Use cached asset loading to improve performance
+            let asset = PerformanceOptimizer.optimizedAssetLoading(for: sourceURL)
             
             // Check if the asset is valid and can be exported using compatibility helpers
-            let isExportable = try await asset.isAssetExportable()
-            let audioTracks = try await asset.getAudioTracks()
+            // Use a timeout to prevent hanging on corrupted files
+            let isExportableTask = Task {
+                return try await asset.isAssetExportable()
+            }
+            
+            // Set a reasonable timeout
+            let isExportable = try await withTimeout(seconds: 5) { 
+                try await isExportableTask.value
+            }
+            
+            let audioTracksTask = Task {
+                return try await asset.getAudioTracks()
+            }
+            
+            let audioTracks = try await withTimeout(seconds: 5) {
+                try await audioTracksTask.value
+            }
             
             guard isExportable, audioTracks.count > 0 else {
-                throw AudioProcessingError.inputFileError("Audio file cannot be processed")
+                throw AudioProcessingError.inputFileError("Audio file cannot be processed - either not exportable or has no audio tracks")
             }
             
             // 3. Create a temporary URL for processing steps
@@ -515,6 +538,32 @@ class MacAudioEngine {
             throw AudioProcessingError.metadataFailed("Metadata export failed: \(error.localizedDescription)")
         } else {
             throw AudioProcessingError.metadataFailed("Metadata export failed with status: \(exportSession.status.rawValue)")
+        }
+    }
+    
+    // Helper function for timeouts - crucial for Mac App Store performance
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+        return try await withThrowingTaskGroup(of: T.self) { group in
+            // Add the main operation
+            group.addTask {
+                return try await operation()
+            }
+            
+            // Add a timeout task
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw AudioProcessingError.processingError("Operation timed out after \(seconds) seconds")
+            }
+            
+            // Return the first completed task result (or error)
+            guard let result = try await group.next() else {
+                throw AudioProcessingError.processingError("No task completed")
+            }
+            
+            // Cancel any remaining tasks
+            group.cancelAll()
+            
+            return result
         }
     }
     
