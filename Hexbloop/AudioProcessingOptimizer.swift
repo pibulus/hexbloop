@@ -189,23 +189,95 @@ class AudioProcessingOptimizer {
     }
     
     // Configure optimal buffer sizes for current hardware
-    func configureOptimalBufferSizes() -> (input: Int, processing: Int) {
+    func configureOptimalBufferSizes() -> (input: UInt32, processing: UInt32) {
         // Default sizes that work well across devices
-        var inputSize = Constants.defaultBufferSize
-        var processingSize = Constants.defaultBufferSize / 2
+        var inputSize: UInt32 = UInt32(Constants.defaultBufferSize)
+        var processingSize: UInt32 = UInt32(Constants.defaultBufferSize / 2)
         
-        // Adjust based on available memory
-        let memoryInfo = checkMemoryUsage()
-        if memoryInfo.available > 4 * 1024 * 1024 * 1024 {  // More than 4GB free
-            inputSize *= 2
-            processingSize *= 2
-        } else if memoryInfo.available < 1024 * 1024 * 1024 {  // Less than 1GB free
-            inputSize /= 2
-            processingSize /= 2
+        // For problematic Mac14,15 models, use tiny buffers to reduce memory pressure
+        if isRunningOnMac14_15() {
+            // Check current memory status to adjust buffer size
+            let memoryInfo = checkMemoryUsage()
+            
+            if memoryInfo.available < 200 * 1024 * 1024 {  // Less than 200MB free - extreme reduction
+                inputSize = 512
+                processingSize = 256
+                print("CRITICAL: Using minimum buffer sizes for Mac14,15 model due to very low memory")
+            } else {
+                inputSize = 1024
+                processingSize = 512
+                print("Using reduced buffer sizes for Mac14,15 model")
+            }
+        } else {
+            // Adjust based on available memory for other models
+            let memoryInfo = checkMemoryUsage()
+            if memoryInfo.available > 4 * 1024 * 1024 * 1024 {  // More than 4GB free
+                inputSize *= 2
+                processingSize *= 2
+            } else if memoryInfo.available < 1024 * 1024 * 1024 {  // Less than 1GB free
+                inputSize /= 2
+                processingSize /= 2
+            }
         }
         
-        os_log("Configured buffer sizes - input: %d, processing: %d", log: logger, type: .debug, inputSize, processingSize)
+        print("Configured buffer sizes - input: \(inputSize), processing: \(processingSize)")
         return (inputSize, processingSize)
+    }
+    
+    // Check if we're running on a problematic model which has known issues
+    func isRunningOnMac14_15() -> Bool {
+        // Special environment variable override for extreme cases
+        if ProcessInfo.processInfo.environment["HEXBLOOP_SAFE_MODE"] == "1" {
+            print("Safe mode enabled via environment variable")
+            return true
+        }
+        var size = 0
+        var hwModel: [CChar] = Array(repeating: 0, count: 256)
+        var sizeOfModel = size_t(hwModel.count)
+        
+        let result = sysctlbyname("hw.model", &hwModel, &sizeOfModel, nil, 0)
+        if result == 0 {
+            let model = String(cString: hwModel)
+            // Mac14,15 is known to have audio issues - expand list if other models have problems
+            if model.contains("Mac14,15") {
+                print("Detected problematic hardware model: \(model)")
+                return true
+            }
+        }
+        
+        // Fallback to process-based detection
+        let process = Process()
+        process.launchPath = "/usr/sbin/sysctl"
+        process.arguments = ["-n", "hw.model"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            // Read hardware model
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let model = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                if model.contains("Mac14,15") {
+                    print("Detected problematic hardware model: \(model)")
+                    return true
+                }
+            }
+        } catch {
+            // Ignore errors, assume false
+        }
+        
+        // Check for specific error patterns that suggest we should use optimized mode
+        // Check for system audio memory pressure
+        let systemUsage = checkMemoryUsage()
+        if systemUsage.available < 512 * 1024 * 1024 { // Less than 512MB available
+            print("Low system memory detected, using optimized audio processing")
+            return true
+        }
+        
+        return false
     }
     
     // MARK: - Asset Management
@@ -361,8 +433,8 @@ class AudioProcessingOptimizer {
         }
     }
     
-    // Check memory usage
-    private func checkMemoryUsage() -> (usage: UInt64, available: UInt64) {
+    // Check memory usage - public so other classes can access it
+    func checkMemoryUsage() -> (usage: UInt64, available: UInt64) {
         var info = mach_task_basic_info()
         var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
         

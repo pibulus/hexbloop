@@ -164,16 +164,23 @@ class AudioProcessorService: ObservableObject {
         return outputURL
     }
     
-    // Batch process multiple files
+    // Batch process multiple files with cancellation support
     func batchProcessAudio(
         files: [URL],
         with parameters: ProcessingParameters,
-        progressCallback: @escaping (String, Float) -> Void
+        progressCallback: @escaping (String, Float) -> Void,
+        shouldCancel: @escaping () -> Bool = { false }
     ) async -> [URL] {
         var processedFiles: [URL] = []
         
-        // Process each file sequentially
+        // Process each file sequentially with cancellation support
         for (index, fileURL) in files.enumerated() {
+            // Check for cancellation before processing each file
+            if shouldCancel() {
+                print("⚠️ Batch processing cancelled after \(processedFiles.count) of \(files.count) files")
+                break
+            }
+            
             do {
                 // Update overall progress
                 let fileProgress = Float(index) / Float(files.count)
@@ -186,8 +193,14 @@ class AudioProcessorService: ObservableObject {
                 // Update progress for this file
                 progressCallback("Completed \(fileURL.lastPathComponent)", (Float(index + 1) / Float(files.count)))
             } catch {
-                print("Error processing file \(fileURL.lastPathComponent): \(error.localizedDescription)")
-                // Continue with next file
+                print("❌ Error processing file \(fileURL.lastPathComponent): \(error.localizedDescription)")
+                // Record the error but continue with the next file to be resilient
+            }
+            
+            // Check for cancellation after processing each file
+            if shouldCancel() {
+                print("⚠️ Batch processing cancelled after \(processedFiles.count) of \(files.count) files")
+                break
             }
         }
         

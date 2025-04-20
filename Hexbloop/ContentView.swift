@@ -50,6 +50,14 @@ struct ContentView: View {
     @State private var showProcessingParams = false
     @State private var configuration = Configuration()
     @State private var processingParameters = ProcessingParameters()
+    
+    // MARK: - Batch Processing State
+    @State private var totalFilesCount = 0
+    @State private var currentFileIndex = 0
+    @State private var showBatchProgress = false
+    @State private var batchProgress: Float = 0.0
+    @State private var currentFileName: String = ""
+    @State private var isCancelling = false
 
     // MARK: - UI State
     @State private var isHoveringOverHex = false
@@ -311,20 +319,92 @@ struct ContentView: View {
             }
             
             // MARK: - Progress Overlay
-            if audioProcessor.isProcessing {
+            if isProcessing {
                 VStack {
-                    ProgressView(value: audioProcessor.progress)
-                        .progressViewStyle(LinearProgressViewStyle())
-                        .frame(width: 200)
-                        .tint(.purple)
-                        .background(Color.black.opacity(0.5))
-                        .cornerRadius(10)
-                        .padding()
-                    
-                    Text("Processing audio...")
-                        .foregroundColor(.white)
-                        .font(.caption)
-                        .padding(.top, 5)
+                    // Show batch progress if processing multiple files
+                    if showBatchProgress {
+                        VStack(spacing: 10) {
+                            // Batch overall progress
+                            ProgressView(value: batchProgress)
+                                .progressViewStyle(LinearProgressViewStyle())
+                                .frame(width: 200)
+                                .tint(.orange)
+                                .background(Color.black.opacity(0.5))
+                                .cornerRadius(10)
+                            
+                            Text("Processing file \(currentFileIndex) of \(totalFilesCount)")
+                                .foregroundColor(.white)
+                                .font(.caption)
+                            
+                            Text(currentFileName)
+                                .foregroundColor(.white.opacity(0.8))
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .frame(width: 220)
+                            
+                            // Individual file progress
+                            ProgressView(value: audioProcessor.progress)
+                                .progressViewStyle(LinearProgressViewStyle())
+                                .frame(width: 200)
+                                .tint(.purple)
+                                .background(Color.black.opacity(0.5))
+                                .cornerRadius(10)
+                                .padding(.top, 5)
+                            
+                            // Cancel button
+                            Button(action: {
+                                isCancelling = true
+                                // Cancel processing
+                                Task {
+                                    await cancelProcessing()
+                                }
+                            }) {
+                                Text("Cancel")
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 15)
+                                    .padding(.vertical, 5)
+                                    .background(Color.red.opacity(0.7))
+                                    .cornerRadius(8)
+                            }
+                            .disabled(isCancelling)
+                            .opacity(isCancelling ? 0.5 : 1.0)
+                            .padding(.top, 10)
+                        }
+                    } else {
+                        // Single file progress
+                        ProgressView(value: audioProcessor.progress)
+                            .progressViewStyle(LinearProgressViewStyle())
+                            .frame(width: 200)
+                            .tint(.purple)
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(10)
+                            .padding()
+                        
+                        Text("Processing audio...")
+                            .foregroundColor(.white)
+                            .font(.caption)
+                            .padding(.top, 5)
+                        
+                        // Cancel button
+                        Button(action: {
+                            isCancelling = true
+                            // Cancel processing
+                            Task {
+                                await cancelProcessing()
+                            }
+                        }) {
+                            Text("Cancel")
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 15)
+                                .padding(.vertical, 5)
+                                .background(Color.red.opacity(0.7))
+                                .cornerRadius(8)
+                        }
+                        .disabled(isCancelling)
+                        .opacity(isCancelling ? 0.5 : 1.0)
+                        .padding(.top, 10)
+                    }
                 }
                 .background(Color.black.opacity(0.3))
                 .cornerRadius(15)
@@ -362,9 +442,14 @@ struct ContentView: View {
     private func processDrop(providers: [NSItemProvider]) async {
         // Don't process if already processing
         guard !isProcessing else {
-            print("🚫 Already processing a file, please wait")
+            withAnimation {
+                processedFiles.append("🚫 Already processing files, please wait")
+            }
             return
         }
+        
+        // Setup cancellation support
+        isCancelling = false
         
         // Track overall processing state
         isProcessing = true
@@ -405,7 +490,7 @@ struct ContentView: View {
                 
                 guard let inputURL = inputURL else {
                     withAnimation {
-                        processedFiles.append("Error: Invalid file")
+                        processedFiles.append("❌ Error: Invalid file")
                     }
                     continue
                 }
@@ -414,7 +499,24 @@ struct ContentView: View {
                 let validExtensions = ["mp3", "wav", "m4a", "aac", "aif", "aiff", "flac"]
                 guard validExtensions.contains(inputURL.pathExtension.lowercased()) else {
                     withAnimation {
-                        processedFiles.append("Error: Not an audio file")
+                        processedFiles.append("❌ Error: \(inputURL.lastPathComponent) is not an audio file")
+                    }
+                    continue
+                }
+                
+                // Validate file can be opened
+                do {
+                    let testFile = try AVAudioFile(forReading: inputURL)
+                    let frameCount = testFile.length
+                    if frameCount <= 0 {
+                        withAnimation {
+                            processedFiles.append("❌ Error: \(inputURL.lastPathComponent) appears to be empty")
+                        }
+                        continue
+                    }
+                } catch {
+                    withAnimation {
+                        processedFiles.append("❌ Error: \(inputURL.lastPathComponent) could not be read as audio")
                     }
                     continue
                 }
@@ -425,10 +527,15 @@ struct ContentView: View {
             } catch {
                 print("❌ Error reading file: \(error.localizedDescription)")
                 withAnimation {
-                    processedFiles.append("Error: Could not read file")
+                    processedFiles.append("❌ Error: Could not read file")
                 }
             }
         }
+        
+        // Set up batch processing if we have multiple files
+        totalFilesCount = validFiles.count
+        currentFileIndex = 0
+        showBatchProgress = validFiles.count > 1
         
         // If we have valid files, generate parameters
         if !validFiles.isEmpty {
@@ -437,7 +544,20 @@ struct ContentView: View {
             showProcessingParams = true
             
             // Process each valid file sequentially
-            for (inputURL, glitchedName) in validFiles {
+            for (index, (inputURL, glitchedName)) in validFiles.enumerated() {
+                // Check if processing was cancelled
+                if isCancelling {
+                    withAnimation {
+                        processedFiles.append("ℹ️ Processing cancelled")
+                    }
+                    break
+                }
+                
+                // Update batch progress
+                currentFileIndex = index + 1
+                batchProgress = Float(index) / Float(validFiles.count)
+                currentFileName = inputURL.lastPathComponent
+                
                 do {
                     // Create output file path
                     // Determine output format:
@@ -455,8 +575,12 @@ struct ContentView: View {
                         to: fileManager.outputDirectory
                     )
                     
-                    // Process audio using our enhanced MacAudioEngine
+                    // Process audio using our enhanced MacAudioEngine with memory monitoring
                     let engine = MacAudioEngine()
+                    
+                    // Log memory status before processing starts
+                    logCurrentMemoryStatus()
+                    
                     let success = try await engine.processAudioFile(
                         at: inputURL,
                         to: finalOutputURL,
@@ -465,7 +589,22 @@ struct ContentView: View {
                         // Update our progress on the main actor
                         Task { @MainActor in
                             audioProcessor.progress = progress
+                            
+                            // Occasionally log memory status during processing
+                            if Int(progress * 100) % 20 == 0 {
+                                logCurrentMemoryStatus()
+                            }
                         }
+                    }
+                    
+                    // Log memory status after processing completes
+                    logCurrentMemoryStatus()
+                    
+                    // Check for cancellation after processing
+                    if isCancelling {
+                        // Try to clean up partial file
+                        try? FileManager.default.removeItem(at: finalOutputURL)
+                        break
                     }
                     
                     if success {
@@ -493,7 +632,7 @@ struct ContentView: View {
                         
                         // Show success feedback
                         withAnimation {
-                            processedFiles.append(glitchedName)
+                            processedFiles.append("✅ \(glitchedName)")
                         }
                     } else {
                         throw NSError(domain: "HexbloopError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to process audio"])
@@ -503,27 +642,62 @@ struct ContentView: View {
                     
                     // Show error to the user
                     withAnimation {
-                        let errorMsg = "Error processing: \(glitchedName)"
+                        let errorMsg = "❌ Error processing: \(glitchedName)"
                         processedFiles.append(errorMsg)
                     }
                 }
             }
             
-            // After all files are processed, show success and open output folder
+            // After all files are processed or processing was cancelled
             if !processedFiles.isEmpty {
                 withAnimation {
-                    showSuccessFeedback()
-                    
-                    // Open Finder to show the output directory
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        fileManager.revealInFinder(url: fileManager.outputDirectory)
+                    if !isCancelling {
+                        showSuccessFeedback()
+                        
+                        // Always open Finder to show the output directory
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            fileManager.revealInFinder(url: fileManager.outputDirectory)
+                        }
+                    } else {
+                        // Show cancellation feedback
+                        withAnimation {
+                            processedFiles.append("⚠️ Processing cancelled by user")
+                        }
                     }
                 }
             }
+            
+            // Always clean up temp files regardless of success/cancel
+            fileManager.cleanupTempFiles()
         }
         
         // Reset processing state
         isProcessing = false
+        showBatchProgress = false
+        isCancelling = false
+    }
+    
+    // Function to cancel ongoing processing
+    @MainActor
+    private func cancelProcessing() async {
+        if isProcessing {
+            isCancelling = true
+            
+            // Alert the user that cancellation is in progress
+            withAnimation {
+                processedFiles.append("Cancelling processing...")
+            }
+            
+            // Allow time for ongoing tasks to detect the cancellation flag
+            // Add a small delay to ensure the cancellation is detected
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            
+            // Actual cancellation logic happens in the processDrop loop
+            // We stop any in-progress audio operations and allow them to clean up
+            
+            // Clean up temp files immediately 
+            fileManager.cleanupTempFiles()
+        }
     }
     
     // Helper to convert Date to YYYYMMDD format
@@ -610,6 +784,47 @@ struct ContentView: View {
         let percentAvailable = total > 0 ? Double(mem_free) / Double(total) : 0.0
         
         return (mem_used, mem_free, percentAvailable)
+    }
+    
+    /// Log current memory status for debugging
+    private func logCurrentMemoryStatus() {
+        // For app memory usage
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+        
+        let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        
+        if kerr == KERN_SUCCESS {
+            let appMemoryUsage = Double(info.resident_size) / 1024.0 / 1024.0
+            
+            // For system memory
+            let systemMemory = checkSystemMemory()
+            let freeMemoryMB = Double(systemMemory.available) / 1024.0 / 1024.0
+            
+            // Log memory stats
+            print("Memory usage: \(Int(appMemoryUsage)) MB / \(Int(freeMemoryMB)) MB available")
+            
+            // Check if we're running low on memory
+            if systemMemory.percentAvailable < 0.1 { // Less than 10% available
+                // Force a cleanup 
+                autoreleasepool {
+                    // Clear caches
+                    AudioProcessingOptimizer.shared.clearCache()
+                    
+                    // Clean temp files
+                    fileManager.cleanupTempFiles()
+                    
+                    // Suggest GC
+                    #if DEBUG
+                    print("⚠️ Low memory condition: forcing cleanup")
+                    #endif
+                }
+            }
+        }
     }
     
     /// Get current natural influences text
