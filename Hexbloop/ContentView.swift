@@ -187,6 +187,78 @@ struct ContentView: View {
                 }
             }
             
+            // MARK: - Style Settings
+            HStack {
+                Spacer()
+                VStack(alignment: .trailing, spacing: 8) {
+                    Menu {
+                        Button(action: {
+                            nameGenerator.updateConfiguration(useSparklepop: true, useBlackmetal: false)
+                        }) {
+                            Label("Sparklepop", systemImage: "sparkles")
+                        }
+                        
+                        Button(action: {
+                            nameGenerator.updateConfiguration(useSparklepop: false, useBlackmetal: true)
+                        }) {
+                            Label("Black Metal", systemImage: "cross")
+                        }
+                        
+                        Button(action: {
+                            nameGenerator.updateConfiguration(useSparklepop: false, useBlackmetal: false)
+                        }) {
+                            Label("Neutral", systemImage: "circle.grid.cross")
+                        }
+                        
+                        Divider()
+                        
+                        Button(action: {
+                            nameGenerator.updateConfiguration(useWitchHouse: true)
+                        }) {
+                            Label("Enable Witch House Symbols", systemImage: "chevron.up.chevron.down")
+                        }
+                        
+                        Button(action: {
+                            nameGenerator.updateConfiguration(useWitchHouse: false)
+                        }) {
+                            Label("Disable Witch House Symbols", systemImage: "chevron.up.chevron.down")
+                        }
+                        
+                        Divider()
+                        
+                        Button(action: {
+                            nameGenerator.updateConfiguration(glitchIntensity: 50)
+                        }) {
+                            Label("High Glitch", systemImage: "waveform.path.ecg")
+                        }
+                        
+                        Button(action: {
+                            nameGenerator.updateConfiguration(glitchIntensity: 20)
+                        }) {
+                            Label("Medium Glitch", systemImage: "waveform.path")
+                        }
+                        
+                        Button(action: {
+                            nameGenerator.updateConfiguration(glitchIntensity: 5)
+                        }) {
+                            Label("Low Glitch", systemImage: "waveform")
+                        }
+                        
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(8)
+                            .background(Color.black.opacity(0.4))
+                            .clipShape(Circle())
+                    }
+                    .menuStyle(BorderlessButtonMenuStyle())
+                    .fixedSize()
+                }
+                .padding(.trailing, 20)
+                .padding(.top, 20)
+            }
+    
             // MARK: - Notifications
             VStack {
                 Spacer()
@@ -298,16 +370,15 @@ struct ContentView: View {
         isProcessing = true
         pentagramRotation += 360
         
+        // Collect all valid files first
+        var validFiles: [(URL, String)] = []
+        
         // Process each file
         for provider in providers {
             do {
                 // Generate a name for the file
                 let generatedName = nameGenerator.generateName()
                 let glitchedName = nameGenerator.applyGlitchEffects(to: generatedName)
-                
-                // Generate processing parameters with natural influences
-                processingParameters = ProcessingParameters.generateWithMoonPhaseInfluence()
-                showProcessingParams = true
                 
                 // Load file URL with simplified validation
                 var inputURL: URL?
@@ -348,22 +419,43 @@ struct ContentView: View {
                     continue
                 }
                 
-                // Create output file path
-                let outputExtension = "m4a" // Using m4a for better quality and metadata support
-                let finalOutputURL = fileManager.generateUniqueOutputPath(
-                    baseName: glitchedName,
-                    fileExtension: outputExtension
-                )
+                // Add to valid files
+                validFiles.append((inputURL, glitchedName))
                 
-                // Generate artwork for the processed file
-                let artworkURL = artGenerator.generateArtwork(
-                    for: glitchedName,
-                    to: fileManager.outputDirectory
-                )
-                
-                // Process audio using our enhanced MacAudioEngine
+            } catch {
+                print("❌ Error reading file: \(error.localizedDescription)")
+                withAnimation {
+                    processedFiles.append("Error: Could not read file")
+                }
+            }
+        }
+        
+        // If we have valid files, generate parameters
+        if !validFiles.isEmpty {
+            // Generate processing parameters with natural influences
+            processingParameters = ProcessingParameters.generateWithMoonPhaseInfluence()
+            showProcessingParams = true
+            
+            // Process each valid file sequentially
+            for (inputURL, glitchedName) in validFiles {
                 do {
-                    // Apply audio effects and convert using the MacAudioEngine
+                    // Create output file path
+                    // Determine output format:
+                    // - MP3: Great compatibility but slightly lower quality
+                    // - M4A: Better quality, good metadata support, less compatibility with some systems
+                    let outputExtension = "mp3" // Default to MP3 as in the original script for max compatibility
+                    let finalOutputURL = fileManager.generateUniqueOutputPath(
+                        baseName: glitchedName,
+                        fileExtension: outputExtension
+                    )
+                    
+                    // Generate artwork for the processed file
+                    let artworkURL = artGenerator.generateArtwork(
+                        for: glitchedName,
+                        to: fileManager.outputDirectory
+                    )
+                    
+                    // Process audio using our enhanced MacAudioEngine
                     let engine = MacAudioEngine()
                     let success = try await engine.processAudioFile(
                         at: inputURL,
@@ -402,12 +494,6 @@ struct ContentView: View {
                         // Show success feedback
                         withAnimation {
                             processedFiles.append(glitchedName)
-                            showSuccessFeedback()
-                            
-                            // Open Finder to show the output
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                fileManager.revealInFinder(url: finalOutputURL)
-                            }
                         }
                     } else {
                         throw NSError(domain: "HexbloopError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to process audio"])
@@ -417,17 +503,21 @@ struct ContentView: View {
                     
                     // Show error to the user
                     withAnimation {
-                        let errorMsg = "Error: Processing failed"
+                        let errorMsg = "Error processing: \(glitchedName)"
                         processedFiles.append(errorMsg)
                     }
                 }
-            } catch {
-                print("❌ Error processing file: \(error.localizedDescription)")
-                
-                // Show error to the user
+            }
+            
+            // After all files are processed, show success and open output folder
+            if !processedFiles.isEmpty {
                 withAnimation {
-                    let errorMsg = "Error: Could not process file"
-                    processedFiles.append(errorMsg)
+                    showSuccessFeedback()
+                    
+                    // Open Finder to show the output directory
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        fileManager.revealInFinder(url: fileManager.outputDirectory)
+                    }
                 }
             }
         }
