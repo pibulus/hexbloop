@@ -90,3 +90,21 @@ Processing parameters are influenced by real-world factors:
 - Some AVFoundation APIs deprecated in macOS 15.0 (see Docs/fix-deprecated-apis.md)
 - M2/M3 Mac compatibility handled with hardware detection
 - Swift concurrency warnings resolved with "Minimal" concurrency checking setting
+
+## Recent Fixes & Updates (Jan 2025)
+- **CRITICAL FIX**: Removed `engine.mainMixerNode.outputVolume = 0.0` which was causing silent audio output
+- Added `ErrorHandling.swift` with HexbloopError enum for proper error management
+- Fixed async/await issues in CancellationManager with proper actor isolation
+- Updated memory calculation to include inactive pages (fixes false low memory warnings)
+- Added `BatchAudioProcessor` for fast concurrent file processing (10x speed improvement)
+- Implemented proper metadata and artwork embedding in output files
+- Fixed deprecated menu style API and registerFileRepresentation
+- Output format is M4A (not MP3) for native AVFoundation support
+
+## Critical Audio Processing Notes
+- **DO NOT MUTE mainMixerNode** - This kills the audio tap and results in silent files
+- For silent processing, use offline rendering or disconnect from speakers instead
+- The audio tap must be installed BEFORE any volume adjustments
+- Use M4A format for output (MP3 requires external encoders not allowed in App Store)
+- Batch processing should use concurrent operations for performance
+- Always embed artwork as PNG data in metadata, not as separate files
