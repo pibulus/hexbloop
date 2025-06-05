@@ -713,8 +713,9 @@ class MacAudioEngine {
             engine.connect(distortionNode, to: reverbNode, format: outputFormat)
             engine.connect(reverbNode, to: engine.mainMixerNode, format: outputFormat)
             
-            // IMPORTANT: Mute the output so processing is silent
-            engine.mainMixerNode.outputVolume = 0.0
+            // IMPORTANT: Don't mute the main mixer as it affects the tap!
+            // Instead, we'll process with full volume but no speaker output
+            // engine.mainMixerNode.outputVolume = 0.0  // REMOVED - This was killing our audio tap!
         }
         
         // Create a progress update mechanism with less frequent updates to reduce overhead

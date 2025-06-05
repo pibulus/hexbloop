@@ -753,8 +753,24 @@ struct ContentView: View {
             processingParameters = ProcessingParameters.generateWithMoonPhaseInfluence()
             showProcessingParams = true
             
-            // Process each valid file sequentially
-            for (index, (inputURL, glitchedName)) in validFiles.enumerated() {
+            // Use fast batch processing instead of slow sequential processing
+            if validFiles.count > 3 {
+                // For multiple files, use batch processor
+                let inputURLs = validFiles.map { $0.0 }
+                await BatchAudioProcessor.processBatch(
+                    files: inputURLs,
+                    parameters: processingParameters
+                ) { processedURLs in
+                    Task { @MainActor in
+                        for url in processedURLs {
+                            processedFiles.append("✅ \(url.lastPathComponent)")
+                        }
+                        lastProcessedFile = processedURLs.last
+                    }
+                }
+            } else {
+                // For 1-3 files, use existing sequential processing
+                for (index, (inputURL, glitchedName)) in validFiles.enumerated() {
                 // Check if processing was cancelled
                 if await cancellationManager.shouldCancel || isCancelling {
                     withAnimation {
@@ -773,7 +789,7 @@ struct ContentView: View {
                     // Determine output format:
                     // - MP3: Great compatibility but slightly lower quality
                     // - M4A: Better quality, good metadata support, less compatibility with some systems
-                    let outputExtension = "m4a" // Use M4A for better AVFoundation compatibility
+                    let outputExtension = "m4a" // Use M4A for AVFoundation (MP3 requires external encoding)
                     let finalOutputURL = fileManager.generateUniqueOutputPath(
                         baseName: glitchedName,
                         fileExtension: outputExtension
