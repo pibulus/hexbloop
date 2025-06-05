@@ -27,8 +27,34 @@ class AudioProcessor: ObservableObject {
     // Used to store a strong reference to the completion timer
     private var completionTimer: Timer?
     
+    // Thread-safe state management
+    private let stateActor = AudioProcessorStateActor()
+    
     // For tracking progress updates
     private var framesWrittenValue: AVAudioFramePosition = 0
+    
+    // MARK: - State Actor for Thread-Safe Access
+    
+    private actor AudioProcessorStateActor {
+        private var isPlayerPlaying = false
+        private var currentProgress: Float = 0.0
+        
+        func setPlayerPlaying(_ playing: Bool) {
+            isPlayerPlaying = playing
+        }
+        
+        func getPlayerPlaying() -> Bool {
+            return isPlayerPlaying
+        }
+        
+        func setProgress(_ progress: Float) {
+            currentProgress = progress
+        }
+        
+        func getProgress() -> Float {
+            return currentProgress
+        }
+    }
     
     // MARK: - Initialization
     
@@ -378,6 +404,11 @@ class AudioProcessor: ObservableObject {
                                 // Calculate and update progress on the main actor
                                 let progress = Float(framesWritten) / Float(totalFrames)
                                 self.progress = progress
+                                
+                                // Also update the actor's progress
+                                Task {
+                                    await self.stateActor.setProgress(progress)
+                                }
                             }
                         }
                     } catch {
@@ -387,12 +418,16 @@ class AudioProcessor: ObservableObject {
             }
             
             // Schedule the file with the completion handler
-            playerNode.scheduleFile(audioFile, at: nil, completionCallbackType: .dataPlayedBack) { [weak self] callbackType in
-                self?.handlePlaybackCompletion(callbackType)
+            playerNode.scheduleFile(audioFile, at: nil, completionCallbackType: .dataPlayedBack) { callbackType in
+                // Use Task to call back to main actor
+                Task { @MainActor [weak self] in
+                    self?.handlePlaybackCompletion(callbackType)
+                }
             }
             
             // 6. Start playback
             playerNode.play()
+            await stateActor.setPlayerPlaying(true)
             
             // 7. Wait for processing to complete
             try await waitForPlaybackCompletion(totalFrames: totalFrames)
@@ -446,22 +481,22 @@ class AudioProcessor: ObservableObject {
                 let startTime = Date()
                 
                 // Create a timer on the main actor
-                completionTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
-                    guard let self = self else {
-                        timer.invalidate()
-                        continuation.resume(throwing: NSError(domain: "AudioProcessing", code: 3, userInfo: [NSLocalizedDescriptionKey: "Audio processor was deallocated"]))
-                        return
-                    }
-                    
+                let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
                     // Check for timeout
                     let elapsed = Date().timeIntervalSince(startTime)
                     if elapsed > timeoutSeconds {
                         timer.invalidate()
-                        self.completionTimer = nil
                         
-                        // Try to stop processing cleanly
-                        if self.playerNode.isPlaying {
-                            self.playerNode.stop()
+                        // Schedule cleanup on main actor
+                        Task { @MainActor [weak self] in
+                            guard let self = self else { return }
+                            self.completionTimer = nil
+                            
+                            // Try to stop processing cleanly
+                            if self.playerNode.isPlaying {
+                                self.playerNode.stop()
+                                await self.stateActor.setPlayerPlaying(false)
+                            }
                         }
                         
                         continuation.resume(throwing: NSError(
@@ -472,32 +507,60 @@ class AudioProcessor: ObservableObject {
                         return
                     }
                     
-                    // Need to dispatch to main actor for checking properties
-                    Task { @MainActor in
-                        // Check if we've made progress in the last second
-                        if !self.playerNode.isPlaying {
+                    // Check completion status using actor
+                    Task { [weak self] in
+                        guard let self = self else {
+                            timer.invalidate()
+                            continuation.resume(throwing: NSError(domain: "AudioProcessing", code: 3, userInfo: [NSLocalizedDescriptionKey: "Audio processor was deallocated"]))
+                            return
+                        }
+                        
+                        // Get current state from actor
+                        let isPlaying = await self.stateActor.getPlayerPlaying()
+                        let currentProgress = await self.stateActor.getProgress()
+                        
+                        // Update playing state if needed
+                        await MainActor.run { [weak self] in
+                            guard let self = self else { return }
+                            
+                            let actuallyPlaying = self.playerNode.isPlaying
+                            if actuallyPlaying != isPlaying {
+                                Task {
+                                    await self.stateActor.setPlayerPlaying(actuallyPlaying)
+                                }
+                            }
+                        }
+                        
+                        // Check if we've made progress
+                        if !isPlaying {
                             // If player stopped but we're still processing, wait for buffers to flush
-                            if self.progress < 0.99 {
+                            if currentProgress < 0.99 {
                                 // Give it a little time for buffers to flush
                                 if elapsed > 5.0 {
                                     // If it's been more than 5 seconds since player stopped,
                                     // consider processing complete
                                     timer.invalidate()
-                                    self.completionTimer = nil
+                                    Task { @MainActor [weak self] in
+                                        self?.completionTimer = nil
+                                    }
                                     continuation.resume()
                                 }
                             } else {
                                 // Normal completion
                                 timer.invalidate()
-                                self.completionTimer = nil
+                                Task { @MainActor [weak self] in
+                                    self?.completionTimer = nil
+                                }
                                 continuation.resume()
                             }
                         }
                     }
                 }
                 
+                self.completionTimer = timer
+                
                 // Add to the common run loop mode
-                RunLoop.main.add(self.completionTimer!, forMode: .common)
+                RunLoop.main.add(timer, forMode: .common)
             }
         }
     }
@@ -518,6 +581,9 @@ class AudioProcessor: ObservableObject {
         // Stop the player node if it's playing
         if playerNode.isPlaying {
             playerNode.stop()
+            Task {
+                await stateActor.setPlayerPlaying(false)
+            }
         }
         
         // Stop the engine if it's running
@@ -537,10 +603,8 @@ class AudioProcessor: ObservableObject {
     }
     
     deinit {
-        // Call cleanup to ensure resources are properly released
-        // We use a synchronous task to call the MainActor-isolated method
-        Task { @MainActor in
-            cleanup()
-        }
+        // Note: We cannot safely call cleanup() from deinit due to Swift concurrency rules.
+        // The cleanup should be called explicitly before the object is deallocated.
+        // Resources will be released when the object is deallocated.
     }
 }

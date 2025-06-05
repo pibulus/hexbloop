@@ -56,13 +56,19 @@ class AudioOptimizer {
     }
     
     // Create optimized export session to avoid the HALC errors
-    static func createOptimizedExportSession(for asset: AVAsset, preset: String = AVAssetExportPresetAppleM4A) -> AVAssetExportSession? {
+    static func createOptimizedExportSession(for asset: AVAsset, preset: String = AVAssetExportPresetAppleM4A) async throws -> AVAssetExportSession? {
         // Basic session creation
         let session = AVAssetExportSession(asset: asset, presetName: preset)
         
         // Additional optimization:
         // 1. Set the timeRange to ensure we process the whole asset correctly
-        session?.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+        let duration: CMTime
+        if #available(macOS 13.0, *) {
+            duration = try await asset.load(.duration)
+        } else {
+            duration = asset.duration
+        }
+        session?.timeRange = CMTimeRange(start: .zero, duration: duration)
         
         // 2. Set optimization flag
         session?.shouldOptimizeForNetworkUse = false // Set to false for local use
@@ -182,7 +188,7 @@ class AudioOptimizer {
         let numSamples = Int(sampleRate * duration)
         
         // Create a buffer with zeros (silence)
-        var samples = [Float](repeating: 0.0, count: numSamples)
+        let samples = [Float](repeating: 0.0, count: numSamples)
         
         // Get audio format
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)

@@ -500,8 +500,8 @@ class NameGenerator: ObservableObject {
             let index = glitchedName.index(glitchedName.startIndex, offsetBy: i)
             let char = glitchedName[index]
             
-            if glitchMappings.keys.contains(char), Int.random(in: 1...100) <= 25 {
-                glitchedName.replaceSubrange(index...index, with: String(glitchMappings[char]!))
+            if let glitchChar = glitchMappings[char], Int.random(in: 1...100) <= 25 {
+                glitchedName.replaceSubrange(index...index, with: String(glitchChar))
             }
         }
         

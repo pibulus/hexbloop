@@ -33,6 +33,10 @@ extension AVAsset {
     }
 }
 
+// MARK: - Deprecated API Wrappers
+// These functions wrap deprecated APIs to maintain backwards compatibility
+// while suppressing deprecation warnings in the compatibility layer itself
+
 extension AVAssetExportSession {
     // Export with compatibility across macOS versions
     func compatibleExport() async throws {
@@ -47,16 +51,20 @@ extension AVAssetExportSession {
     }
     
     // Check export status with compatibility across macOS versions
+    @available(macOS, deprecated: 15.0, message: "Use states(updateInterval:) on macOS 15.0+")
     func getExportStatus() -> AVAssetExportSession.Status {
-        // For now, just return the current status
-        // In macOS 15+, we would use states(updateInterval:)
+        // Note: In macOS 15.0+, 'status' is deprecated in favor of states(updateInterval:)
+        // This compatibility method provides a consistent interface across OS versions
+        // The deprecation warning is expected and acceptable here as this is a compatibility layer
         return self.status
     }
     
-    // Get export error with compatibility across macOS versions
+    // Get export error with compatibility across macOS versions  
+    @available(macOS, deprecated: 15.0, message: "Use export(to:as:) async throws on macOS 15.0+")
     func getExportError() -> Error? {
-        // For now, just return the current error
-        // In macOS 15+, this would be handled differently
+        // Note: In macOS 15.0+, 'error' is deprecated in favor of the new async throws pattern
+        // This compatibility method provides a consistent interface across OS versions
+        // The deprecation warning is expected and acceptable here as this is a compatibility layer
         return self.error
     }
 }

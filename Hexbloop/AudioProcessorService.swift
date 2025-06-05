@@ -10,7 +10,7 @@ class AudioProcessorService: ObservableObject {
     @Published var progress: Float = 0.0
     
     // Core audio engine
-    private let audioEngine = MacAudioEngine()
+    private let audioEngine: MacAudioEngine
     
     // File manager
     private let fileManager = HexbloopFileManager.shared
@@ -20,6 +20,10 @@ class AudioProcessorService: ObservableObject {
         case processingFailed(String)
         case invalidFile(String)
         case metadataFailed(String)
+    }
+    
+    init() {
+        self.audioEngine = MacAudioEngine()
     }
     
     // Process audio file with progress updates

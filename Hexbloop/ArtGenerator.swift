@@ -56,11 +56,15 @@ class ArtGenerator: ObservableObject {
             colors = naturalPalette
         }
         
-        let color = colors.randomElement()!
+        let color = colors.randomElement() ?? NSColor.white
+        let components = color.cgColor.components ?? [1.0, 1.0, 1.0, 1.0]
+        let r = components.count > 0 ? components[0] : 1.0
+        let g = components.count > 1 ? components[1] : 1.0
+        let b = components.count > 2 ? components[2] : 1.0
         let colorString = String(format: "#%02X%02X%02X", 
-                                Int(color.cgColor.components![0] * 255),
-                                Int(color.cgColor.components![1] * 255),
-                                Int(color.cgColor.components![2] * 255))
+                                Int(r * 255),
+                                Int(g * 255),
+                                Int(b * 255))
         
         var svg = ""
         
@@ -199,16 +203,27 @@ class ArtGenerator: ObservableObject {
         let numShapes = Int.random(in: 15...maxShapes)
         let shapes = (0..<numShapes).map { _ in generateRandomShape() }.joined(separator: "\n    ")
         
-        let bgColor1 = darkPalette.randomElement()!
-        let bgColor2 = darkPalette.randomElement()!
+        let bgColor1 = darkPalette.randomElement() ?? NSColor.black
+        let bgColor2 = darkPalette.randomElement() ?? NSColor.darkGray
+        
+        let bg1Components = bgColor1.cgColor.components ?? [0.0, 0.0, 0.0, 1.0]
+        let bg1R = bg1Components.count > 0 ? bg1Components[0] : 0.0
+        let bg1G = bg1Components.count > 1 ? bg1Components[1] : 0.0
+        let bg1B = bg1Components.count > 2 ? bg1Components[2] : 0.0
+        
+        let bg2Components = bgColor2.cgColor.components ?? [0.2, 0.2, 0.2, 1.0]
+        let bg2R = bg2Components.count > 0 ? bg2Components[0] : 0.2
+        let bg2G = bg2Components.count > 1 ? bg2Components[1] : 0.2
+        let bg2B = bg2Components.count > 2 ? bg2Components[2] : 0.2
+        
         let bgColor1String = String(format: "#%02X%02X%02X", 
-                            Int(bgColor1.cgColor.components![0] * 255),
-                            Int(bgColor1.cgColor.components![1] * 255),
-                            Int(bgColor1.cgColor.components![2] * 255))
+                            Int(bg1R * 255),
+                            Int(bg1G * 255),
+                            Int(bg1B * 255))
         let bgColor2String = String(format: "#%02X%02X%02X", 
-                            Int(bgColor2.cgColor.components![0] * 255),
-                            Int(bgColor2.cgColor.components![1] * 255),
-                            Int(bgColor2.cgColor.components![2] * 255))
+                            Int(bg2R * 255),
+                            Int(bg2G * 255),
+                            Int(bg2B * 255))
         
         let svg = """
         <svg width="\(width)" height="\(height)" xmlns="http://www.w3.org/2000/svg">

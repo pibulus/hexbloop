@@ -311,6 +311,11 @@ class MacAudioEngine {
             if FileManager.default.fileExists(atPath: destinationURL.path) {
                 try FileManager.default.removeItem(at: destinationURL)
             }
+            
+            // Verify the processed file has content before moving
+            let processedFileSize = try FileManager.default.attributesOfItem(atPath: processedAudioURL.path)[.size] as? Int64 ?? 0
+            print("📊 Processed file size: \(processedFileSize) bytes (\(Double(processedFileSize) / 1024.0 / 1024.0) MB)")
+            
             try FileManager.default.moveItem(at: processedAudioURL, to: destinationURL)
             
             // Show final progress
@@ -343,12 +348,12 @@ class MacAudioEngine {
         ffmpegTask.executableURL = URL(fileURLWithPath: "/usr/local/bin/ffmpeg")
         
         // Check if ffmpeg exists at the specified path
-        if !FileManager.default.fileExists(atPath: ffmpegTask.executableURL!.path) {
+        if let ffmpegURL = ffmpegTask.executableURL, !FileManager.default.fileExists(atPath: ffmpegURL.path) {
             // Try with just "ffmpeg" which will use PATH
             ffmpegTask.executableURL = URL(fileURLWithPath: "/usr/bin/ffmpeg")
             
             // If still doesn't exist, skip this mastering step
-            if !FileManager.default.fileExists(atPath: ffmpegTask.executableURL!.path) {
+            if let altURL = ffmpegTask.executableURL, !FileManager.default.fileExists(atPath: altURL.path) {
                 if #available(macOS 10.12, *) {
                     let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Mastering")
                     os_log("ffmpeg not found - skipping enhanced mastering stage", log: logger, type: .info)
@@ -429,7 +434,7 @@ class MacAudioEngine {
     ) async throws -> URL {
         // Create an export session using our comprehensive optimizer
         let optimizer = AudioProcessingOptimizer.shared
-        guard let exportSession = optimizer.createOptimizedExportSession(
+        guard let exportSession = try await optimizer.createOptimizedExportSession(
             for: asset,
             preset: AVAssetExportPresetAppleM4A
         ) else {
@@ -443,7 +448,7 @@ class MacAudioEngine {
         
         // Configure audio mix for adjusting gain if needed
         if parameters.outputGain != 0.0 {
-            let audioMix = createGainAudioMix(for: asset, gain: parameters.outputGain)
+            let audioMix = try await createGainAudioMix(for: asset, gain: parameters.outputGain)
             exportSession.audioMix = audioMix
         }
         
@@ -481,11 +486,10 @@ class MacAudioEngine {
             progressUpdateTask?.cancel()
             
             // Convert general errors to our specific error type
-            if let asError = error as? NSError {
-                if asError.domain == "AudioProcessingOptimizer" {
-                    if asError.code == 1002 { // Timeout error
-                        throw AudioProcessingError.conversionFailed("Export timed out. The file may be corrupted or too large.")
-                    }
+            let nsError = error as NSError
+            if nsError.domain == "AudioProcessingOptimizer" {
+                if nsError.code == 1002 { // Timeout error
+                    throw AudioProcessingError.conversionFailed("Export timed out. The file may be corrupted or too large.")
                 }
             }
             
@@ -494,14 +498,12 @@ class MacAudioEngine {
     }
     
     // Create an audio mix to adjust gain
-    private func createGainAudioMix(for asset: AVAsset, gain: Float) -> AVAudioMix {
+    private func createGainAudioMix(for asset: AVAsset, gain: Float) async throws -> AVAudioMix {
         let audioMix = AVMutableAudioMix()
         var trackMixes: [AVMutableAudioMixInputParameters] = []
         
         // Get audio tracks using compatibility layer
-        // In a real implementation, this would need try/await, but for simplicity we'll 
-        // use the synchronous method here since we're in a synchronous context
-        let audioTracks = asset.tracks(withMediaType: .audio)
+        let audioTracks = try await asset.getAudioTracks()
         
         // Create input parameters for each audio track
         for track in audioTracks {
@@ -668,15 +670,36 @@ class MacAudioEngine {
             // Configure EQ
             configureEQ(eqNode, with: parameters)
             
-            // Configure distortion with safety checks - use integer-based preset to avoid enum reference issues 
-            // The value 10 corresponds to overdrive2 preset
-            let presetValue = Int(parameters.distortionPreset.audioUnitPreset)
-            distortionNode.loadFactoryPreset(AVAudioUnitDistortionPreset(rawValue: 10)!)
+            // Configure distortion with safety checks
+            if let preset = AVAudioUnitDistortionPreset(rawValue: parameters.distortionPreset.audioUnitPreset) {
+                distortionNode.loadFactoryPreset(preset)
+            } else {
+                // Fallback to overdrive preset
+                distortionNode.loadFactoryPreset(.drumsBitBrush)
+            }
             distortionNode.wetDryMix = min(max(parameters.distortionAmount * 100.0, 0.0), 100.0) // Ensure within 0-100
             
             // Configure reverb
             reverbNode.loadFactoryPreset(.mediumHall)
             reverbNode.wetDryMix = min(max(parameters.reverbAmount * 100.0, 0.0), 100.0) // Ensure within 0-100
+            
+            // Log effect settings for debugging
+            if #available(macOS 10.12, *) {
+                let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Effects")
+                os_log("Effects configured - Distortion: %{public}@ @ %.1f%%, Reverb: %.1f%%", 
+                       log: logger, type: .info, 
+                       parameters.distortionPreset.rawValue,
+                       parameters.distortionAmount * 100.0,
+                       parameters.reverbAmount * 100.0)
+                
+                // Log EQ settings
+                os_log("EQ configured - HighPass: %.0fHz, LowPass: %.0fHz, Mid: %.0fHz @ %.1fdB", 
+                       log: logger, type: .info,
+                       parameters.highPassFreq,
+                       parameters.lowPassFreq,
+                       parameters.midFreq,
+                       parameters.midGain)
+            }
             
             // Add nodes to engine
             engine.attach(playerNode)
@@ -689,6 +712,9 @@ class MacAudioEngine {
             engine.connect(eqNode, to: distortionNode, format: outputFormat)
             engine.connect(distortionNode, to: reverbNode, format: outputFormat)
             engine.connect(reverbNode, to: engine.mainMixerNode, format: outputFormat)
+            
+            // IMPORTANT: Mute the output so processing is silent
+            engine.mainMixerNode.outputVolume = 0.0
         }
         
         // Create a progress update mechanism with less frequent updates to reduce overhead
@@ -702,6 +728,8 @@ class MacAudioEngine {
         
         // Set up task for error handling and cleanup
         var processingError: Error? = nil
+        var totalFramesWritten: Int64 = 0
+        var tapCallCount = 0
         
         // Create a temporary autorelease pool to better manage memory
         autoreleasepool {
@@ -715,6 +743,18 @@ class MacAudioEngine {
                 autoreleasepool {
                     do {
                         try outputFile.write(from: buffer)
+                        totalFramesWritten += Int64(buffer.frameLength)
+                        tapCallCount += 1
+                        
+                        // Log progress every 100 tap calls
+                        if tapCallCount % 100 == 0 {
+                            if #available(macOS 10.12, *) {
+                                let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Processing")
+                                os_log("Audio tap progress - Frames written: %lld, Tap calls: %d", 
+                                       log: logger, type: .debug, totalFramesWritten, tapCallCount)
+                            }
+                        }
+                        
                         // Use a Task only if we need to update progress
                         if let progressTracker = progressTracker {
                             Task { await progressTracker.update(framesWritten: buffer.frameLength) }
@@ -738,8 +778,6 @@ class MacAudioEngine {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 // Add the main playback task
                 group.addTask {
-                    // Use a shorter total processing time to prevent hangs
-                    let shortReasonableTimeout = min(Double(fileLength) / sampleRate * 1.5, 120.0) // 1.5x audio length or max 2 min
                     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                         // Schedule the file with the completion handler - split into chunks for large files
                         let chunkSize: AVAudioFrameCount = 32768 // Use smaller chunks to prevent memory issues
@@ -824,12 +862,39 @@ class MacAudioEngine {
         playerNode.stop()
         engine.stop()
         
+        // IMPORTANT: Close the output file to ensure all data is written
+        // This is critical for ensuring the audio is properly saved
+        outputFile.close()
+        
+        // Small delay to ensure file system has flushed
+        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        
         // Log memory usage after processing
         logMemoryUsage(tag: "After audio processing")
+        
+        // Log final processing statistics
+        if #available(macOS 10.12, *) {
+            let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Processing")
+            os_log("Audio processing complete - Total frames written: %lld, Total tap calls: %d", 
+                   log: logger, type: .info, totalFramesWritten, tapCallCount)
+        }
         
         // Verify the output file was created correctly
         guard FileManager.default.fileExists(atPath: tempOutputURL.path) else {
             throw AudioProcessingError.processingError("Output file was not created")
+        }
+        
+        // Also verify the file has actual content
+        let fileAttributes = try FileManager.default.attributesOfItem(atPath: tempOutputURL.path)
+        let fileSize = fileAttributes[.size] as? Int64 ?? 0
+        guard fileSize > 1000 else { // At least 1KB
+            throw AudioProcessingError.processingError("Output file appears to be empty (size: \(fileSize) bytes)")
+        }
+        
+        // Log file size
+        if #available(macOS 10.12, *) {
+            let logger = OSLog(subsystem: "com.hexbloop.audio", category: "Processing")
+            os_log("Output file size: %lld bytes (%.2f MB)", log: logger, type: .info, fileSize, Double(fileSize) / 1024.0 / 1024.0)
         }
         
         // Replace the original file with the processed one
@@ -1188,7 +1253,7 @@ class MacAudioEngine {
         let asset = optimizer.optimizedAsset(for: audioURL)
         
         // Create an export session with our optimized system
-        guard let exportSession = optimizer.createOptimizedExportSession(
+        guard let exportSession = try await optimizer.createOptimizedExportSession(
             for: asset,
             preset: AVAssetExportPresetAppleM4A
         ) else {
@@ -1245,7 +1310,8 @@ class MacAudioEngine {
             
         } catch {
             // Handle specific error types
-            if let nsError = error as NSError?, nsError.domain == "AudioProcessingOptimizer" {
+            let nsError = error as NSError
+            if nsError.domain == "AudioProcessingOptimizer" {
                 if nsError.code == 1002 { // Timeout error
                     throw AudioProcessingError.metadataFailed("Metadata export timed out")
                 }

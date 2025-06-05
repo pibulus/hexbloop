@@ -36,10 +36,15 @@ class AudioPlayer: ObservableObject {
 // MARK: - ContentView
 struct ContentView: View {
     // MARK: - Services and State Objects
-    @StateObject private var audioPlayer = AudioPlayer()
-    @StateObject private var nameGenerator = NameGenerator()
-    @StateObject private var audioProcessor = AudioProcessorService()
-    @StateObject private var artGenerator = ArtGenerator()
+    @StateObject private var nameGenerator: NameGenerator
+    @StateObject private var audioProcessor: AudioProcessorService
+    @StateObject private var artGenerator: ArtGenerator
+    
+    init() {
+        _nameGenerator = StateObject(wrappedValue: NameGenerator())
+        _audioProcessor = StateObject(wrappedValue: AudioProcessorService())
+        _artGenerator = StateObject(wrappedValue: ArtGenerator())
+    }
     
     // MARK: - Processing State
     @State private var processedFiles: [String] = []
@@ -58,6 +63,9 @@ struct ContentView: View {
     @State private var batchProgress: Float = 0.0
     @State private var currentFileName: String = ""
     @State private var isCancelling = false
+    @State private var lastMemoryCleanup: Date? = nil
+    @State private var lastProcessedFile: URL?
+    @StateObject private var cancellationManager = CancellationManager()
 
     // MARK: - UI State
     @State private var isHoveringOverHex = false
@@ -81,7 +89,7 @@ struct ContentView: View {
                 endRadius: 700
             )
             .ignoresSafeArea()
-            .blur(radius: 60)
+            .blur(radius: 30)
 
             // Background texture (commented out as image may not exist)
             // Image("grain")
@@ -95,7 +103,7 @@ struct ContentView: View {
                 Hexagon()
                     .fill(LinearGradient(gradient: Gradient(colors: isHoveringOverHex ? [Color.purple, Color.purple.opacity(0.8)] : hexagonColors), startPoint: .top, endPoint: .bottom))
                     .frame(width: 300, height: 300)
-                    .shadow(color: Color.purple.opacity(1.0), radius: glowPulse1 ? 120 : 90)
+                    .shadow(color: Color.purple.opacity(0.6), radius: glowPulse1 ? 40 : 30)
                     .opacity(glowPulse1 ? 0.9 : 0.7)
                     .scaleEffect(glowPulse1 ? 1.3 : 1.0)
                     .animation(
@@ -106,7 +114,7 @@ struct ContentView: View {
                 Hexagon()
                     .fill(LinearGradient(gradient: Gradient(colors: isHoveringOverHex ? [Color.purple, Color.purple.opacity(0.8)] : hexagonColors.reversed()), startPoint: .bottom, endPoint: .top))
                     .frame(width: 250, height: 250)
-                    .shadow(color: Color.blue.opacity(0.9), radius: glowPulse2 ? 100 : 80)
+                    .shadow(color: Color.blue.opacity(0.5), radius: glowPulse2 ? 35 : 25)
                     .opacity(glowPulse2 ? 0.8 : 0.6)
                     .scaleEffect(glowPulse2 ? 1.2 : 1.0)
                     .animation(
@@ -117,7 +125,7 @@ struct ContentView: View {
                 Hexagon()
                     .fill(LinearGradient(gradient: Gradient(colors: innerHexagonColors), startPoint: .leading, endPoint: .trailing))
                     .frame(width: 200, height: 200)
-                    .shadow(color: Color.orange.opacity(0.7), radius: glowPulse3 ? 90 : 60)
+                    .shadow(color: Color.orange.opacity(0.4), radius: glowPulse3 ? 30 : 20)
                     .opacity(glowPulse3 ? 0.7 : 0.5)
                     .scaleEffect(glowPulse3 ? 1.2 : 1.0)
                     .animation(
@@ -128,9 +136,31 @@ struct ContentView: View {
                 Text("\u{26E7}") // Pentagram
                     .font(.system(size: 120))
                     .foregroundColor(.white.opacity(0.4))
-                    .shadow(color: .purple.opacity(0.9), radius: 40)
+                    .shadow(color: .purple.opacity(0.5), radius: 20)
                     .rotationEffect(.degrees(isProcessing ? pentagramRotation : 0))
                     .animation(.linear(duration: 6), value: pentagramRotation)
+                
+                // Add file picker button
+                if !isProcessing {
+                    Button(action: {
+                        showFilePicker()
+                    }) {
+                        Label("Choose Files", systemImage: "folder.badge.plus")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.purple.opacity(0.3))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.purple.opacity(0.5), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .help("Select audio files to process")
+                    .padding(.top, 20)
+                }
                 
                 // Display moon phase and time info
                 VStack {
@@ -252,6 +282,14 @@ struct ContentView: View {
                             Label("Low Glitch", systemImage: "waveform")
                         }
                         
+                        Divider()
+                        
+                        Button(action: {
+                            fileManager.revealInFinder(url: fileManager.outputDirectory)
+                        }) {
+                            Label("Show Output Folder", systemImage: "folder")
+                        }
+                        
                     } label: {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 20))
@@ -260,7 +298,7 @@ struct ContentView: View {
                             .background(Color.black.opacity(0.4))
                             .clipShape(Circle())
                     }
-                    .menuStyle(BorderlessButtonMenuStyle())
+                    .buttonStyle(.plain)
                     .fixedSize()
                 }
                 .padding(.trailing, 20)
@@ -381,7 +419,7 @@ struct ContentView: View {
                                 
                                 // File progress circle (inner)
                                 Circle()
-                                    .trim(from: 0, to: CGFloat(audioProcessor.progress))
+                                    .trim(from: 0, to: CGFloat(self.audioProcessor.progress))
                                     .stroke(
                                         LinearGradient(
                                             gradient: Gradient(colors: [.purple, .pink]),
@@ -454,7 +492,7 @@ struct ContentView: View {
                                 
                                 // Progress circle
                                 Circle()
-                                    .trim(from: 0, to: CGFloat(audioProcessor.progress))
+                                    .trim(from: 0, to: CGFloat(self.audioProcessor.progress))
                                     .stroke(
                                         LinearGradient(
                                             gradient: Gradient(colors: [.purple, .pink, .blue]),
@@ -467,7 +505,7 @@ struct ContentView: View {
                                     .rotationEffect(.degrees(-90))
                                 
                                 // Percentage
-                                Text("\(Int(audioProcessor.progress * 100))%")
+                                Text("\(Int(self.audioProcessor.progress * 100))%")
                                     .font(.system(size: 26, weight: .bold))
                                     .foregroundColor(.white)
                             }
@@ -528,17 +566,14 @@ struct ContentView: View {
         .onDrop(of: ["public.file-url"], isTargeted: $isHoveringOverHex) { providers in
             // Drop handling with better error capture
             Task {
-                do {
-                    await processDrop(providers: providers)
-                } catch {
-                    print("Error handling drop: \(error)")
-                }
+                await processDrop(providers: providers)
             }
             return true
         }
         .onAppear {
             // Start ambient audio
-            audioPlayer.startAmbientLoop()
+            // Ambient audio disabled for now
+            // audioPlayer.startAmbientLoop()
             
             // Start visual effects
             glowPulse1.toggle()
@@ -547,6 +582,48 @@ struct ContentView: View {
             
             // Initialize audio optimizations
             initializeAudioSystem()
+        }
+    }
+
+    // MARK: - File Selection
+    
+    // Show file picker
+    private func showFilePicker() {
+        let panel = NSOpenPanel()
+        panel.title = "Select Audio Files"
+        panel.message = "Choose audio files to process with Hexbloop"
+        panel.prompt = "Select"
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [
+            .audio,
+            .mp3,
+            .mpeg4Audio,
+            .wav,
+            .aiff,
+            .init(filenameExtension: "flac") ?? .audio
+        ]
+        
+        panel.begin { response in
+            if response == .OK {
+                let urls = panel.urls
+                if !urls.isEmpty {
+                    // Convert URLs to NSItemProviders and process
+                    let providers = urls.map { url in
+                        let provider = NSItemProvider()
+                        provider.registerFileRepresentation(forTypeIdentifier: "public.audio", fileOptions: [], visibility: .all) { completion in
+                            completion(url, false, nil)
+                            return nil
+                        }
+                        return provider
+                    }
+                    
+                    Task {
+                        await processDrop(providers: providers)
+                    }
+                }
+            }
         }
     }
 
@@ -596,7 +673,7 @@ struct ContentView: View {
                             } else if let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
                                 continuation.resume(returning: url)
                             } else {
-                                continuation.resume(throwing: NSError(domain: "HexbloopError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Could not load file URL"]))
+                                continuation.resume(throwing: HexbloopError.invalidInput("Could not load file URL"))
                             }
                         }
                     }
@@ -614,6 +691,25 @@ struct ContentView: View {
                 guard validExtensions.contains(inputURL.pathExtension.lowercased()) else {
                     withAnimation {
                         processedFiles.append("❌ Error: \(inputURL.lastPathComponent) is not an audio file")
+                    }
+                    continue
+                }
+                
+                // Validate file size first
+                let fileAttributes = try? FileManager.default.attributesOfItem(atPath: inputURL.path)
+                let fileSize = fileAttributes?[.size] as? Int64 ?? 0
+                let maxFileSize: Int64 = 500 * 1024 * 1024 // 500MB limit
+                
+                if fileSize > maxFileSize {
+                    withAnimation {
+                        processedFiles.append("❌ Error: \(inputURL.lastPathComponent) is too large (max 500MB)")
+                    }
+                    continue
+                }
+                
+                if fileSize == 0 {
+                    withAnimation {
+                        processedFiles.append("❌ Error: \(inputURL.lastPathComponent) is empty")
                     }
                     continue
                 }
@@ -660,7 +756,7 @@ struct ContentView: View {
             // Process each valid file sequentially
             for (index, (inputURL, glitchedName)) in validFiles.enumerated() {
                 // Check if processing was cancelled
-                if isCancelling {
+                if await cancellationManager.shouldCancel || isCancelling {
                     withAnimation {
                         processedFiles.append("ℹ️ Processing cancelled")
                     }
@@ -677,7 +773,7 @@ struct ContentView: View {
                     // Determine output format:
                     // - MP3: Great compatibility but slightly lower quality
                     // - M4A: Better quality, good metadata support, less compatibility with some systems
-                    let outputExtension = "mp3" // Default to MP3 as in the original script for max compatibility
+                    let outputExtension = "m4a" // Use M4A for better AVFoundation compatibility
                     let finalOutputURL = fileManager.generateUniqueOutputPath(
                         baseName: glitchedName,
                         fileExtension: outputExtension
@@ -703,6 +799,11 @@ struct ContentView: View {
                         // Update our progress on the main actor
                         Task { @MainActor in
                             audioProcessor.progress = progress
+                            
+                            // Force UI update when complete
+                            if progress >= 1.0 {
+                                audioProcessor.progress = 0.0
+                            }
                             
                             // Occasionally log memory status during processing
                             if Int(progress * 100) % 20 == 0 {
@@ -748,8 +849,12 @@ struct ContentView: View {
                         withAnimation {
                             processedFiles.append("✅ \(glitchedName)")
                         }
+                        
+                        // Store the output file path for later
+                        lastProcessedFile = finalOutputURL
+                        print("✅ File processed successfully: \(finalOutputURL.path)")
                     } else {
-                        throw NSError(domain: "HexbloopError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to process audio"])
+                        throw HexbloopError.processingFailed("Failed to process audio")
                     }
                 } catch {
                     print("❌ Audio processing failed: \(error.localizedDescription)")
@@ -763,14 +868,21 @@ struct ContentView: View {
             }
             
             // After all files are processed or processing was cancelled
+            print("🏁 Processing complete. Files processed: \(processedFiles.count), isCancelling: \(isCancelling)")
             if !processedFiles.isEmpty {
                 withAnimation {
                     if !isCancelling {
                         showSuccessFeedback()
                         
-                        // Always open Finder to show the output directory
+                        // Always open Finder to show the output file or directory
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            fileManager.revealInFinder(url: fileManager.outputDirectory)
+                            if let outputFile = lastProcessedFile {
+                                print("📂 Attempting to reveal file: \(outputFile.path)")
+                                fileManager.revealInFinder(url: outputFile)
+                            } else {
+                                print("📂 Attempting to reveal directory: \(fileManager.outputDirectory.path)")
+                                fileManager.revealInFinder(url: fileManager.outputDirectory)
+                            }
                         }
                     } else {
                         // Show cancellation feedback
@@ -786,9 +898,14 @@ struct ContentView: View {
         }
         
         // Reset processing state
-        isProcessing = false
-        showBatchProgress = false
-        isCancelling = false
+        withAnimation {
+            isProcessing = false
+            showBatchProgress = false
+            isCancelling = false
+            audioProcessor.progress = 0.0
+            batchProgress = 0.0
+            showProcessingParams = false
+        }
     }
     
     // Function to cancel ongoing processing
@@ -796,18 +913,32 @@ struct ContentView: View {
     private func cancelProcessing() async {
         if isProcessing {
             isCancelling = true
+            cancellationManager.requestCancellation()
             
             // Alert the user that cancellation is in progress
             withAnimation {
-                processedFiles.append("Cancelling processing...")
+                processedFiles.append("⚠️ Cancelling processing...")
+            }
+            
+            // Reset audio processor state
+            await MainActor.run {
+                audioProcessor.isProcessing = false
+                audioProcessor.progress = 0.0
             }
             
             // Allow time for ongoing tasks to detect the cancellation flag
             // Add a small delay to ensure the cancellation is detected
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             
-            // Actual cancellation logic happens in the processDrop loop
-            // We stop any in-progress audio operations and allow them to clean up
+            // Reset state
+            withAnimation {
+                isProcessing = false
+                showBatchProgress = false
+                isCancelling = false
+                audioProcessor.progress = 0.0
+                batchProgress = 0.0
+                cancellationManager.reset()
+            }
             
             // Clean up temp files immediately 
             fileManager.cleanupTempFiles()
@@ -844,7 +975,7 @@ struct ContentView: View {
         // Use the shared optimizer instance
         Task {
             // Initialize in the background to avoid blocking UI
-            let optimizer = AudioProcessingOptimizer.shared
+            _ = AudioProcessingOptimizer.shared
             
             // For M2 Macs that might be detected incorrectly
             #if DEBUG
@@ -920,14 +1051,15 @@ struct ContentView: View {
             return (0, 0, 1.0) // Default to assume memory is available if check fails
         }
         
-        let mem_free = UInt64(vm_stat.free_count) * UInt64(pagesize)
-        let mem_used = UInt64(vm_stat.active_count + vm_stat.inactive_count + vm_stat.wire_count) * UInt64(pagesize)
-        let total = mem_free + mem_used
+        // Include inactive pages as available since macOS can reclaim them
+        let mem_available = UInt64(vm_stat.free_count + vm_stat.inactive_count) * UInt64(pagesize)
+        let mem_used = UInt64(vm_stat.active_count + vm_stat.wire_count) * UInt64(pagesize)
+        let total = mem_available + mem_used
         
-        // Calculate percentage of available memory
-        let percentAvailable = total > 0 ? Double(mem_free) / Double(total) : 0.0
+        // Calculate percentage of available memory (including inactive pages)
+        let percentAvailable = total > 0 ? Double(mem_available) / Double(total) : 0.5
         
-        return (mem_used, mem_free, percentAvailable)
+        return (mem_used, mem_available, percentAvailable)
     }
     
     /// Log current memory status for debugging
@@ -953,19 +1085,23 @@ struct ContentView: View {
             print("Memory usage: \(Int(appMemoryUsage)) MB / \(Int(freeMemoryMB)) MB available")
             
             // Check if we're running low on memory
-            if systemMemory.percentAvailable < 0.1 { // Less than 10% available
-                // Force a cleanup 
-                autoreleasepool {
-                    // Clear caches
-                    AudioProcessingOptimizer.shared.clearCache()
-                    
-                    // Clean temp files
-                    fileManager.cleanupTempFiles()
-                    
-                    // Suggest GC
-                    #if DEBUG
-                    print("⚠️ Low memory condition: forcing cleanup")
-                    #endif
+            if systemMemory.percentAvailable < 0.05 { // Less than 5% available (was 10%)
+                // Force a cleanup only if it hasn't been done recently
+                let now = Date()
+                if lastMemoryCleanup == nil || (lastMemoryCleanup.map { now.timeIntervalSince($0) > 30 } ?? true) {
+                    lastMemoryCleanup = now
+                    autoreleasepool {
+                        // Clear caches
+                        AudioProcessingOptimizer.shared.clearCache()
+                        
+                        // Clean temp files
+                        fileManager.cleanupTempFiles()
+                        
+                        // Suggest GC
+                        #if DEBUG
+                        print("⚠️ Low memory condition: forcing cleanup (won't cleanup again for 30 seconds)")
+                        #endif
+                    }
                 }
             }
         }
@@ -999,11 +1135,7 @@ struct ContentView: View {
         return try await withCheckedThrowingContinuation { continuation in
             // Check if provider can load this type
             guard provider.hasItemConformingToTypeIdentifier(fileURLType) else {
-                continuation.resume(throwing: NSError(
-                    domain: "HexbloopError",
-                    code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "Dropped item is not a file URL"]
-                ))
+                continuation.resume(throwing: HexbloopError.invalidInput("Dropped item is not a file URL"))
                 return
             }
             
@@ -1024,18 +1156,10 @@ struct ContentView: View {
                     } else if let url = URL(dataRepresentation: data, relativeTo: nil) {
                         continuation.resume(returning: url)
                     } else {
-                        continuation.resume(throwing: NSError(
-                            domain: "HexbloopError",
-                            code: 2,
-                            userInfo: [NSLocalizedDescriptionKey: "Could not convert data to URL"]
-                        ))
+                        continuation.resume(throwing: HexbloopError.invalidInput("Could not convert data to URL"))
                     }
                 } else {
-                    continuation.resume(throwing: NSError(
-                        domain: "HexbloopError",
-                        code: 3,
-                        userInfo: [NSLocalizedDescriptionKey: "Unknown item type from drop operation"]
-                    ))
+                    continuation.resume(throwing: HexbloopError.invalidInput("Unknown item type from drop operation"))
                 }
             }
         }
@@ -1057,7 +1181,7 @@ extension NSItemProvider {
             }
         }) as? Data,
         let url = URL(dataRepresentation: urlData, relativeTo: nil) else {
-            throw NSError(domain: "FileProcessing", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid file data"]) as Error
+            throw HexbloopError.invalidInput("Invalid file data")
         }
         return url
     }

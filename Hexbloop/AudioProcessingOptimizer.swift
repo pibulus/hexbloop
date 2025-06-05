@@ -51,7 +51,8 @@ class AudioProcessingOptimizer {
         // to prevent crashes - see fixPlatformUtilitiesIssue method
         
         // Configure buffer sizes for optimal performance
-        configureOptimalBufferSizes()
+        let bufferSizes = configureOptimalBufferSizes()
+        os_log("Configured buffer sizes - input: %d, processing: %d", log: logger, type: .debug, bufferSizes.input, bufferSizes.processing)
     }
     
     // Fix for PlatformUtilities errors on newer Mac models
@@ -245,7 +246,6 @@ class AudioProcessingOptimizer {
         ]
         
         // Improved hardware detection with verification
-        var size = 0
         var hwModel: [CChar] = Array(repeating: 0, count: 256)
         var sizeOfModel = size_t(hwModel.count)
         
@@ -366,14 +366,15 @@ class AudioProcessingOptimizer {
     // MARK: - Export Session Optimization
     
     // Create an optimized export session with the right configuration
-    func createOptimizedExportSession(for asset: AVAsset, preset: String) -> AVAssetExportSession? {
+    func createOptimizedExportSession(for asset: AVAsset, preset: String) async throws -> AVAssetExportSession? {
         guard let session = AVAssetExportSession(asset: asset, presetName: preset) else {
             os_log("Failed to create export session", log: logger, type: .error)
             return nil
         }
         
         // Configure export session for optimal performance
-        session.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+        let duration = try await asset.load(.duration)
+        session.timeRange = CMTimeRange(start: .zero, duration: duration)
         session.shouldOptimizeForNetworkUse = false
         
         // Add validation for output path
@@ -397,7 +398,7 @@ class AudioProcessingOptimizer {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(progressUpdateInterval * 1_000_000_000))
                 progressHandler(session.progress)
-                if session.progress >= 1.0 || session.status != .exporting {
+                if session.progress >= 1.0 || session.getExportStatus() != .exporting {
                     break
                 }
             }

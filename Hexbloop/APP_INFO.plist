@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Store Metadata -->
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.music</string>
+    
+    <!-- Age Rating -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+    
+    <!-- Privacy -->
+    <key>NSPrivacyUsageDescription</key>
+    <string>Hexbloop processes audio files locally on your device. No data is transmitted to external servers.</string>
+    
+    <!-- Supported File Types -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Audio Files</string>
+            <key>LSHandlerRank</key>
+            <string>Default</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.audio</string>
+                <string>public.mp3</string>
+                <string>public.mpeg-4-audio</string>
+                <string>com.apple.m4a-audio</string>
+                <string>public.aiff-audio</string>
+                <string>com.microsoft.waveform-audio</string>
+                <string>org.flac.flac-audio</string>
+            </array>
+        </dict>
+    </array>
+    
+    <!-- App Transport Security -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+    </dict>
+</dict>
+</plist>
