@@ -1,0 +1,344 @@
+/* HEXBLOOP - EXACT SWIFT COLOR MATCHING */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: rgb(13, 13, 26); /* Color(red: 0.05, green: 0.05, blue: 0.1) = rgb(13, 13, 26) */
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.app-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* EXACT ORIGINAL BACKGROUND - RadialGradient with blur */
+.background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        circle at center,
+        rgb(13, 13, 26) 10px,     /* backgroundColor */
+        rgb(0, 0, 0) 700px        /* Color.black */
+    );
+    filter: blur(30px);          /* .blur(radius: 30) */
+    z-index: -2;
+}
+
+/* Enhanced grain texture with vignette effect */
+.background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        /* Vignette effect */
+        radial-gradient(circle at center, 
+            transparent 0%, 
+            transparent 40%, 
+            rgba(0,0,0,0.1) 70%, 
+            rgba(0,0,0,0.4) 100%),
+        /* Fine grain texture */
+        radial-gradient(circle at 25% 25%, rgba(255,255,255,0.03) 0.5px, transparent 0.5px),
+        radial-gradient(circle at 75% 75%, rgba(255,255,255,0.02) 0.5px, transparent 0.5px),
+        radial-gradient(circle at 50% 10%, rgba(255,255,255,0.01) 1px, transparent 1px),
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,0.015) 1px, transparent 1px),
+        /* Subtle color noise */
+        radial-gradient(circle at 60% 30%, rgba(88, 86, 214, 0.01) 0.3px, transparent 0.3px),
+        radial-gradient(circle at 40% 70%, rgba(255, 45, 85, 0.01) 0.3px, transparent 0.3px);
+    background-size: 
+        100% 100%,  /* vignette */
+        3px 3px,    /* fine grain */
+        4px 4px,    /* fine grain */
+        8px 8px,    /* medium grain */
+        6px 6px,    /* medium grain */
+        12px 12px,  /* color noise */
+        14px 14px;  /* color noise */
+    opacity: 0.3;
+    mix-blend-mode: overlay;
+    animation: grain-float 15s ease-in-out infinite;
+}
+
+@keyframes grain-float {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-1px, -1px); }
+    50% { transform: translate(1px, -0.5px); }
+    75% { transform: translate(-0.5px, 1px); }
+}
+
+/* Hexagon stack */
+.hexagon-stack {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    cursor: pointer;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* Base hexagon shape */
+.hexagon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    will-change: transform, opacity, box-shadow;
+    transform-origin: center;
+    backface-visibility: hidden;
+}
+
+/* OUTER HEXAGON - EXACT SWIFT COLORS */
+.hex-outer {
+    width: 300px;
+    height: 300px;
+    /* LinearGradient(gradient: Gradient(colors: hexagonColors), startPoint: .top, endPoint: .bottom) */
+    /* hexagonColors = [Color.purple.opacity(0.7), Color.pink.opacity(0.6)] */
+    background: linear-gradient(
+        to bottom,
+        rgba(88, 86, 214, 0.7),   /* SwiftUI Color.purple */
+        rgba(255, 45, 85, 0.6)    /* SwiftUI Color.pink */
+    );
+    /* .shadow(color: Color.purple.opacity(0.6), radius: glowPulse1 ? 40 : 30) */
+    box-shadow: 0 0 30px rgba(88, 86, 214, 0.6);
+    /* .opacity(glowPulse1 ? 0.9 : 0.7) */
+    opacity: 0.7;
+    /* .scaleEffect(glowPulse1 ? 1.3 : 1.0) + .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) */
+    animation: glow-pulse-1 2.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+}
+
+@keyframes glow-pulse-1 {
+    0% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 0.7;
+        box-shadow: 0 0 30px rgba(88, 86, 214, 0.6);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.3);
+        opacity: 0.9;
+        box-shadow: 0 0 40px rgba(88, 86, 214, 0.6);
+    }
+}
+
+/* MIDDLE HEXAGON - EXACT SWIFT COLORS REVERSED */
+.hex-middle {
+    width: 250px;
+    height: 250px;
+    /* LinearGradient(gradient: Gradient(colors: hexagonColors.reversed()), startPoint: .bottom, endPoint: .top) */
+    background: linear-gradient(
+        to top,
+        rgba(88, 86, 214, 0.7),   /* reversed order - SwiftUI purple */
+        rgba(255, 45, 85, 0.6)    /* SwiftUI pink */
+    );
+    /* .shadow(color: Color.blue.opacity(0.5), radius: glowPulse2 ? 35 : 25) */
+    box-shadow: 0 0 25px rgba(0, 122, 255, 0.5);
+    /* .opacity(glowPulse2 ? 0.8 : 0.6) */
+    opacity: 0.6;
+    animation: glow-pulse-2 2.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    animation-delay: 0.5s;
+}
+
+@keyframes glow-pulse-2 {
+    0% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 0.6;
+        box-shadow: 0 0 25px rgba(0, 122, 255, 0.5);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 0.8;
+        box-shadow: 0 0 35px rgba(0, 122, 255, 0.5);
+    }
+}
+
+/* INNER HEXAGON - EXACT SWIFT COLORS */
+.hex-inner {
+    width: 200px;
+    height: 200px;
+    /* LinearGradient(gradient: Gradient(colors: innerHexagonColors), startPoint: .leading, endPoint: .trailing) */
+    /* innerHexagonColors = [Color.yellow.opacity(0.5), Color.orange.opacity(0.5)] */
+    background: linear-gradient(
+        to right,
+        rgba(255, 204, 0, 0.5),    /* SwiftUI Color.yellow */
+        rgba(255, 149, 0, 0.5)      /* SwiftUI Color.orange */
+    );
+    /* .shadow(color: Color.orange.opacity(0.4), radius: glowPulse3 ? 30 : 20) */
+    box-shadow: 0 0 20px rgba(255, 149, 0, 0.4);
+    /* .opacity(glowPulse3 ? 0.7 : 0.5) */
+    opacity: 0.5;
+    animation: glow-pulse-3 3s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    animation-delay: 1s;
+}
+
+@keyframes glow-pulse-3 {
+    0% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 0.5;
+        box-shadow: 0 0 20px rgba(255, 149, 0, 0.4);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 0.7;
+        box-shadow: 0 0 30px rgba(255, 149, 0, 0.4);
+    }
+}
+
+/* PENTAGRAM - EXACT SWIFT STYLING */
+.pentagram {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* .font(.system(size: 120)) */
+    font-size: 120px;
+    /* .foregroundColor(.white.opacity(0.4)) */
+    color: rgba(255, 255, 255, 0.4);
+    /* .shadow(color: .purple.opacity(0.5), radius: 20) */
+    text-shadow: 0 0 20px rgba(88, 86, 214, 0.5);
+    z-index: 10;
+    will-change: transform;
+    transition: transform 0.3s ease-out;
+}
+
+.pentagram.spinning {
+    /* .animation(.linear(duration: 6)) */
+    animation: pentagram-rotation 6s linear infinite;
+}
+
+@keyframes pentagram-rotation {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* HOVER STATES - EXACT SWIFT BEHAVIOR */
+.hexagon-stack:hover .hex-outer {
+    /* isHoveringOverHex ? [Color.purple, Color.purple.opacity(0.8)] */
+    background: linear-gradient(
+        to bottom,
+        rgb(159, 121, 234),
+        rgba(88, 86, 214, 0.8)
+    );
+}
+
+.hexagon-stack:hover .pentagram {
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* DRAG HOVER STATE - FEEDING THE BEAST */
+.hexagon-stack.feeding .hex-outer {
+    background: linear-gradient(
+        to bottom,
+        rgb(159, 121, 234),
+        rgba(255, 255, 255, 0.6)
+    );
+    box-shadow: 0 0 80px rgba(255, 255, 255, 0.8);
+    animation-duration: 1s;
+}
+
+.hexagon-stack.feeding .hex-middle {
+    box-shadow: 0 0 60px rgba(255, 255, 255, 0.6);
+    animation-duration: 1s;
+}
+
+.hexagon-stack.feeding .hex-inner {
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
+    animation-duration: 1s;
+}
+
+.hexagon-stack.feeding .pentagram {
+    color: rgba(255, 255, 255, 1);
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+    transform: translate(-50%, -50%) scale(1.3);
+}
+
+/* PROCESSING GLOW - MYSTICAL BREATHING */
+.processing-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(88, 86, 214, 0.3) 50%,
+        transparent 70%
+    );
+    opacity: 0;
+    pointer-events: none;
+    z-index: 20;
+    will-change: opacity, transform;
+}
+
+.processing-glow.active {
+    opacity: 1;
+    animation: processing-breath 1.5s ease-in-out infinite;
+}
+
+@keyframes processing-breath {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 0.4;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* MYSTICAL PROGRESS INDICATOR */
+.progress-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out;
+    z-index: 30;
+}
+
+.progress-indicator.active {
+    opacity: 1;
+}
+
+.progress-text {
+    color: rgba(255, 255, 255, 0.8);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(88, 86, 214, 0.5);
+    letter-spacing: 1px;
+}
+
+/* Performance optimizations */
+.hexagon-stack,
+.hexagon,
+.pentagram,
+.processing-glow {
+    transform-style: preserve-3d;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}

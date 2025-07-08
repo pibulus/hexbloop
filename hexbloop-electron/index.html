@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEXBLOOP</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Mystical background -->
+        <div class="background"></div>
+        
+        <!-- Hexagonal interface - no text, pure magic -->
+        <div class="hexagon-stack" id="hexStack">
+            <!-- Outer breathing hexagon -->
+            <div class="hexagon hex-outer" id="hexOuter"></div>
+            
+            <!-- Middle breathing hexagon -->
+            <div class="hexagon hex-middle" id="hexMiddle"></div>
+            
+            <!-- Inner breathing hexagon -->
+            <div class="hexagon hex-inner" id="hexInner"></div>
+            
+            <!-- Central pentagram -->
+            <div class="pentagram" id="pentagram">⛧</div>
+        </div>
+        
+        <!-- Simple processing indicator -->
+        <div class="processing-glow" id="processingGlow"></div>
+        
+        <!-- Mystical progress indicator -->
+        <div class="progress-indicator" id="progressIndicator">
+            <div class="progress-text" id="progressText"></div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
