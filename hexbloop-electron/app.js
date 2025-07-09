@@ -36,6 +36,14 @@ class HexbloopMystic {
         window.electronAPI.onProcessingProgress((event, data) => {
             this.updateProgress(data);
         });
+        
+        // Listen for file drops from main process
+        window.electronAPI.onFileDropped((event, filePaths) => {
+            console.log('📁 Received file drop from main process:', filePaths);
+            if (filePaths && filePaths.length > 0) {
+                this.processFiles(filePaths);
+            }
+        });
     }
     
     updateProgress(data) {
@@ -79,34 +87,39 @@ class HexbloopMystic {
         
         if (audioFiles.length > 0) {
             console.log('🎵 Processing dropped files:', audioFiles.map(f => f.name));
+            console.log('🔍 File objects debug:', audioFiles.map(f => ({ 
+                name: f.name, 
+                path: f.path, 
+                size: f.size, 
+                type: f.type,
+                webkitRelativePath: f.webkitRelativePath
+            })));
             
             try {
-                // With webSecurity: false, file.path should be available
-                const filePaths = audioFiles.map(file => file.path).filter(path => path);
+                // Use the new webUtils.getPathForFile() method (Electron v32+ compatible)
+                console.log('🔍 Using webUtils.getPathForFile() to extract file paths...');
+                const filePaths = window.electronAPI.getFilePathsFromFiles(audioFiles);
                 
-                if (filePaths.length > 0) {
-                    console.log('✅ Extracted file paths directly:', filePaths);
+                if (filePaths && filePaths.length > 0) {
+                    console.log('✅ Extracted file paths using webUtils:', filePaths);
                     await this.processFiles(filePaths);
                 } else {
-                    // Fallback: Try IPC method
-                    console.log('⚠️ Direct path extraction failed, trying IPC fallback...');
-                    const fileData = audioFiles.map(file => ({
-                        name: file.name,
-                        path: file.path,
-                        size: file.size,
-                        type: file.type
-                    }));
+                    console.log('❌ webUtils path extraction failed, falling back to file dialog...');
+                    // Show a brief message and automatically open file dialog
+                    this.progressText.textContent = 'Opening file selector...';
+                    this.progressIndicator.classList.add('active');
                     
-                    const fallbackPaths = await window.electronAPI.getFilePathsFromDrop(fileData);
-                    
-                    if (fallbackPaths && fallbackPaths.length > 0) {
-                        console.log('✅ Got file paths via IPC fallback:', fallbackPaths);
-                        await this.processFiles(fallbackPaths);
-                    } else {
-                        console.error('❌ Both direct and IPC path extraction failed');
-                        console.log('File objects:', audioFiles.map(f => ({ name: f.name, path: f.path, size: f.size })));
-                        this.showError('Could not access dropped files. Try using the file selector instead.');
-                    }
+                    // Small delay to show the message
+                    setTimeout(async () => {
+                        const paths = await window.electronAPI.selectFiles();
+                        this.progressIndicator.classList.remove('active');
+                        
+                        if (paths && paths.length > 0) {
+                            await this.processFiles(paths);
+                        } else {
+                            this.showError('File selection cancelled.');
+                        }
+                    }, 500);
                 }
                 
             } catch (error) {

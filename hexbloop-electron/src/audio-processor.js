@@ -8,10 +8,17 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const LunarProcessor = require('./lunar-processor');
+const NameGenerator = require('./name-generator');
+const ArtworkGenerator = require('./artwork-generator');
+const MetadataEmbedder = require('./metadata-embedder');
 
 class AudioProcessor {
     static async processFile(inputPath, outputPath) {
         console.log(`🎵 Processing: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`);
+        
+        // Generate mystical name and artwork
+        const bandName = NameGenerator.generateMystical();
+        console.log(`✨ Generated band name: ${bandName}`);
         
         // Get mystical lunar influences
         const influences = LunarProcessor.getInfluencedParameters();
@@ -19,26 +26,44 @@ class AudioProcessor {
         
         // Create temp file for sox processing
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
+        const processedFile = path.join(path.dirname(outputPath), 'temp_processed.m4a');
+        
+        // Initialize artwork generator and metadata embedder
+        const artworkGenerator = new ArtworkGenerator();
+        const metadataEmbedder = new MetadataEmbedder();
         
         try {
             // Step 1: Sox processing with lunar influences
             await this.processSox(inputPath, tempFile, influences);
             
             // Step 2: FFmpeg mastering (exact parameters from "bloop it" script)
-            await this.processFFmpeg(tempFile, outputPath);
+            await this.processFFmpeg(tempFile, processedFile);
             
-            // Clean up temp file
+            // Step 3: Generate artwork (both SVG and PNG)
+            const artworkPath = path.join(path.dirname(outputPath), `${bandName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.svg`);
+            const artworkResult = await artworkGenerator.generateArtwork(bandName, artworkPath);
+            
+            // Step 4: Embed metadata and artwork (use PNG for embedding)
+            await metadataEmbedder.processFileWithMetadata(processedFile, outputPath, bandName, artworkResult.pngPath);
+            
+            // Clean up temp files
             if (fs.existsSync(tempFile)) {
                 fs.unlinkSync(tempFile);
             }
+            if (fs.existsSync(processedFile)) {
+                fs.unlinkSync(processedFile);
+            }
             
             console.log(`✅ Successfully processed: ${path.basename(outputPath)}`);
-            return true;
+            return { success: true, bandName, artwork: artworkResult };
             
         } catch (error) {
-            // Clean up temp file on error
+            // Clean up temp files on error
             if (fs.existsSync(tempFile)) {
                 fs.unlinkSync(tempFile);
+            }
+            if (fs.existsSync(processedFile)) {
+                fs.unlinkSync(processedFile);
             }
             throw error;
         }

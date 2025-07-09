@@ -8,11 +8,20 @@
     "build": "electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["audio", "music", "processing", "hexagon", "mystical", "chaos", "magic"],
+  "keywords": [
+    "audio",
+    "music",
+    "processing",
+    "hexagon",
+    "mystical",
+    "chaos",
+    "magic"
+  ],
   "author": "Hexbloop Audio Labs",
   "license": "ISC",
   "description": "🔮 Hexbloop - Chaos Magic Audio Engine. Transform your audio with mystical digital processing influenced by natural forces.",
   "dependencies": {
+    "convert-svg-to-png": "^0.7.1",
     "electron": "^37.2.0",
     "electron-builder": "^26.0.12",
     "fluent-ffmpeg": "^2.1.3",

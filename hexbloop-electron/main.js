@@ -25,7 +25,11 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: false,  // Allow file:// access for drag-drop
+            webSecurity: true,  // Keep security enabled (drag-drop works with webUtils now)
+            sandbox: false,  // Keep false for our IPC functionality
+            enableRemoteModule: false,
+            allowRunningInsecureContent: false,
+            experimentalFeatures: false,
             preload: path.join(__dirname, 'preload.js')
         },
         titleBarStyle: 'hiddenInset',
@@ -38,6 +42,30 @@ function createWindow() {
     // Show window when ready to prevent visual flash
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
+    });
+
+    // Enable drag-and-drop files at main process level
+    mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+        const parsedUrl = new URL(navigationUrl);
+        if (parsedUrl.protocol === 'file:') {
+            event.preventDefault();
+            
+            // Extract file path from file:// URL
+            const filePath = decodeURIComponent(parsedUrl.pathname);
+            console.log('🔍 Detected file drag:', filePath);
+            
+            // Check if it's an audio file
+            if (/\.(mp3|wav|m4a|aiff|aif|flac|ogg)$/i.test(filePath)) {
+                // Send file path to renderer
+                mainWindow.webContents.send('file-dropped', [filePath]);
+            }
+        }
+    });
+
+    // Performance monitoring
+    mainWindow.webContents.on('did-finish-load', () => {
+        const memoryInfo = process.getProcessMemoryInfo();
+        console.log(`📊 Memory usage: ${Math.round(memoryInfo.residentSet / 1024 / 1024)}MB resident, ${Math.round(memoryInfo.private / 1024 / 1024)}MB private`);
     });
 
     // Open DevTools in development
@@ -144,15 +172,31 @@ ipcMain.handle('select-files', async () => {
 // Handle file paths from drag-drop (workaround for renderer security)
 ipcMain.handle('get-file-paths-from-drop', async (event, fileData) => {
     // Extract paths from file data sent from renderer
+    console.log('🔍 Processing drag-drop file data:', fileData);
+    
+    // With webSecurity: false, we should be able to access the file path
+    // Try to reconstruct the full path from the file name
     const paths = [];
     
     for (const file of fileData) {
         if (file.path) {
+            // If we have a direct path, use it
             paths.push(file.path);
+        } else if (file.name) {
+            // This is a fallback - in reality, we can't reliably get the full path
+            // from just the filename in a secure way
+            console.log(`⚠️ Cannot determine full path for: ${file.name}`);
         }
     }
     
     console.log('🔍 Extracted file paths from drop:', paths);
+    
+    // If we couldn't get proper paths, return empty array to trigger click handler
+    if (paths.length === 0) {
+        console.log('❌ Could not extract file paths from drag-drop');
+        return [];
+    }
+    
     return paths;
 });
 
@@ -184,6 +228,38 @@ function checkDependencies() {
     
     return results;
 }
+
+// App event handlers
+app.whenReady().then(createWindow);
+
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// Enhanced error handling (2024 best practice)
+process.on('uncaughtException', (error) => {
+    console.error('🚨 Uncaught Exception:', error);
+    // In production, you'd want to log this to a service like Sentry
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+    // In production, you'd want to log this to a service like Sentry
+});
+
+// Renderer process crash handling
+app.on('render-process-gone', (event, webContents, details) => {
+    console.error('🚨 Renderer process gone:', details);
+    if (details.reason === 'crashed') {
+        // Optionally restart the renderer process
+        console.log('🔄 Attempting to reload...');
+        webContents.reload();
+    }
+});
 
 console.log('🔥 HEXBLOOP ELECTRON - CHAOS MAGIC AUDIO ENGINE 🔥');
 console.log('Checking audio processing dependencies...');
