@@ -26,7 +26,7 @@ class AudioProcessor {
         
         // Create temp file for sox processing
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
-        const processedFile = path.join(path.dirname(outputPath), 'temp_processed.m4a');
+        const processedFile = path.join(path.dirname(outputPath), 'temp_processed.mp3');
         
         // Initialize artwork generator and metadata embedder
         const artworkGenerator = new ArtworkGenerator();
@@ -157,8 +157,9 @@ class AudioProcessor {
                 .complexFilter(filterComplex)
                 .audioFrequency(44100)
                 .audioChannels(2)
-                .format('mp4')
-                .audioCodec('aac')
+                .format('mp3')
+                .audioCodec('libmp3lame')
+                .audioBitrate('320k')
                 .on('start', (commandLine) => {
                     console.log('🎛️ FFmpeg mastering: ' + commandLine);
                 })

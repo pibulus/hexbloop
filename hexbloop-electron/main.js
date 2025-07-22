@@ -118,9 +118,9 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             }
             
             const mysticalName = NameGenerator.generateMystical();
-            const outputPath = path.join(outputDirectory, `${mysticalName}.m4a`);
+            const outputPath = path.join(outputDirectory, `${mysticalName}.mp3`);
             
-            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(filePath)} -> ${mysticalName}.m4a`);
+            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(filePath)} -> ${mysticalName}.mp3`);
             
             // Process the audio file
             await AudioProcessor.processFile(filePath, outputPath);

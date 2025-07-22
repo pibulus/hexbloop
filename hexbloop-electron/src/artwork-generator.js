@@ -260,11 +260,6 @@ class ArtworkGenerator {
             <!-- Shapes -->
             ${shapes.join('\n            ')}
             
-            <!-- Band Name -->
-            <text x="50%" y="50%" font-family="monospace" font-size="60" fill="white" text-anchor="middle" dominant-baseline="middle" filter="url(#glitch)">
-                ${bandName}
-            </text>
-            
             <!-- Vignette effect -->
             <rect width="100%" height="100%" fill="none" filter="url(#vignette)" />
         </svg>`;
