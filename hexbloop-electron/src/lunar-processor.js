@@ -6,20 +6,17 @@
 
 class LunarProcessor {
     static getMoonPhase() {
-        // Calculate current moon phase (0-1, where 0/1 = new moon, 0.5 = full moon)
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
         const day = now.getDate();
         
-        // Simplified lunar phase calculation
-        // Based on the fact that moon phases repeat every 29.53 days
+        // Calculate days since known new moon (Jan 6, 2000)
         const lunarMonth = 29.530588853;
-        
-        // Known new moon reference: January 6, 2000
         const referenceNewMoon = new Date(2000, 0, 6);
         const daysSinceReference = (now - referenceNewMoon) / (1000 * 60 * 60 * 24);
         
+        // Phase: 0-1 (0/1 = new moon, 0.5 = full moon)
         const phase = (daysSinceReference % lunarMonth) / lunarMonth;
         
         return {
@@ -41,10 +38,10 @@ class LunarProcessor {
         return 'Waning Crescent';
     }
     
+    // === Moon Phase → Audio Parameter Mapping ===
     static getPhaseInfluence(phase) {
-        // Each moon phase affects audio processing differently
         if (phase < 0.03 || phase > 0.97) {
-            // New Moon - Dark, heavy, mysterious
+            // New Moon → Dark, heavy, mysterious
             return {
                 type: 'dark',
                 overdrive: 6.0,
@@ -54,7 +51,7 @@ class LunarProcessor {
                 compand: { attack: 0.3, ratio: 8 }
             };
         } else if (phase < 0.22) {
-            // Waxing Crescent - Building energy
+            // Waxing Crescent → Building energy
             return {
                 type: 'building',
                 overdrive: 3.5,
@@ -64,7 +61,7 @@ class LunarProcessor {
                 compand: { attack: 0.25, ratio: 6 }
             };
         } else if (phase < 0.28) {
-            // First Quarter - Balanced but intense
+            // First Quarter → Balanced but intense
             return {
                 type: 'balanced',
                 overdrive: 4.0,
@@ -74,7 +71,7 @@ class LunarProcessor {
                 compand: { attack: 0.2, ratio: 6 }
             };
         } else if (phase < 0.47) {
-            // Waxing Gibbous - Growing power
+            // Waxing Gibbous → Growing power
             return {
                 type: 'growing',
                 overdrive: 3.0,
@@ -84,7 +81,7 @@ class LunarProcessor {
                 compand: { attack: 0.15, ratio: 4 }
             };
         } else if (phase < 0.53) {
-            // Full Moon - Bright, ethereal, maximum energy
+            // Full Moon → Bright, ethereal
             return {
                 type: 'ethereal',
                 overdrive: 2.0,
@@ -94,7 +91,7 @@ class LunarProcessor {
                 compand: { attack: 0.1, ratio: 3 }
             };
         } else if (phase < 0.72) {
-            // Waning Gibbous - Reflective power
+            // Waning Gibbous → Reflective
             return {
                 type: 'reflective',
                 overdrive: 3.5,
@@ -104,7 +101,7 @@ class LunarProcessor {
                 compand: { attack: 0.2, ratio: 5 }
             };
         } else if (phase < 0.78) {
-            // Last Quarter - Releasing energy
+            // Last Quarter → Releasing
             return {
                 type: 'releasing',
                 overdrive: 4.5,
@@ -114,7 +111,7 @@ class LunarProcessor {
                 compand: { attack: 0.25, ratio: 7 }
             };
         } else {
-            // Waning Crescent - Fading to darkness
+            // Waning Crescent → Fading
             return {
                 type: 'fading',
                 overdrive: 5.0,
@@ -126,13 +123,13 @@ class LunarProcessor {
         }
     }
     
+    // === Time of Day Modifiers ===
     static getTimeInfluence() {
         const now = new Date();
         const hour = now.getHours();
         
-        // Time of day affects processing subtly
         if (hour >= 0 && hour < 6) {
-            // Deep Night - Enhance the darkness
+            // Deep Night → Enhance darkness
             return {
                 type: 'deep_night',
                 modifier: 1.3,
@@ -140,7 +137,7 @@ class LunarProcessor {
                 bassBoost: 0.5
             };
         } else if (hour >= 6 && hour < 12) {
-            // Morning - Brighter, cleaner
+            // Morning → Brighter
             return {
                 type: 'morning',
                 modifier: 0.8,
@@ -149,7 +146,7 @@ class LunarProcessor {
                 trebleBoost: 0.5
             };
         } else if (hour >= 12 && hour < 18) {
-            // Afternoon - Neutral
+            // Afternoon → Neutral
             return {
                 type: 'afternoon',
                 modifier: 1.0,
@@ -157,7 +154,7 @@ class LunarProcessor {
                 bassBoost: 0.0
             };
         } else {
-            // Evening - Warm, mellow
+            // Evening → Warm
             return {
                 type: 'evening',
                 modifier: 1.1,
@@ -172,7 +169,7 @@ class LunarProcessor {
         const moonPhase = this.getMoonPhase();
         const timeInfluence = this.getTimeInfluence();
         
-        // Combine moon phase and time influences
+        // Combine moon + time influences
         const base = moonPhase.influence;
         const time = timeInfluence;
         
@@ -181,7 +178,7 @@ class LunarProcessor {
             timeOfDay: time.type,
             influence: moonPhase.influence.type,
             
-            // Apply time modifications to moon phase base
+            // Apply time modifiers to moon base
             overdrive: Math.max(1.0, base.overdrive * time.modifier),
             bass: base.bass + (time.bassBoost || 0),
             treble: base.treble + (time.trebleBoost || 0),
@@ -191,7 +188,6 @@ class LunarProcessor {
             },
             compand: base.compand,
             
-            // Mystical flavor text
             description: `${moonPhase.name} ${time.type} processing (${base.type})`
         };
     }

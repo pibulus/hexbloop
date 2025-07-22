@@ -8,14 +8,15 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { spawn } = require('child_process');
 
 // Audio processing modules
 const AudioProcessor = require('./src/audio-processor');
 const NameGenerator = require('./src/name-generator');
-const { spawn } = require('child_process');
 
 let mainWindow;
 
+// === Window Management ===
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
@@ -25,8 +26,8 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: true,  // Keep security enabled (drag-drop works with webUtils now)
-            sandbox: false,  // Keep false for our IPC functionality
+            webSecurity: true,  // Drag-drop works with webUtils now
+            sandbox: false,     // Required for IPC functionality
             enableRemoteModule: false,
             allowRunningInsecureContent: false,
             experimentalFeatures: false,
@@ -44,19 +45,16 @@ function createWindow() {
         mainWindow.show();
     });
 
-    // Enable drag-and-drop files at main process level
+    // Workaround: intercept file:// navigation to handle drag-drop
     mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
         const parsedUrl = new URL(navigationUrl);
         if (parsedUrl.protocol === 'file:') {
             event.preventDefault();
             
-            // Extract file path from file:// URL
             const filePath = decodeURIComponent(parsedUrl.pathname);
             console.log('🔍 Detected file drag:', filePath);
             
-            // Check if it's an audio file
             if (/\.(mp3|wav|m4a|aiff|aif|flac|ogg)$/i.test(filePath)) {
-                // Send file path to renderer
                 mainWindow.webContents.send('file-dropped', [filePath]);
             }
         }
@@ -74,7 +72,7 @@ function createWindow() {
     }
 }
 
-// App event handlers
+// === App Lifecycle ===
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
@@ -89,12 +87,12 @@ app.on('activate', () => {
     }
 });
 
-// IPC handlers for audio processing
+// === IPC Handlers ===
 ipcMain.handle('process-audio', async (event, filePaths) => {
     const results = [];
     let firstSuccessfulOutput = null;
     
-    // Create output directory like the original Swift app
+    // Ensure output directory exists
     const outputDirectory = path.join(os.homedir(), 'Documents', 'HexbloopOutput');
     if (!fs.existsSync(outputDirectory)) {
         fs.mkdirSync(outputDirectory, { recursive: true });
@@ -147,7 +145,7 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
         }
     }
     
-    // Open output folder once after all processing is complete
+    // Show processed files in Finder/Explorer
     if (firstSuccessfulOutput) {
         console.log(`📁 Opening output folder for ${results.filter(r => r.success).length} processed files`);
         shell.showItemInFolder(firstSuccessfulOutput);
@@ -156,7 +154,6 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     return results;
 });
 
-// File dialog for manual file selection
 ipcMain.handle('select-files', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openFile', 'multiSelections'],
@@ -169,29 +166,21 @@ ipcMain.handle('select-files', async () => {
     return result.filePaths;
 });
 
-// Handle file paths from drag-drop (workaround for renderer security)
+// Legacy drag-drop handler (kept for compatibility)
 ipcMain.handle('get-file-paths-from-drop', async (event, fileData) => {
-    // Extract paths from file data sent from renderer
     console.log('🔍 Processing drag-drop file data:', fileData);
     
-    // With webSecurity: false, we should be able to access the file path
-    // Try to reconstruct the full path from the file name
     const paths = [];
-    
     for (const file of fileData) {
         if (file.path) {
-            // If we have a direct path, use it
             paths.push(file.path);
         } else if (file.name) {
-            // This is a fallback - in reality, we can't reliably get the full path
-            // from just the filename in a secure way
             console.log(`⚠️ Cannot determine full path for: ${file.name}`);
         }
     }
     
     console.log('🔍 Extracted file paths from drop:', paths);
     
-    // If we couldn't get proper paths, return empty array to trigger click handler
     if (paths.length === 0) {
         console.log('❌ Could not extract file paths from drag-drop');
         return [];
@@ -200,7 +189,7 @@ ipcMain.handle('get-file-paths-from-drop', async (event, fileData) => {
     return paths;
 });
 
-// Check dependencies on startup
+// === Startup & Dependencies ===
 function checkDependencies() {
     const dependencies = ['ffmpeg', 'sox'];
     const results = {};
@@ -229,38 +218,23 @@ function checkDependencies() {
     return results;
 }
 
-// App event handlers
-app.whenReady().then(createWindow);
-
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
-});
-
-app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
-
-// Enhanced error handling (2024 best practice)
+// === Error Handling ===
 process.on('uncaughtException', (error) => {
     console.error('🚨 Uncaught Exception:', error);
-    // In production, you'd want to log this to a service like Sentry
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
-    // In production, you'd want to log this to a service like Sentry
 });
-
-// Renderer process crash handling
 app.on('render-process-gone', (event, webContents, details) => {
     console.error('🚨 Renderer process gone:', details);
     if (details.reason === 'crashed') {
-        // Optionally restart the renderer process
         console.log('🔄 Attempting to reload...');
         webContents.reload();
     }
 });
 
+// === Startup ===
 console.log('🔥 HEXBLOOP ELECTRON - CHAOS MAGIC AUDIO ENGINE 🔥');
 console.log('Checking audio processing dependencies...');
 checkDependencies();

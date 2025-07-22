@@ -6,11 +6,15 @@
 class HexbloopMystic {
     constructor() {
         this.isProcessing = false;
+        
+        // UI elements
         this.hexStack = document.getElementById('hexStack');
         this.pentagram = document.getElementById('pentagram');
         this.processingGlow = document.getElementById('processingGlow');
         this.progressIndicator = document.getElementById('progressIndicator');
         this.progressText = document.getElementById('progressText');
+        
+        // Progress tracking
         this.currentFileIndex = 0;
         this.totalFiles = 0;
         
@@ -20,24 +24,23 @@ class HexbloopMystic {
     }
     
     initEvents() {
-        // Drag and drop - minimal overhead
+        // Set up drag/drop and click handlers
         this.hexStack.addEventListener('dragover', this.onDragOver.bind(this));
         this.hexStack.addEventListener('dragleave', this.onDragLeave.bind(this));
         this.hexStack.addEventListener('drop', this.onDrop.bind(this));
         this.hexStack.addEventListener('click', this.onClick.bind(this));
         
-        // Prevent defaults
+        // Prevent browser default file handling
         document.addEventListener('dragover', e => e.preventDefault());
         document.addEventListener('drop', e => e.preventDefault());
     }
     
     initProgressListeners() {
-        // Listen for progress updates from main process
+        // IPC event listeners
         window.electronAPI.onProcessingProgress((event, data) => {
             this.updateProgress(data);
         });
         
-        // Listen for file drops from main process
         window.electronAPI.onFileDropped((event, filePaths) => {
             console.log('📁 Received file drop from main process:', filePaths);
             if (filePaths && filePaths.length > 0) {
@@ -51,21 +54,20 @@ class HexbloopMystic {
         this.currentFileIndex = current;
         this.totalFiles = total;
         
-        // Update progress display
         if (status === 'processing') {
             console.log(`🎵 Processing ${current}/${total}: ${fileName}`);
             
-            // Show progress indicator
             this.progressIndicator.classList.add('active');
             this.progressText.textContent = `Transmuting ${current} of ${total} • ${fileName}`;
             
-            // Adjust animation speed based on progress
+            // Pentagram spins faster as we progress through files
             const progress = current / total;
-            const speed = 6 - (progress * 3); // Slower as we progress
+            const speed = 6 - (progress * 3);
             this.pentagram.style.animationDuration = `${speed}s`;
         }
     }
     
+    // === Drag & Drop Handlers ===
     onDragOver(e) {
         e.preventDefault();
         this.hexStack.classList.add('feeding');
@@ -96,7 +98,7 @@ class HexbloopMystic {
             })));
             
             try {
-                // Use the new webUtils.getPathForFile() method (Electron v32+ compatible)
+                // Extract file paths using webUtils (Electron v32+)
                 console.log('🔍 Using webUtils.getPathForFile() to extract file paths...');
                 const filePaths = window.electronAPI.getFilePathsFromFiles(audioFiles);
                 
@@ -104,12 +106,11 @@ class HexbloopMystic {
                     console.log('✅ Extracted file paths using webUtils:', filePaths);
                     await this.processFiles(filePaths);
                 } else {
+                    // Fallback to file dialog
                     console.log('❌ webUtils path extraction failed, falling back to file dialog...');
-                    // Show a brief message and automatically open file dialog
                     this.progressText.textContent = 'Opening file selector...';
                     this.progressIndicator.classList.add('active');
                     
-                    // Small delay to show the message
                     setTimeout(async () => {
                         const paths = await window.electronAPI.selectFiles();
                         this.progressIndicator.classList.remove('active');
@@ -146,6 +147,7 @@ class HexbloopMystic {
         return /\.(mp3|wav|m4a|aiff|aif|flac|ogg)$/i.test(file.name);
     }
     
+    // === Audio Processing ===
     async processFiles(paths) {
         this.isProcessing = true;
         this.startProcessing();
@@ -153,12 +155,9 @@ class HexbloopMystic {
         try {
             console.log('🎵 Processing mystical audio:', paths);
             
-            // Process all files
             const results = await window.electronAPI.processAudio(paths);
-            
             console.log('✅ Mystical transformation complete:', results);
             
-            // Check if any files were successfully processed
             const successfulFiles = results.filter(r => r.success);
             if (successfulFiles.length > 0) {
                 this.showSuccess();
@@ -176,6 +175,7 @@ class HexbloopMystic {
         }
     }
     
+    // === UI State Management ===
     startProcessing() {
         this.pentagram.classList.add('spinning');
         this.processingGlow.classList.add('active');
@@ -187,13 +187,11 @@ class HexbloopMystic {
         this.processingGlow.classList.remove('active');
         this.progressIndicator.classList.remove('active');
         this.progressText.textContent = '';
-        
-        // Reset animation speed
-        this.pentagram.style.animationDuration = '';
+        this.pentagram.style.animationDuration = ''; // Reset speed
     }
     
     showSuccess() {
-        // Brief success glow
+        // Flash hexagon bright
         this.hexStack.style.filter = 'brightness(1.5)';
         setTimeout(() => {
             this.hexStack.style.filter = '';
@@ -201,7 +199,7 @@ class HexbloopMystic {
     }
     
     showError(message) {
-        // Brief error flash
+        // Flash hexagon red
         this.hexStack.style.filter = 'hue-rotate(120deg) brightness(1.2)';
         console.log('🚨 USER ERROR:', message);
         setTimeout(() => {

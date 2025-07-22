@@ -1,6 +1,8 @@
 /**
  * @fileoverview Audio processing pipeline with lunar influences
  * @author Hexbloop Audio Labs
+ * 
+ * Pipeline: Input → Sox (mystical effects) → FFmpeg (mastering) → MP3 with embedded artwork
  */
 
 const ffmpeg = require('fluent-ffmpeg');
@@ -16,19 +18,16 @@ class AudioProcessor {
     static async processFile(inputPath, outputPath) {
         console.log(`🎵 Processing: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`);
         
-        // Generate mystical name and artwork
         const bandName = NameGenerator.generateMystical();
         console.log(`✨ Generated band name: ${bandName}`);
         
-        // Get mystical lunar influences
         const influences = LunarProcessor.getInfluencedParameters();
         console.log(`🌙 ${influences.description}`);
         
-        // Create temp file for sox processing
+        // Temp files for processing stages
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
         const processedFile = path.join(path.dirname(outputPath), 'temp_processed.mp3');
         
-        // Initialize artwork generator and metadata embedder
         const artworkGenerator = new ArtworkGenerator();
         const metadataEmbedder = new MetadataEmbedder();
         
@@ -36,17 +35,17 @@ class AudioProcessor {
             // Step 1: Sox processing with lunar influences
             await this.processSox(inputPath, tempFile, influences);
             
-            // Step 2: FFmpeg mastering (exact parameters from "bloop it" script)
+            // Step 2: FFmpeg mastering
             await this.processFFmpeg(tempFile, processedFile);
             
-            // Step 3: Generate artwork (both SVG and PNG)
+            // Step 3: Generate artwork
             const artworkPath = path.join(path.dirname(outputPath), `${bandName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.svg`);
             const artworkResult = await artworkGenerator.generateArtwork(bandName, artworkPath);
             
-            // Step 4: Embed metadata and artwork (use PNG for embedding)
+            // Step 4: Embed metadata and artwork
             await metadataEmbedder.processFileWithMetadata(processedFile, outputPath, bandName, artworkResult.pngPath);
             
-            // Clean up temp files and artwork
+            // Clean up temp files
             if (fs.existsSync(tempFile)) {
                 fs.unlinkSync(tempFile);
             }
@@ -54,7 +53,7 @@ class AudioProcessor {
                 fs.unlinkSync(processedFile);
             }
             
-            // Clean up artwork files after embedding
+            // Clean up artwork files
             try {
                 if (fs.existsSync(artworkPath)) {
                     fs.unlinkSync(artworkPath);
@@ -85,18 +84,18 @@ class AudioProcessor {
     
     static async processSox(inputPath, outputPath, influences) {
         return new Promise((resolve, reject) => {
-            // Use lunar-influenced parameters
+            // Sox effects chain with lunar-influenced parameters
             const soxProcess = spawn('sox', [
                 inputPath,
                 outputPath,
-                'gain', '-n', '-1.5',
-                'overdrive', influences.overdrive.toString(), '2.5',
-                'bass', `+${influences.bass}`,
-                'treble', influences.treble >= 0 ? `+${influences.treble}` : influences.treble.toString(),
-                'echo', influences.echo.delay.toString(), influences.echo.decay.toString(), '6.5', '0.045',
-                'compand', `${influences.compand.attack},0.6`, '6:-70,-60,-20', '-2', '-90', '0.25',
-                'rate', '44100',
-                'dither'
+                'gain', '-n', '-1.5',                    // Normalize
+                'overdrive', influences.overdrive.toString(), '2.5',  // Distortion
+                'bass', `+${influences.bass}`,            // Low freq boost
+                'treble', influences.treble >= 0 ? `+${influences.treble}` : influences.treble.toString(),  // High freq adjust
+                'echo', influences.echo.delay.toString(), influences.echo.decay.toString(), '6.5', '0.045',  // Echo effect
+                'compand', `${influences.compand.attack},0.6`, '6:-70,-60,-20', '-2', '-90', '0.25',  // Compression
+                'rate', '44100',                          // Sample rate
+                'dither'                                  // Dithering
             ]);
             
             let stderr = '';
@@ -111,14 +110,12 @@ class AudioProcessor {
                     resolve();
                 } else {
                     console.log('⚠️ Sox not available, using FFmpeg for all processing...');
-                    // Fallback: use FFmpeg to simulate sox effects
                     this.processWithFFmpegOnly(inputPath, outputPath, influences).then(resolve).catch(reject);
                 }
             });
             
             soxProcess.on('error', (error) => {
                 console.log('⚠️ Sox not found, using FFmpeg fallback...');
-                // Fallback: use FFmpeg to simulate sox effects
                 this.processWithFFmpegOnly(inputPath, outputPath, influences).then(resolve).catch(reject);
             });
         });
@@ -126,13 +123,13 @@ class AudioProcessor {
     
     static async processWithFFmpegOnly(inputPath, outputPath, influences) {
         return new Promise((resolve, reject) => {
-            // FFmpeg filter chain that approximates the sox processing with lunar influences
+            // FFmpeg fallback that approximates Sox effects
             const soxLikeFilters = [
-                'volume=-1.5dB',  // gain -n -1.5
-                `bass=g=${influences.bass}`,     // bass with lunar influence
-                `treble=g=${influences.treble}`,     // treble with lunar influence
-                `aecho=${influences.echo.delay}:${influences.echo.decay}:6.5:0.045`,  // echo with lunar timing
-                `acompressor=threshold=-20dB:ratio=${influences.compand.ratio || 6}:attack=${influences.compand.attack * 1000}:release=250:makeup=2`  // compand approximation
+                'volume=-1.5dB',
+                `bass=g=${influences.bass}`,
+                `treble=g=${influences.treble}`,
+                `aecho=${influences.echo.delay}:${influences.echo.decay}:6.5:0.045`,
+                `acompressor=threshold=-20dB:ratio=${influences.compand.ratio || 6}:attack=${influences.compand.attack * 1000}:release=250:makeup=2`
             ].join(',');
             
             ffmpeg(inputPath)
@@ -157,14 +154,14 @@ class AudioProcessor {
     
     static async processFFmpeg(inputPath, outputPath) {
         return new Promise((resolve, reject) => {
-            // Exact FFmpeg filter chain from "bloop it" script
+            // Mastering chain: EQ → Compression → Limiting
             const filterComplex = [
-                'equalizer=f=100:t=q:w=1:g=0.3',
-                'equalizer=f=800:t=q:w=1.2:g=0.5',
-                'equalizer=f=1600:t=q:w=1:g=0.4',
-                'equalizer=f=5000:t=q:w=1:g=0.3',
-                'acompressor=threshold=-12dB:ratio=2:attack=100:release=1000:makeup=1.5',
-                'alimiter=limit=0.97'
+                'equalizer=f=100:t=q:w=1:g=0.3',      // Low bass boost
+                'equalizer=f=800:t=q:w=1.2:g=0.5',    // Low-mid presence
+                'equalizer=f=1600:t=q:w=1:g=0.4',     // Mid clarity
+                'equalizer=f=5000:t=q:w=1:g=0.3',     // High-mid sparkle
+                'acompressor=threshold=-12dB:ratio=2:attack=100:release=1000:makeup=1.5',  // Gentle compression
+                'alimiter=limit=0.97'                  // Brick wall limiter
             ].join(',');
             
             ffmpeg(inputPath)
