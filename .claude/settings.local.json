@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./bundle_ffmpeg.sh)",
+      "Bash(/Users/pabloalvarado/Documents/Hexbloop/ffmpeg_wrapper.sh -version)",
+      "Bash(brew install:*)",
+      "Bash(cd:*)",
+      "Bash(chmod:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(sed:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(rg:*)",
+      "Bash(swift build:*)",
+      "Bash(swift:*)",
+      "mcp__openai__openai_chat",
+      "mcp__sequential-thinking__sequentialthinking_tools",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(pkill:*)",
+      "Bash(node:*)",
+      "Bash(cat:*)",
+      "Bash(pmset:*)",
+      "Bash(time zsh:*)",
+      "Bash(diff:*)",
+      "Bash(zsh:*)",
+      "Bash(npm start)",
+      "Bash(open:*)",
+      "Bash(npm uninstall:*)"
+    ],
+    "deny": []
+  }
+}

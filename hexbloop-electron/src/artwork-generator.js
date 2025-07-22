@@ -4,6 +4,9 @@
  * @description Generates SVG-based procedural artwork based on band names and styles
  */
 
+const { spawn } = require('child_process');
+const fs = require('fs').promises;
+
 class ArtworkGenerator {
     constructor() {
         this.width = 1000;
@@ -275,7 +278,6 @@ class ArtworkGenerator {
     async generateArtwork(bandName, outputPath) {
         const svg = this.generateSVG(bandName);
         const fs = require('fs').promises;
-        const { convert } = require('convert-svg-to-png');
         const path = require('path');
         
         try {
@@ -283,16 +285,14 @@ class ArtworkGenerator {
             await fs.writeFile(outputPath, svg, 'utf8');
             console.log(`✨ SVG artwork saved to: ${outputPath}`);
             
-            // Convert to PNG for audio embedding
+            // Convert to PNG using built-in macOS tools (no puppeteer needed!)
             const pngPath = outputPath.replace('.svg', '.png');
-            const pngBuffer = await convert(svg, {
-                width: 800,
-                height: 800,
-                quality: 0.9
-            });
-            
-            await fs.writeFile(pngPath, pngBuffer);
-            console.log(`✨ PNG artwork saved to: ${pngPath}`);
+            try {
+                await this.convertSvgToPng(outputPath, pngPath);
+                console.log(`✨ PNG artwork saved to: ${pngPath}`);
+            } catch (error) {
+                console.log(`⚠️ PNG conversion failed, using SVG only: ${error.message}`);
+            }
             
             return {
                 svgPath: outputPath,
@@ -304,15 +304,25 @@ class ArtworkGenerator {
         }
     }
     
-    /**
-     * Convert SVG to PNG using built-in Canvas API (for metadata embedding)
-     */
-    async convertSVGToPNG(svgContent, outputPath) {
-        // This would need a proper SVG to PNG converter
-        // For now, we'll save the SVG and use it directly
-        // In a full implementation, you'd use a library like sharp or canvas
-        console.log('📝 SVG to PNG conversion would happen here');
-        return svgContent;
+    // Simple SVG to PNG conversion using macOS built-in tools
+    async convertSvgToPng(svgPath, pngPath) {
+        return new Promise((resolve, reject) => {
+            // Use qlmanage (QuickLook) to convert SVG to PNG - built into macOS
+            const process = spawn('qlmanage', ['-t', '-s', '800', '-o', require('path').dirname(pngPath), svgPath]);
+            
+            process.on('close', (code) => {
+                if (code === 0) {
+                    // qlmanage creates filename.svg.png, rename it
+                    const qlPath = pngPath.replace('.png', '.svg.png');
+                    require('fs').rename(qlPath, pngPath, (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                } else {
+                    reject(new Error(`qlmanage failed with code ${code}`));
+                }
+            });
+        });
     }
 }
 

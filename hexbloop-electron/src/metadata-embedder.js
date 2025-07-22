@@ -82,19 +82,15 @@ class MetadataEmbedder {
             outputPath
         ];
         
-        // Add PNG artwork if provided
-        if (artworkPath && artworkPath.endsWith('.png')) {
-            try {
-                await fs.access(artworkPath);
-                args.splice(2, 0, '-i', artworkPath); // Insert artwork input
-                args.splice(6, 0, '-map', '0:a', '-map', '1:0'); // Map audio from first input, artwork from second
-                args.splice(8, 0, '-id3v2_version', '3'); // Use ID3v2.3 for better compatibility
-                console.log(`🎨 Embedding PNG artwork: ${artworkPath}`);
-            } catch (error) {
-                console.log(`⚠️  Artwork file not found: ${artworkPath}`);
+        // For M4A files, we need to handle artwork differently
+        // FFmpeg doesn't support embedding images in M4A directly, so we'll skip it
+        if (artworkPath) {
+            if (artworkPath.endsWith('.png')) {
+                console.log(`🎨 PNG artwork generated: ${artworkPath}`);
+                console.log(`ℹ️  Note: M4A format doesn't support embedded artwork via FFmpeg`);
+            } else {
+                console.log(`🎨 SVG artwork generated: ${artworkPath}`);
             }
-        } else if (artworkPath) {
-            console.log(`🎨 Artwork generated: ${artworkPath} (SVG format, PNG version will be embedded)`);
         }
         
         return new Promise((resolve, reject) => {
