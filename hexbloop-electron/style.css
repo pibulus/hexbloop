@@ -103,118 +103,183 @@ body {
     will-change: transform, opacity, box-shadow;
     transform-origin: center;
     backface-visibility: hidden;
+    transition: background 0.6s ease-out, box-shadow 0.6s ease-out, opacity 0.4s ease-out;
 }
 
-/* OUTER HEXAGON - EXACT SWIFT COLORS */
+/* OUTER HEXAGON - LUSH MYSTICAL COLORS */
 .hex-outer {
     width: 300px;
     height: 300px;
-    /* LinearGradient(gradient: Gradient(colors: hexagonColors), startPoint: .top, endPoint: .bottom) */
-    /* hexagonColors = [Color.purple.opacity(0.7), Color.pink.opacity(0.6)] */
     background: linear-gradient(
         to bottom,
         rgba(88, 86, 214, 0.7),   /* SwiftUI Color.purple */
         rgba(255, 45, 85, 0.6)    /* SwiftUI Color.pink */
     );
-    /* .shadow(color: Color.purple.opacity(0.6), radius: glowPulse1 ? 40 : 30) */
-    box-shadow: 0 0 30px rgba(88, 86, 214, 0.6);
-    /* .opacity(glowPulse1 ? 0.9 : 0.7) */
+    /* Enhanced multi-layer glow system */
+    box-shadow: 
+        0 0 20px rgba(88, 86, 214, 0.8),      /* Inner glow */
+        0 0 40px rgba(88, 86, 214, 0.6),      /* Middle glow */
+        0 0 80px rgba(88, 86, 214, 0.3),      /* Outer glow */
+        0 0 120px rgba(255, 45, 85, 0.2);     /* Far glow */
     opacity: 0.7;
-    /* .scaleEffect(glowPulse1 ? 1.3 : 1.0) + .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) */
-    animation: glow-pulse-1 2.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    animation: glow-pulse-1-lush 3s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
 }
 
-@keyframes glow-pulse-1 {
+@keyframes glow-pulse-1-lush {
     0% {
         transform: translate(-50%, -50%) scale(1.0);
         opacity: 0.7;
-        box-shadow: 0 0 30px rgba(88, 86, 214, 0.6);
+        box-shadow: 
+            0 0 20px rgba(88, 86, 214, 0.8),
+            0 0 40px rgba(88, 86, 214, 0.6),
+            0 0 80px rgba(88, 86, 214, 0.3),
+            0 0 120px rgba(255, 45, 85, 0.2);
     }
     100% {
         transform: translate(-50%, -50%) scale(1.3);
         opacity: 0.9;
-        box-shadow: 0 0 40px rgba(88, 86, 214, 0.6);
+        box-shadow: 
+            0 0 30px rgba(88, 86, 214, 1.0),
+            0 0 60px rgba(88, 86, 214, 0.8),
+            0 0 120px rgba(88, 86, 214, 0.5),
+            0 0 180px rgba(255, 45, 85, 0.3);
     }
 }
 
-/* MIDDLE HEXAGON - EXACT SWIFT COLORS REVERSED */
+/* MIDDLE HEXAGON - LUSH MYSTICAL REVERSED */
 .hex-middle {
     width: 250px;
     height: 250px;
-    /* LinearGradient(gradient: Gradient(colors: hexagonColors.reversed()), startPoint: .bottom, endPoint: .top) */
     background: linear-gradient(
         to top,
         rgba(88, 86, 214, 0.7),   /* reversed order - SwiftUI purple */
         rgba(255, 45, 85, 0.6)    /* SwiftUI pink */
     );
-    /* .shadow(color: Color.blue.opacity(0.5), radius: glowPulse2 ? 35 : 25) */
-    box-shadow: 0 0 25px rgba(0, 122, 255, 0.5);
-    /* .opacity(glowPulse2 ? 0.8 : 0.6) */
+    /* Enhanced multi-layer glow system */
+    box-shadow: 
+        0 0 15px rgba(0, 122, 255, 0.7),      /* Inner glow */
+        0 0 30px rgba(0, 122, 255, 0.5),      /* Middle glow */
+        0 0 60px rgba(0, 122, 255, 0.3),      /* Outer glow */
+        0 0 90px rgba(88, 86, 214, 0.2);      /* Far glow */
     opacity: 0.6;
-    animation: glow-pulse-2 2.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    animation: glow-pulse-2-lush 3.2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
     animation-delay: 0.5s;
 }
 
-@keyframes glow-pulse-2 {
+@keyframes glow-pulse-2-lush {
     0% {
         transform: translate(-50%, -50%) scale(1.0);
         opacity: 0.6;
-        box-shadow: 0 0 25px rgba(0, 122, 255, 0.5);
+        box-shadow: 
+            0 0 15px rgba(0, 122, 255, 0.7),
+            0 0 30px rgba(0, 122, 255, 0.5),
+            0 0 60px rgba(0, 122, 255, 0.3),
+            0 0 90px rgba(88, 86, 214, 0.2);
     }
     100% {
         transform: translate(-50%, -50%) scale(1.2);
         opacity: 0.8;
-        box-shadow: 0 0 35px rgba(0, 122, 255, 0.5);
+        box-shadow: 
+            0 0 25px rgba(0, 122, 255, 0.9),
+            0 0 50px rgba(0, 122, 255, 0.7),
+            0 0 100px rgba(0, 122, 255, 0.4),
+            0 0 140px rgba(88, 86, 214, 0.3);
     }
 }
 
-/* INNER HEXAGON - EXACT SWIFT COLORS */
+/* INNER HEXAGON - LUSH MYSTICAL CORE */
 .hex-inner {
     width: 200px;
     height: 200px;
-    /* LinearGradient(gradient: Gradient(colors: innerHexagonColors), startPoint: .leading, endPoint: .trailing) */
-    /* innerHexagonColors = [Color.yellow.opacity(0.5), Color.orange.opacity(0.5)] */
     background: linear-gradient(
         to right,
         rgba(255, 204, 0, 0.5),    /* SwiftUI Color.yellow */
         rgba(255, 149, 0, 0.5)      /* SwiftUI Color.orange */
     );
-    /* .shadow(color: Color.orange.opacity(0.4), radius: glowPulse3 ? 30 : 20) */
-    box-shadow: 0 0 20px rgba(255, 149, 0, 0.4);
-    /* .opacity(glowPulse3 ? 0.7 : 0.5) */
+    /* Enhanced multi-layer glow system */
+    box-shadow: 
+        0 0 10px rgba(255, 149, 0, 0.8),      /* Inner glow */
+        0 0 20px rgba(255, 149, 0, 0.6),      /* Middle glow */
+        0 0 40px rgba(255, 149, 0, 0.4),      /* Outer glow */
+        0 0 60px rgba(255, 204, 0, 0.3);      /* Far glow */
     opacity: 0.5;
-    animation: glow-pulse-3 3s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    animation: glow-pulse-3-lush 3.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
     animation-delay: 1s;
 }
 
-@keyframes glow-pulse-3 {
+@keyframes glow-pulse-3-lush {
     0% {
         transform: translate(-50%, -50%) scale(1.0);
         opacity: 0.5;
-        box-shadow: 0 0 20px rgba(255, 149, 0, 0.4);
+        box-shadow: 
+            0 0 10px rgba(255, 149, 0, 0.8),
+            0 0 20px rgba(255, 149, 0, 0.6),
+            0 0 40px rgba(255, 149, 0, 0.4),
+            0 0 60px rgba(255, 204, 0, 0.3);
     }
     100% {
         transform: translate(-50%, -50%) scale(1.2);
         opacity: 0.7;
-        box-shadow: 0 0 30px rgba(255, 149, 0, 0.4);
+        box-shadow: 
+            0 0 15px rgba(255, 149, 0, 1.0),
+            0 0 30px rgba(255, 149, 0, 0.8),
+            0 0 60px rgba(255, 149, 0, 0.5),
+            0 0 90px rgba(255, 204, 0, 0.4);
     }
 }
 
-/* PENTAGRAM - EXACT SWIFT STYLING */
+/* Feeding state animations - synchronized and smooth */
+@keyframes glow-pulse-1-feeding {
+    0% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.8;
+        box-shadow: 0 0 60px rgba(255, 255, 255, 0.6);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.4);
+        opacity: 1.0;
+        box-shadow: 0 0 100px rgba(255, 255, 255, 0.9);
+    }
+}
+
+@keyframes glow-pulse-2-feeding {
+    0% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 0.7;
+        box-shadow: 0 0 45px rgba(255, 255, 255, 0.5);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.25);
+        opacity: 0.9;
+        box-shadow: 0 0 75px rgba(255, 255, 255, 0.7);
+    }
+}
+
+@keyframes glow-pulse-3-feeding {
+    0% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 0.6;
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 0.8;
+        box-shadow: 0 0 50px rgba(255, 255, 255, 0.6);
+    }
+}
+
+/* PENTAGRAM - SMOOTH MYSTICAL STYLING */
 .pentagram {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    /* .font(.system(size: 120)) */
     font-size: 120px;
-    /* .foregroundColor(.white.opacity(0.4)) */
     color: rgba(255, 255, 255, 0.4);
-    /* .shadow(color: .purple.opacity(0.5), radius: 20) */
     text-shadow: 0 0 20px rgba(88, 86, 214, 0.5);
     z-index: 10;
     will-change: transform;
-    transition: transform 0.3s ease-out;
+    transition: transform 0.6s ease-out, color 0.6s ease-out, text-shadow 0.6s ease-out;
 }
 
 .pentagram.spinning {
@@ -227,14 +292,34 @@ body {
     to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* HOVER STATES - EXACT SWIFT BEHAVIOR */
+/* SMOOTH HOVER STATES */
 .hexagon-stack:hover .hex-outer {
-    /* isHoveringOverHex ? [Color.purple, Color.purple.opacity(0.8)] */
     background: linear-gradient(
         to bottom,
         rgb(159, 121, 234),
         rgba(88, 86, 214, 0.8)
     );
+    box-shadow: 
+        0 0 25px rgba(159, 121, 234, 0.9),
+        0 0 50px rgba(159, 121, 234, 0.7),
+        0 0 100px rgba(159, 121, 234, 0.4),
+        0 0 150px rgba(255, 45, 85, 0.3);
+}
+
+.hexagon-stack:hover .hex-middle {
+    box-shadow: 
+        0 0 20px rgba(159, 121, 234, 0.8),
+        0 0 40px rgba(159, 121, 234, 0.6),
+        0 0 80px rgba(159, 121, 234, 0.4),
+        0 0 120px rgba(88, 86, 214, 0.3);
+}
+
+.hexagon-stack:hover .hex-inner {
+    box-shadow: 
+        0 0 15px rgba(255, 149, 0, 0.9),
+        0 0 35px rgba(255, 149, 0, 0.7),
+        0 0 70px rgba(255, 149, 0, 0.4),
+        0 0 100px rgba(255, 204, 0, 0.3);
 }
 
 .hexagon-stack:hover .pentagram {
@@ -243,7 +328,7 @@ body {
     transform: translate(-50%, -50%) scale(1.1);
 }
 
-/* DRAG HOVER STATE - FEEDING THE BEAST */
+/* SMOOTH DRAG HOVER STATE - FEEDING THE BEAST */
 .hexagon-stack.feeding .hex-outer {
     background: linear-gradient(
         to bottom,
@@ -251,17 +336,22 @@ body {
         rgba(255, 255, 255, 0.6)
     );
     box-shadow: 0 0 80px rgba(255, 255, 255, 0.8);
-    animation-duration: 1s;
+    animation: glow-pulse-1-feeding 1.2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    transition: background 0.5s ease-out, box-shadow 0.5s ease-out;
 }
 
 .hexagon-stack.feeding .hex-middle {
     box-shadow: 0 0 60px rgba(255, 255, 255, 0.6);
-    animation-duration: 1s;
+    animation: glow-pulse-2-feeding 1.2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    animation-delay: 0.2s;
+    transition: box-shadow 0.5s ease-out;
 }
 
 .hexagon-stack.feeding .hex-inner {
     box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
-    animation-duration: 1s;
+    animation: glow-pulse-3-feeding 1.2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite alternate;
+    animation-delay: 0.4s;
+    transition: box-shadow 0.5s ease-out;
 }
 
 .hexagon-stack.feeding .pentagram {
@@ -332,6 +422,147 @@ body {
     text-shadow: 0 0 10px rgba(88, 86, 214, 0.5);
     letter-spacing: 1px;
 }
+
+/* SUCCESS GLOW CONFIRMATION */
+.hexagon-stack.success-glow .hex-outer {
+    animation: success-glow-outer 2s ease-out;
+}
+
+.hexagon-stack.success-glow .hex-middle {
+    animation: success-glow-middle 2s ease-out;
+    animation-delay: 0.1s;
+}
+
+.hexagon-stack.success-glow .hex-inner {
+    animation: success-glow-inner 2s ease-out;
+    animation-delay: 0.2s;
+}
+
+.hexagon-stack.success-glow .pentagram {
+    animation: success-glow-pentagram 2s ease-out;
+}
+
+@keyframes success-glow-outer {
+    0% { 
+        box-shadow: 
+            0 0 20px rgba(88, 86, 214, 0.8),
+            0 0 40px rgba(88, 86, 214, 0.6),
+            0 0 80px rgba(88, 86, 214, 0.3),
+            0 0 120px rgba(255, 45, 85, 0.2);
+    }
+    25% {
+        box-shadow: 
+            0 0 40px rgba(255, 215, 0, 1.0),      /* Golden flash */
+            0 0 80px rgba(255, 215, 0, 0.8),
+            0 0 160px rgba(255, 215, 0, 0.6),
+            0 0 240px rgba(255, 140, 0, 0.4);
+    }
+    100% { 
+        box-shadow: 
+            0 0 30px rgba(88, 86, 214, 1.0),
+            0 0 60px rgba(88, 86, 214, 0.8),
+            0 0 120px rgba(88, 86, 214, 0.5),
+            0 0 180px rgba(255, 45, 85, 0.3);
+    }
+}
+
+@keyframes success-glow-middle {
+    0% { 
+        box-shadow: 
+            0 0 15px rgba(0, 122, 255, 0.7),
+            0 0 30px rgba(0, 122, 255, 0.5),
+            0 0 60px rgba(0, 122, 255, 0.3),
+            0 0 90px rgba(88, 86, 214, 0.2);
+    }
+    25% {
+        box-shadow: 
+            0 0 30px rgba(255, 215, 0, 0.9),
+            0 0 60px rgba(255, 215, 0, 0.7),
+            0 0 120px rgba(255, 215, 0, 0.5),
+            0 0 180px rgba(255, 140, 0, 0.3);
+    }
+    100% { 
+        box-shadow: 
+            0 0 25px rgba(0, 122, 255, 0.9),
+            0 0 50px rgba(0, 122, 255, 0.7),
+            0 0 100px rgba(0, 122, 255, 0.4),
+            0 0 140px rgba(88, 86, 214, 0.3);
+    }
+}
+
+@keyframes success-glow-inner {
+    0% { 
+        box-shadow: 
+            0 0 10px rgba(255, 149, 0, 0.8),
+            0 0 20px rgba(255, 149, 0, 0.6),
+            0 0 40px rgba(255, 149, 0, 0.4),
+            0 0 60px rgba(255, 204, 0, 0.3);
+    }
+    25% {
+        box-shadow: 
+            0 0 20px rgba(255, 215, 0, 1.0),
+            0 0 40px rgba(255, 215, 0, 0.8),
+            0 0 80px rgba(255, 215, 0, 0.6),
+            0 0 120px rgba(255, 140, 0, 0.4);
+    }
+    100% { 
+        box-shadow: 
+            0 0 15px rgba(255, 149, 0, 1.0),
+            0 0 30px rgba(255, 149, 0, 0.8),
+            0 0 60px rgba(255, 149, 0, 0.5),
+            0 0 90px rgba(255, 204, 0, 0.4);
+    }
+}
+
+@keyframes success-glow-pentagram {
+    0% { 
+        color: rgba(255, 255, 255, 0.4);
+        text-shadow: 0 0 20px rgba(88, 86, 214, 0.5);
+        transform: translate(-50%, -50%) scale(1.0);
+    }
+    25% {
+        color: rgba(255, 215, 0, 1.0);
+        text-shadow: 
+            0 0 30px rgba(255, 215, 0, 0.8),
+            0 0 60px rgba(255, 215, 0, 0.6);
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+    100% { 
+        color: rgba(255, 255, 255, 0.6);
+        text-shadow: 0 0 25px rgba(88, 86, 214, 0.6);
+        transform: translate(-50%, -50%) scale(1.0);
+    }
+}
+
+/* SUCCESS RIPPLE EFFECT */
+.success-ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 2px solid rgba(255, 215, 0, 0.8);
+    pointer-events: none;
+    animation: success-ripple 1.5s ease-out;
+}
+
+@keyframes success-ripple {
+    0% {
+        width: 100px;
+        height: 100px;
+        opacity: 1;
+        border-width: 2px;
+    }
+    100% {
+        width: 500px;
+        height: 500px;
+        opacity: 0;
+        border-width: 0;
+    }
+}
+
 
 /* Performance optimizations */
 .hexagon-stack,

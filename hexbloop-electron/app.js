@@ -18,13 +18,26 @@ class HexbloopMystic {
         this.currentFileIndex = 0;
         this.totalFiles = 0;
         
+        // Drag state management
+        this.dragCounter = 0;
+        this.isDragActive = false;
+        this.dragLeaveTimeout = null;
+        
+        // Mouse parallax system
+        this.mouseX = 0;
+        this.mouseY = 0;
+        this.centerX = 0;
+        this.centerY = 0;
+        
         this.initEvents();
         this.initProgressListeners();
+        this.initParallax();
         console.log('🔥 Mystical hexagon awakened - ready for sacrifices 🤘');
     }
     
     initEvents() {
         // Set up drag/drop and click handlers
+        this.hexStack.addEventListener('dragenter', this.onDragEnter.bind(this));
         this.hexStack.addEventListener('dragover', this.onDragOver.bind(this));
         this.hexStack.addEventListener('dragleave', this.onDragLeave.bind(this));
         this.hexStack.addEventListener('drop', this.onDrop.bind(this));
@@ -49,6 +62,57 @@ class HexbloopMystic {
         });
     }
     
+    initParallax() {
+        // Calculate center position
+        this.updateCenter();
+        
+        // Mouse move tracking for parallax effect
+        document.addEventListener('mousemove', (e) => {
+            this.mouseX = e.clientX;
+            this.mouseY = e.clientY;
+            this.updateParallax();
+        });
+        
+        // Recalculate center on window resize
+        window.addEventListener('resize', () => {
+            this.updateCenter();
+        });
+    }
+    
+    updateCenter() {
+        this.centerX = window.innerWidth / 2;
+        this.centerY = window.innerHeight / 2;
+    }
+    
+    updateParallax() {
+        // Calculate mouse position relative to center (-1 to 1)
+        const deltaX = (this.mouseX - this.centerX) / this.centerX;
+        const deltaY = (this.mouseY - this.centerY) / this.centerY;
+        
+        // Subtle parallax intensity (max 5px movement)
+        const intensity = 5;
+        
+        // Apply different parallax amounts to each layer for depth
+        const outerX = deltaX * intensity * 0.8;
+        const outerY = deltaY * intensity * 0.8;
+        const middleX = deltaX * intensity * 0.5;
+        const middleY = deltaY * intensity * 0.5;
+        const innerX = deltaX * intensity * 0.3;
+        const innerY = deltaY * intensity * 0.3;
+        const pentagramX = deltaX * intensity * 0.2;
+        const pentagramY = deltaY * intensity * 0.2;
+        
+        // Apply transforms (preserve existing transform)
+        document.getElementById('hexOuter').style.transform = 
+            `translate(-50%, -50%) translate3d(${outerX}px, ${outerY}px, 0)`;
+        document.getElementById('hexMiddle').style.transform = 
+            `translate(-50%, -50%) translate3d(${middleX}px, ${middleY}px, 0)`;
+        document.getElementById('hexInner').style.transform = 
+            `translate(-50%, -50%) translate3d(${innerX}px, ${innerY}px, 0)`;
+        this.pentagram.style.transform = 
+            `translate(-50%, -50%) translate3d(${pentagramX}px, ${pentagramY}px, 0)`;
+    }
+    
     updateProgress(data) {
         const { current, total, fileName, status } = data;
         this.currentFileIndex = current;
@@ -68,19 +132,64 @@ class HexbloopMystic {
     }
     
     // === Drag & Drop Handlers ===
+    onDragEnter(e) {
+        e.preventDefault();
+        this.dragCounter++;
+        
+        if (!this.isDragActive) {
+            this.isDragActive = true;
+            this.setFeedingState(true);
+        }
+        
+        // Clear any pending drag leave timeout
+        if (this.dragLeaveTimeout) {
+            clearTimeout(this.dragLeaveTimeout);
+            this.dragLeaveTimeout = null;
+        }
+    }
+    
     onDragOver(e) {
         e.preventDefault();
-        this.hexStack.classList.add('feeding');
+        // Keep the drag active state but don't toggle classes
     }
     
     onDragLeave(e) {
         e.preventDefault();
-        this.hexStack.classList.remove('feeding');
+        this.dragCounter--;
+        
+        // Only trigger leave state if we've left all nested elements
+        if (this.dragCounter <= 0) {
+            this.dragCounter = 0;
+            
+            // Debounce drag leave to prevent glitching
+            this.dragLeaveTimeout = setTimeout(() => {
+                if (this.dragCounter === 0 && this.isDragActive) {
+                    this.isDragActive = false;
+                    this.setFeedingState(false);
+                }
+            }, 50); // 50ms debounce
+        }
+    }
+    
+    setFeedingState(isFeeding) {
+        if (isFeeding) {
+            this.hexStack.classList.add('feeding');
+        } else {
+            this.hexStack.classList.remove('feeding');
+        }
     }
     
     async onDrop(e) {
         e.preventDefault();
-        this.hexStack.classList.remove('feeding');
+        
+        // Reset drag state
+        this.dragCounter = 0;
+        this.isDragActive = false;
+        if (this.dragLeaveTimeout) {
+            clearTimeout(this.dragLeaveTimeout);
+            this.dragLeaveTimeout = null;
+        }
+        this.setFeedingState(false);
         
         if (this.isProcessing) return;
         
@@ -180,22 +289,48 @@ class HexbloopMystic {
         this.pentagram.classList.add('spinning');
         this.processingGlow.classList.add('active');
         this.progressIndicator.classList.add('active');
+        this.hexStack.classList.add('processing'); // Enhanced particles during processing
     }
     
     stopProcessing() {
         this.pentagram.classList.remove('spinning');
         this.processingGlow.classList.remove('active');
         this.progressIndicator.classList.remove('active');
+        this.hexStack.classList.remove('processing'); // Reset particles
         this.progressText.textContent = '';
         this.pentagram.style.animationDuration = ''; // Reset speed
     }
     
     showSuccess() {
-        // Flash hexagon bright
-        this.hexStack.style.filter = 'brightness(1.5)';
+        // Enhanced success glow confirmation
+        this.triggerSuccessGlow();
+    }
+    
+    triggerSuccessGlow() {
+        // Add success glow class for enhanced visual feedback
+        this.hexStack.classList.add('success-glow');
+        
+        // Create ripple effect
+        this.createSuccessRipple();
+        
+        // Reset after animation completes
         setTimeout(() => {
-            this.hexStack.style.filter = '';
-        }, 1000);
+            this.hexStack.classList.remove('success-glow');
+        }, 2000);
+    }
+    
+    createSuccessRipple() {
+        // Create ripple element
+        const ripple = document.createElement('div');
+        ripple.className = 'success-ripple';
+        this.hexStack.appendChild(ripple);
+        
+        // Remove ripple after animation
+        setTimeout(() => {
+            if (ripple.parentNode) {
+                ripple.parentNode.removeChild(ripple);
+            }
+        }, 1500);
     }
     
     showError(message) {
