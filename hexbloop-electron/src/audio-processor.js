@@ -46,12 +46,26 @@ class AudioProcessor {
             // Step 4: Embed metadata and artwork (use PNG for embedding)
             await metadataEmbedder.processFileWithMetadata(processedFile, outputPath, bandName, artworkResult.pngPath);
             
-            // Clean up temp files
+            // Clean up temp files and artwork
             if (fs.existsSync(tempFile)) {
                 fs.unlinkSync(tempFile);
             }
             if (fs.existsSync(processedFile)) {
                 fs.unlinkSync(processedFile);
+            }
+            
+            // Clean up artwork files after embedding
+            try {
+                if (fs.existsSync(artworkPath)) {
+                    fs.unlinkSync(artworkPath);
+                    console.log('🧹 Cleaned up SVG artwork file');
+                }
+                if (artworkResult.pngPath && fs.existsSync(artworkResult.pngPath)) {
+                    fs.unlinkSync(artworkResult.pngPath);
+                    console.log('🧹 Cleaned up PNG artwork file');
+                }
+            } catch (cleanupError) {
+                console.log('⚠️  Could not clean up artwork files:', cleanupError.message);
             }
             
             console.log(`✅ Successfully processed: ${path.basename(outputPath)}`);

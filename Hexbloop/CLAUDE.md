@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Structure
+This repository contains two implementations:
+1. **Swift macOS App** (`/hexbloop/`) - Native Mac App Store version
+2. **Electron Cross-Platform App** (`/hexbloop-electron/`) - Modern web-based version
+
 ## About Hexbloop
 Hexbloop is a creative audio processing app that enhances audio files with mystical digital processing influenced by natural factors like moon phases and time of day. It's a digital-meets-organic "chaos magic engine" for creative audio processing featuring:
 - Nature-influenced audio processing (moon phases, time of day affect sound characteristics)
@@ -11,11 +16,24 @@ Hexbloop is a creative audio processing app that enhances audio files with mysti
 - Mac App Store compliant processing using native AVAudioEngine
 
 ## Build Commands
+
+### Swift Version (macOS only)
 - **Build**: Open in Xcode and press Cmd+B or use Product > Build
 - **Run**: Cmd+R or Product > Run in Xcode
 - **Test**: Cmd+U to run unit tests
 - **Target**: macOS 12.0+, designed for Mac App Store distribution
 - **Important**: Set "Strict Concurrency Checking" to "Minimal" in Build Settings to avoid Swift 6 warnings
+
+### Electron Version (Cross-platform)
+```bash
+cd hexbloop-electron
+npm install              # Install dependencies
+npm start               # Run the app
+npm run dev             # Run with DevTools
+npm run build           # Build for distribution
+```
+- **Dependencies**: Requires sox and ffmpeg installed (`brew install sox ffmpeg`)
+- **Output**: MP3 files with embedded artwork using node-id3
 
 ## Development Setup
 - Uses Xcode 16.2+ with Swift 5.0
@@ -99,7 +117,8 @@ Processing parameters are influenced by real-world factors:
 - Added `BatchAudioProcessor` for fast concurrent file processing (10x speed improvement)
 - Implemented proper metadata and artwork embedding in output files
 - Fixed deprecated menu style API and registerFileRepresentation
-- Output format is M4A (not MP3) for native AVFoundation support
+- Output format is M4A (not MP3) for native AVFoundation support in Swift version
+- Electron version outputs MP3 with embedded artwork via node-id3
 
 ## Critical Audio Processing Notes
 - **DO NOT MUTE mainMixerNode** - This kills the audio tap and results in silent files

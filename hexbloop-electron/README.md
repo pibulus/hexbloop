@@ -22,7 +22,7 @@ Hexbloop is a **chaos magic audio engine** that enhances your audio files with m
 - **Lunar-influenced parameters** that change with moon phases and time
 - **Batch processing** with drag-and-drop support
 - **Multiple format support**: MP3, WAV, M4A, AIFF, FLAC, OGG
-- **M4A output** for optimal quality and compatibility
+- **MP3 output** with embedded artwork and metadata
 
 ### 🌙 Mystical Influences
 - **New Moon**: Dark, heavy processing (high overdrive, deep bass)
@@ -99,7 +99,7 @@ npm start
 2. **Lunar Calculation**: Current moon phase and time influence
 3. **Sox Processing**: Initial audio transformation with lunar parameters
 4. **FFmpeg Mastering**: Final mastering with EQ and compression
-5. **Output Generation**: M4A file creation with mystical naming
+5. **Output Generation**: MP3 file creation with mystical naming and embedded artwork
 
 ### Security Configuration
 - **webSecurity: false**: Required for file access (documented limitation)
