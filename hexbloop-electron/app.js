@@ -29,9 +29,16 @@ class HexbloopMystic {
         this.centerX = 0;
         this.centerY = 0;
         
+        // Ambient audio system
+        this.ambientAudio = document.getElementById('ambientAudio');
+        this.ambientToggle = document.getElementById('ambientToggle');
+        this.toggleIcon = document.getElementById('toggleIcon');
+        this.isAudioPlaying = false;
+        
         this.initEvents();
         this.initProgressListeners();
         this.initParallax();
+        this.initAmbientAudio();
         console.log('🔥 Mystical hexagon awakened - ready for sacrifices 🤘');
     }
     
@@ -111,6 +118,61 @@ class HexbloopMystic {
             `translate(-50%, -50%) translate3d(${innerX}px, ${innerY}px, 0)`;
         this.pentagram.style.transform = 
             `translate(-50%, -50%) translate3d(${pentagramX}px, ${pentagramY}px, 0)`;
+    }
+    
+    initAmbientAudio() {
+        // Set initial volume
+        this.ambientAudio.volume = 0.3;
+        
+        // Add toggle click handler
+        this.ambientToggle.addEventListener('click', () => {
+            this.toggleAmbientAudio();
+        });
+        
+        // Auto-start ambient audio (with user interaction fallback)
+        this.startAmbientAudio();
+    }
+    
+    async startAmbientAudio() {
+        try {
+            await this.ambientAudio.play();
+            this.isAudioPlaying = true;
+            this.updateToggleState();
+            console.log('🎵 Ambient audio started');
+        } catch (error) {
+            // Browser requires user interaction first
+            console.log('🎵 Ambient audio waiting for user interaction');
+            this.isAudioPlaying = false;
+            this.updateToggleState();
+        }
+    }
+    
+    toggleAmbientAudio() {
+        if (this.isAudioPlaying) {
+            this.ambientAudio.pause();
+            this.isAudioPlaying = false;
+            this.toggleIcon.textContent = '♪';
+            console.log('🎵 Ambient audio paused');
+        } else {
+            this.ambientAudio.play().then(() => {
+                this.isAudioPlaying = true;
+                this.toggleIcon.textContent = '♫';
+                console.log('🎵 Ambient audio playing');
+            }).catch(error => {
+                console.log('🎵 Could not play ambient audio:', error);
+            });
+        }
+        this.updateToggleState();
+    }
+    
+    updateToggleState() {
+        if (this.isAudioPlaying) {
+            this.ambientToggle.classList.add('playing');
+            this.toggleIcon.textContent = '♫';
+        } else {
+            this.ambientToggle.classList.remove('playing');
+            this.toggleIcon.textContent = '♪';
+        }
     }
     
     updateProgress(data) {
