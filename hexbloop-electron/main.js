@@ -38,7 +38,7 @@ function createWindow() {
         show: false
     });
 
-    mainWindow.loadFile('index.html');
+    mainWindow.loadFile('src/renderer/index.html');
 
     // Show window when ready to prevent visual flash
     mainWindow.once('ready-to-show', () => {
