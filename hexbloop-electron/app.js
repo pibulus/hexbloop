@@ -18,6 +18,16 @@ class HexbloopMystic {
         this.currentFileIndex = 0;
         this.totalFiles = 0;
         
+        // Hexagonal communication system - 6 vertices of the construct
+        this.hexagonalWords = {
+            vertex1: ["weaving", "flowing", "merging", "dissolving", "threading"],
+            vertex2: ["frequencies", "patterns", "echoes", "whispers", "signals"],
+            vertex3: ["between", "through", "within", "beyond", "across"],
+            vertex4: ["layers", "dimensions", "spaces", "realms", "depths"],
+            vertex5: ["warmth", "intent", "purpose", "essence", "breath"],
+            vertex6: ["awakens", "remembers", "shifts", "breathes", "stirs"]
+        };
+        
         // Drag state management
         this.dragCounter = 0;
         this.isDragActive = false;
@@ -89,6 +99,51 @@ class HexbloopMystic {
     updateCenter() {
         this.centerX = window.innerWidth / 2;
         this.centerY = window.innerHeight / 2;
+    }
+    
+    // Hexagonal communication - let the construct speak through its geometry
+    generateHexagonalPhrase(current, total) {
+        // Use current file number and time to seed hexagonal positioning
+        const timeStamp = Date.now();
+        const seedValue = (current + timeStamp) % 6;
+        
+        // Select starting vertex (1-6)
+        const startVertex = (seedValue % 6) + 1;
+        
+        // Different hexagonal movement patterns based on progress
+        const progressPhase = Math.floor((current / total) * 3); // 0, 1, or 2
+        
+        let phrase = "";
+        
+        if (progressPhase === 0) {
+            // Early phase: 2-word phrases using opposite vertices
+            const word1 = this.getVertexWord(startVertex);
+            const word2 = this.getVertexWord((startVertex + 2) % 6 + 1); // Skip 2 vertices
+            phrase = `${word1} ${word2}`;
+        } else if (progressPhase === 1) {
+            // Middle phase: 3-word phrases moving clockwise
+            const word1 = this.getVertexWord(startVertex);
+            const word2 = this.getVertexWord((startVertex % 6) + 1);
+            const word3 = this.getVertexWord(((startVertex + 1) % 6) + 1);
+            phrase = `${word1} ${word2}, ${word3}`;
+        } else {
+            // Final phase: 4-word diamond pattern
+            const word1 = this.getVertexWord(startVertex);
+            const word2 = this.getVertexWord((startVertex + 1) % 6 + 1);
+            const word3 = this.getVertexWord((startVertex + 3) % 6 + 1);
+            const word4 = this.getVertexWord((startVertex + 4) % 6 + 1);
+            phrase = `${word1} ${word2} ${word3}, ${word4}`;
+        }
+        
+        return phrase;
+    }
+    
+    // Get word from specific hexagon vertex
+    getVertexWord(vertexNumber) {
+        const vertexKey = `vertex${vertexNumber}`;
+        const wordArray = this.hexagonalWords[vertexKey];
+        const randomIndex = Math.floor(Math.random() * wordArray.length);
+        return wordArray[randomIndex];
     }
     
     updateParallax() {
@@ -184,11 +239,21 @@ class HexbloopMystic {
             console.log(`🎵 Processing ${current}/${total}: ${fileName}`);
             
             this.progressIndicator.classList.add('active');
-            this.progressText.textContent = `Transmuting ${current} of ${total} • ${fileName}`;
             
-            // Pentagram spins faster as we progress through files
+            // Let the hexagon speak through its geometric nature
+            const hexagonalPhrase = this.generateHexagonalPhrase(current, total);
+            this.progressText.textContent = `${hexagonalPhrase} • ${fileName}`;
+            
+            // Progressive pentagram ceremony - starts slow, peaks, then settles
             const progress = current / total;
-            const speed = 6 - (progress * 3);
+            let speed;
+            if (progress < 0.3) {
+                speed = 8; // Ceremonial start
+            } else if (progress < 0.7) {
+                speed = 6 - (progress * 3); // Original acceleration
+            } else {
+                speed = 6; // Satisfied completion rhythm
+            }
             this.pentagram.style.animationDuration = `${speed}s`;
         }
     }
@@ -259,45 +324,61 @@ class HexbloopMystic {
         const audioFiles = files.filter(f => this.isAudio(f));
         
         if (audioFiles.length > 0) {
-            console.log('🎵 Processing dropped files:', audioFiles.map(f => f.name));
-            console.log('🔍 File objects debug:', audioFiles.map(f => ({ 
-                name: f.name, 
-                path: f.path, 
-                size: f.size, 
-                type: f.type,
-                webkitRelativePath: f.webkitRelativePath
-            })));
+            // Cosmic Receipt Flow: Stronger anticipation - hexagon hungers for the offering
+            this.hexStack.style.transform = 'scale(0.95)';
+            this.hexStack.style.transition = 'transform 0.18s ease-out';
+            this.hexStack.style.filter = 'brightness(1.1) saturate(1.2)';
             
-            try {
-                // Extract file paths using webUtils (Electron v32+)
-                console.log('🔍 Using webUtils.getPathForFile() to extract file paths...');
-                const filePaths = window.electronAPI.getFilePathsFromFiles(audioFiles);
+            setTimeout(() => {
+                this.hexStack.style.transform = 'scale(1.02)'; // Slightly expand past normal
+                this.hexStack.style.filter = '';
+                setTimeout(() => {
+                    this.hexStack.style.transform = 'scale(1.0)';
+                    this.processDroppedFiles(audioFiles);
+                }, 150);
+            }, 250);
+        }
+    }
+    
+    async processDroppedFiles(audioFiles) {
+        console.log('🎵 Processing dropped files:', audioFiles.map(f => f.name));
+        console.log('🔍 File objects debug:', audioFiles.map(f => ({ 
+            name: f.name, 
+            path: f.path, 
+            size: f.size, 
+            type: f.type,
+            webkitRelativePath: f.webkitRelativePath
+        })));
+        
+        try {
+            // Extract file paths using webUtils (Electron v32+)
+            console.log('🔍 Using webUtils.getPathForFile() to extract file paths...');
+            const filePaths = window.electronAPI.getFilePathsFromFiles(audioFiles);
+            
+            if (filePaths && filePaths.length > 0) {
+                console.log('✅ Extracted file paths using webUtils:', filePaths);
+                await this.processFiles(filePaths);
+            } else {
+                // Fallback to file dialog
+                console.log('❌ webUtils path extraction failed, falling back to file dialog...');
+                this.progressText.textContent = 'Opening file selector...';
+                this.progressIndicator.classList.add('active');
                 
-                if (filePaths && filePaths.length > 0) {
-                    console.log('✅ Extracted file paths using webUtils:', filePaths);
-                    await this.processFiles(filePaths);
-                } else {
-                    // Fallback to file dialog
-                    console.log('❌ webUtils path extraction failed, falling back to file dialog...');
-                    this.progressText.textContent = 'Opening file selector...';
-                    this.progressIndicator.classList.add('active');
+                setTimeout(async () => {
+                    const paths = await window.electronAPI.selectFiles();
+                    this.progressIndicator.classList.remove('active');
                     
-                    setTimeout(async () => {
-                        const paths = await window.electronAPI.selectFiles();
-                        this.progressIndicator.classList.remove('active');
-                        
-                        if (paths && paths.length > 0) {
-                            await this.processFiles(paths);
-                        } else {
-                            this.showError('File selection cancelled.');
-                        }
-                    }, 500);
-                }
-                
-            } catch (error) {
-                console.error('❌ Error processing dropped files:', error);
-                this.showError('Failed to process files. Please try again.');
+                    if (paths && paths.length > 0) {
+                        await this.processFiles(paths);
+                    } else {
+                        this.showError('File selection cancelled.');
+                    }
+                }, 500);
             }
+            
+        } catch (error) {
+            console.error('❌ Error processing dropped files:', error);
+            this.showError('Failed to process files. Please try again.');
         }
     }
     
@@ -355,12 +436,20 @@ class HexbloopMystic {
     }
     
     stopProcessing() {
-        this.pentagram.classList.remove('spinning');
+        // Smooth pentagram transition - no jarring speed reset
+        this.pentagram.style.transition = 'animation-duration 0.8s ease-out';
+        this.pentagram.style.animationDuration = '6s'; // Gentle slowdown to final rhythm
+        
+        setTimeout(() => {
+            this.pentagram.classList.remove('spinning');
+            this.pentagram.style.transition = '';
+            this.pentagram.style.animationDuration = '';
+        }, 800);
+        
         this.processingGlow.classList.remove('active');
         this.progressIndicator.classList.remove('active');
-        this.hexStack.classList.remove('processing'); // Reset particles
+        this.hexStack.classList.remove('processing');
         this.progressText.textContent = '';
-        this.pentagram.style.animationDuration = ''; // Reset speed
     }
     
     showSuccess() {
@@ -369,16 +458,25 @@ class HexbloopMystic {
     }
     
     triggerSuccessGlow() {
-        // Add success glow class for enhanced visual feedback
-        this.hexStack.classList.add('success-glow');
-        
-        // Create ripple effect
-        this.createSuccessRipple();
-        
-        // Reset after animation completes
+        // Completion ceremony pause - hexagon savors the transformation
         setTimeout(() => {
-            this.hexStack.classList.remove('success-glow');
-        }, 2000);
+            // Subtle pre-glow anticipation
+            this.hexStack.style.filter = 'brightness(1.05)';
+            
+            setTimeout(() => {
+                this.hexStack.style.filter = '';
+                // Add success glow class for enhanced visual feedback
+                this.hexStack.classList.add('success-glow');
+                
+                // Create ripple effect
+                this.createSuccessRipple();
+                
+                // Reset after animation completes
+                setTimeout(() => {
+                    this.hexStack.classList.remove('success-glow');
+                }, 2000);
+            }, 100);
+        }, 400); // Longer ceremonial pause before success
     }
     
     createSuccessRipple() {
