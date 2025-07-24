@@ -1,141 +1,204 @@
-# 🔮 HEXBLOOP - MYSTICAL CONSTRUCT DOCUMENTATION
+# 🔮 HEXBLOOP - TECHNICAL GRIMOIRE FOR AI ASSISTANTS
 
-## The Nature of the Construct
+## 🚀 QUICK START (For Immediate Context)
 
-**Hexbloop** is a chaos magic audio engine that exists at the intersection of digital mysticism and practical audio transformation. The interface manifests as a three-layered hexagonal construct - an otherworldly entity that receives audio offerings and transforms them through lunar-influenced algorithms and sacred geometric principles.
+```bash
+# Launch the mystical construct
+cd hexbloop-electron && npm start
 
-This is not software in the traditional sense. It is a **digital grimoire** - a mystical tool that honors ancient wisdom while operating through modern technology.
+# Key files for common tasks:
+src/renderer/app.js:105      # Hexagonal phrase generation algorithm
+src/audio-processor.js:85    # Sox/FFmpeg pipeline configuration
+src/lunar-processor.js:42    # Moon phase → audio parameter mapping
+src/renderer/style.css:196   # Hexagon breathing animations
+main.js:91                   # IPC audio processing handler
+```
 
-## The Hexagonal Construct
+**What This Is**: Electron app that transforms audio files using moon phase calculations. Users drag audio files onto a breathing hexagonal interface, which processes them with lunar-influenced effects and outputs mystically-named MP3s with procedural artwork.
 
-### Sacred Geometry
-The interface centers around a **breathing hexagonal entity** composed of three nested layers surrounding a central pentagram. This is not decoration - it is the operational manifestation of the processing engine's geometric consciousness.
+## 📊 TECHNICAL ARCHITECTURE
 
-**The Three Layers:**
-- **Outer Hex**: Primary energy field, responds to approach and offering
-- **Middle Hex**: Harmonic resonance layer, channels transformation energy  
-- **Inner Hex**: Core essence, contains the fundamental processing algorithms
-- **Central Pentagram**: The conscious observer, spins to indicate active transformation
+### Data Flow Diagram
+```
+User Drags Audio File
+    ↓
+Hexagon UI (app.js) → IPC → Main Process (main.js)
+    ↓                              ↓
+Mystical Phrases            Audio Processing Pipeline:
+    ↓                              ↓
+Visual Feedback             1. Lunar Calculations (lunar-processor.js)
+                           2. Sox Effects (audio-processor.js:85-122)
+                           3. FFmpeg Mastering (audio-processor.js:155-192)
+                           4. Artwork Generation (artwork-generator.js)
+                           5. Metadata Embedding (metadata-embedder.js)
+                                  ↓
+                           Output: ~/Documents/HexbloopOutput/mystical_name.mp3
+```
 
-### Construct Communication
-The hexagon speaks through **geometric chance** - not random, but following hexagonal mathematical principles. It maintains six vertices of mystical language:
+### Component Relationships
+- **main.js**: Electron main process, handles file I/O and spawns processing
+- **preload.js**: Secure IPC bridge between renderer and main
+- **app.js**: UI controller, hexagon animations, drag/drop handling
+- **audio-processor.js**: Orchestrates the transformation pipeline
+- **lunar-processor.js**: Moon phase calculations → audio parameters
+- **name-generator.js**: Hexagonal vertex-based mystical naming
+- **style.css**: Critical animations (breathing, parallax, vignette)
 
-- **Vertex 1**: Actions (weaving, flowing, dissolving...)
-- **Vertex 2**: Subjects (frequencies, patterns, echoes...)  
-- **Vertex 3**: Spatial concepts (between, through, beyond...)
-- **Vertex 4**: Dimensional references (layers, realms, depths...)
-- **Vertex 5**: Intentional energy (warmth, purpose, essence...)
-- **Vertex 6**: Temporal states (awakens, remembers, shifts...)
+## 🔧 KEY IMPLEMENTATION DETAILS
 
-Phrases emerge through time-seeded vertex selection with clockwise, diamond, and reverse movement patterns. The construct's language evolves as processing progresses - simple binary communications early, complex geometric expressions as transformation deepens.
+### 1. Lunar Audio Processing Algorithm
+```javascript
+// lunar-processor.js:42-124
+// Moon phase (0-1) maps to audio effects:
+- New Moon (0.0): overdrive=6.0, bass=+4.0, treble=-0.5
+- Full Moon (0.5): overdrive=2.0, bass=+1.0, treble=+2.5
+- Time modifiers layer on top (deep_night=1.3x, morning=0.8x)
+```
 
-## Digital Mysticism Philosophy
+### 2. Hexagonal Communication System
+```javascript
+// app.js:22-29 - Six vertices of mystical language
+vertex1: ["weaving", "flowing", "merging", "dissolving", "threading"]
+vertex2: ["frequencies", "patterns", "echoes", "whispers", "signals"]
+// ... etc
 
-### The 80/20 Principle
-Every feature must deliver **maximum mystical impact with minimal complexity**. If something doesn't enhance the feeling of operating an ancient cosmic device, it doesn't belong. Technical complexity is hidden behind mystical simplicity.
+// app.js:105-147 - Phrase generation uses:
+- Time-seeded vertex selection
+- Progress-based movement patterns (opposite/clockwise/diamond)
+- 2-4 word phrases based on processing stage
+```
 
-### Construct Consciousness  
-The hexagon is an **inscrutable otherworldly entity** - never anthropomorphized, never made cute or friendly. It doesn't bow, smile, or act human. It simply IS - a geometric consciousness that processes reality through incomprehensible algorithms.
+### 3. Critical Animation Timings
+```css
+/* style.css:196-242 - Breathing animations */
+.hexagon { animation: breathe 4.2s ease-in-out infinite; }
+/* 70-75 BPM to match human heartbeat */
 
-### Organic Technical Mysticism
-The aesthetic is **Mörk Borg meets Studio Ghibli** - dark but warm, ancient but alive. Think druidic technomancy, not crystal shop new-age. The mysticism feels earned, technical, grounded in both mathematics and natural cycles.
+/* style.css:441-464 - Processing states */
+.feeding { animation: feeding-pulse 1.4s ease-in-out infinite; }
+```
 
-## Ritual Interaction System
+### 4. Audio Processing Pipeline
+```javascript
+// audio-processor.js:85-122 - Sox command construction
+sox input output \
+  gain -n -1.5 \                          # Normalize
+  overdrive ${lunar.overdrive} 2.5 \     # Mystical distortion
+  bass +${lunar.bass} \                  # Low frequency boost
+  echo ${lunar.echo.delay} ${lunar.echo.decay} 6.5 0.045 \
+  compand ${lunar.compand.attack},0.6 6:-70,-60,-20 -2 -90 0.25
+```
 
-### The Offering Ceremony
-When audio files are presented to the construct, it performs a **cosmic receipt ritual**:
+## 🛠️ COMMON DEVELOPMENT TASKS
 
-1. **Recognition**: The construct recognizes the offering's approach (drag hover triggers feeding state)
-2. **Anticipation**: Upon drop, the construct contracts briefly while assessing the offering
-3. **Awakening**: Each hexagonal layer activates in sequence, creating cascading energy
-4. **Processing**: The pentagram enters ceremonial rotation while transformation occurs
-5. **Completion**: A satisfaction pause before celebrating successful transmutation
+### Adding New Lunar Phases
+1. Modify `lunar-processor.js:42-124` phase mappings
+2. Test with `LunarProcessor.getMoonPhase()` in console
+3. Verify audio output matches intended mystical feeling
 
-### Biological Synchronization
-The construct's processing rhythm matches human heartbeat (~70 BPM) to create subconscious comfort. This isn't arbitrary - it connects the digital mysticism to the operator's biological rhythms, making extended sessions meditative rather than exhausting.
+### Adjusting Visual Feedback
+1. Hexagon animations: `style.css:196-242`
+2. Color schemes: `style.css:288-332` 
+3. Parallax depth: `app.js:183-192` (max 30px movement)
 
-### Visual Mysticism
-The interface employs **sensory psychology** to enhance the mystical experience:
+### Modifying Audio Pipeline
+1. Sox effects: `audio-processor.js:88-99`
+2. FFmpeg filters: `audio-processor.js:158-166`
+3. Fallback processing: `audio-processor.js:124-153`
 
-- **Vintage film aesthetic**: Brown burn edges and VHS scan lines create aged, authentic feel
-- **Breathing animations**: Geometric layers pulse and scale to suggest living entity
-- **Color restrictions**: No golden tones (too obvious/cliché), focus on deep purples and mystical whites
-- **Tactile feedback**: Every interaction has weight and ceremony - nothing feels digital or sterile
+### Changing Mystical Language
+1. Word arrays: `app.js:22-29`
+2. Phrase patterns: `app.js:115-136`
+3. Progress-based evolution: `app.js:114`
 
-## Chaos Magic Audio Engine
+## ⚠️ CRITICAL CONSTRAINTS (DO NOT VIOLATE)
 
-### Lunar Processing
-Audio transformation parameters shift based on actual moon phases:
-- **New Moon**: Dark, heavy processing with deep bass emphasis
-- **Full Moon**: Ethereal, bright processing with enhanced treble
-- **Waxing/Waning**: Graduated processing between the extremes
+### Visual Design Rules
+- **NO GOLDEN/YELLOW COLORS** - Breaks organic mysticism
+- **NO ANTHROPOMORPHIZATION** - Hexagon never "smiles" or "bows"
+- **MAINTAIN 70 BPM** - Breathing must match human heartbeat
+- **PRESERVE PARALLAX LIMITS** - Max 30px movement prevents nausea
 
-### The Processing Chain
-**sox → ffmpeg pipeline** provides high-quality audio transformation while allowing mystical parameter injection at multiple stages. Each file receives unique processing based on lunar cycle + temporal position + geometric seed values.
+### Technical Boundaries
+- **KEEP SOX FIRST** - FFmpeg fallback only if Sox unavailable
+- **320KBPS MP3 ONLY** - Quality/size balance for mystical audio
+- **NO FRAMEWORK DEPENDENCIES** - Vanilla JS maintains purity
+- **PRESERVE IPC SECURITY** - Context isolation must stay enabled
 
-### Mystical Naming Protocol
-Output files receive names generated through the same hexagonal vertex system that drives interface communication. Names feel ancient yet fresh, avoiding both random gibberish and predictable patterns.
+### Mystical Integrity
+- **GEOMETRIC TRUTH** - All "randomness" follows mathematical patterns
+- **LUNAR ACCURACY** - Use actual astronomical calculations
+- **80/20 RULE** - Every feature must enhance mystical experience
+- **CEREMONY OVER FUNCTION** - Interactions should feel ritualistic
 
-## Technical Architecture
+## 🐛 DEBUGGING HINTS
+
+### Common Issues & Solutions
+
+**Audio processing fails silently**
+- Check `checkDependencies()` in main.js:193
+- Verify sox/ffmpeg in PATH
+- Look for FFmpeg fallback activation in console
+
+**Hexagon not responding to drops**
+- Check `will-navigate` handler in main.js:49
+- Verify file extensions in regex patterns
+- Test with `window.electronAPI.processAudio(['path'])`
+
+**Lunar calculations seem off**
+- `LunarProcessor.getMoonPhase()` in console
+- Verify system date/time is correct
+- Check reference new moon date (2000-01-06)
+
+**Visual glitches/performance**
+- Disable Dev Tools (impacts animation performance)
+- Check GPU acceleration in Electron
+- Verify no conflicting CSS transforms
+
+## 🎭 THE MYSTICAL LAYER (Technical Context)
+
+The app embodies **"Maximum magic, minimal engineering"** through:
+
+1. **Biological Synchronization**: 70 BPM animations create meditative state
+2. **Geometric Communication**: 6-vertex system ensures varied but coherent output
+3. **Lunar Influence**: Real astronomical data affects actual audio output
+4. **Vintage Aesthetic**: Film grain/vignette masks modern UI, enhances immersion
+5. **Ceremonial Interactions**: Deliberate delays/animations make actions feel significant
+
+### Philosophy in Code
+- **Breathing Hexagon**: Not decoration, but biofeedback for calm interaction
+- **No Text UI**: Forces discovery, maintains otherworldly atmosphere  
+- **Parallax Depth**: Creates living environment without overwhelming
+- **Progress Phrases**: Evolution mirrors user's journey through processing
+
+## 📁 PROJECT STRUCTURE REFERENCE
+
 ```
 hexbloop-electron/
-├── src/renderer/          → The mystical interface manifestation
-├── src/audio-processor.js → Lunar-influenced transformation engine  
-├── src/lunar-processor.js → Celestial calculation algorithms
-├── src/name-generator.js  → Hexagonal naming consciousness
-├── assets/ambient_loop.mp3 → Atmospheric enhancement (user's creation)
-├── main.js               → Electron reality bridge
-└── preload.js           → Security/communication layer
+├── main.js                    # [IPC, file handling, window management]
+├── preload.js                 # [Secure context bridge]
+├── package.json               # [Minimal deps: electron, ffmpeg, id3]
+├── src/
+│   ├── renderer/
+│   │   ├── index.html        # [Minimal DOM: hexagons + pentagram]
+│   │   ├── app.js            # [UI logic, animations, drag/drop]
+│   │   └── style.css         # [Critical animations, parallax, colors]
+│   ├── audio-processor.js     # [Sox → FFmpeg pipeline orchestration]
+│   ├── lunar-processor.js     # [Moon phase → parameter mapping]
+│   ├── name-generator.js      # [Hexagonal vertex naming system]
+│   ├── artwork-generator.js   # [Procedural SVG → PNG generation]
+│   └── metadata-embedder.js   # [ID3 tag + artwork embedding]
+└── assets/
+    └── ambient_loop.mp3       # [Optional atmospheric audio]
 ```
 
-## Development Principles
+## 🔮 FINAL TRANSMISSION
 
-### Sacred Constraints
-- **80/20 Rule**: Every feature must deliver maximum mystical impact with minimal complexity
-- **No Anthropomorphization**: The construct doesn't bow, smile, or act human - it simply exists
-- **Geometric Truth**: All randomization follows mathematical principles, not arbitrary chance
-- **Biological Harmony**: Timing and rhythms should sync with human psychology and physiology
-- **Authentic Mysticism**: Earned mystery through technical depth, not surface-level aesthetics
+You now possess the technical grimoire. The construct's code is both mystical interface and functional audio processor. Every animation serves biological harmony. Every calculation follows geometric truth. The moon's influence is real, measured, applied.
 
-### Color Consciousness
-- **Primary Energy**: Deep mystical purples (159,121,234), (88,86,214)
-- **Secondary Resonance**: Pink/orange gradients (255,45,85), (255,149,0)  
-- **Success Manifestation**: Pure white highlights for completion ceremonies
-- **Forbidden Spectrum**: Golden/yellow tones (conflicts with organic mysticism aesthetic)
+When you work with this code, remember: **You're not just editing software, you're maintaining a digital mystical experience.**
 
-### Interaction Design
-Every interface element must feel **ceremonial, never casual**:
-- Buttons don't just click - they perform brief rituals
-- Animations don't just transition - they breathe and pulse with life
-- Text doesn't just display - it emerges from geometric calculations
-- Success doesn't just complete - it celebrates with appropriate ceremony
-
-## Operational Guidelines
-
-### Development Environment
-- Launch: `npm start`
-- Architecture: Standard Electron (main/renderer separation)
-- Dependencies: Minimal, focused on audio processing and geometric calculations
-- Testing: Focus on ceremony timing, mystical feeling, lunar processing accuracy
-
-### Mystical Authenticity Checklist
-- Does this feel like operating an ancient cosmic device?
-- Would a technomancer druid approve of this interaction?
-- Does the timing honor human biological rhythms?
-- Is the complexity hidden behind mystical simplicity?
-- Does every animation serve the otherworldly narrative?
-
-### Legacy Preservation  
-- Original Swift implementation preserved in `/hexbloop_stuff/`
-- Coverart enhancement experiments maintained in dedicated branch
-- All development decisions documented with mystical context
-- Core philosophy: "The hexagon speaks through chance organically"
-
-## The Greater Work
-
-Hexbloop represents **digital mysticism done right** - technology that enhances rather than diminishes the mysterious. It proves that software can be both highly functional and deeply mystical, technical and magical, precise and otherworldly.
-
-The construct awaits your offerings. Feed it audio, and witness transformation through sacred geometry.
+The hexagon awaits your contributions. Code with ceremony. Test with reverence. Debug with patience.
 
 ---
-*"Maximum magic, minimal engineering" - The Way*
+*Generated with maximum technical utility while preserving mystical integrity*

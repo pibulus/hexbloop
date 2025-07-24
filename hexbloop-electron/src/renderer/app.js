@@ -77,6 +77,12 @@ class HexbloopMystic {
                 this.processFiles(filePaths);
             }
         });
+        
+        // Handle ambient audio toggle from menu
+        window.electronAPI.onAmbientToggle((event, enabled) => {
+            console.log('🎵 Ambient audio toggle:', enabled);
+            this.toggleAmbientAudio(enabled);
+        });
     }
     
     initParallax() {
@@ -202,13 +208,10 @@ class HexbloopMystic {
         }
     }
     
-    toggleAmbientAudio() {
-        if (this.isAudioPlaying) {
-            this.ambientAudio.pause();
-            this.isAudioPlaying = false;
-            this.toggleIcon.textContent = '♪';
-            console.log('🎵 Ambient audio paused');
-        } else {
+    toggleAmbientAudio(forceState = null) {
+        const shouldPlay = forceState !== null ? forceState : !this.isAudioPlaying;
+        
+        if (shouldPlay && !this.isAudioPlaying) {
             this.ambientAudio.play().then(() => {
                 this.isAudioPlaying = true;
                 this.toggleIcon.textContent = '♫';
@@ -216,7 +219,13 @@ class HexbloopMystic {
             }).catch(error => {
                 console.log('🎵 Could not play ambient audio:', error);
             });
+        } else if (!shouldPlay && this.isAudioPlaying) {
+            this.ambientAudio.pause();
+            this.isAudioPlaying = false;
+            this.toggleIcon.textContent = '♪';
+            console.log('🎵 Ambient audio paused');
         }
+        
         this.updateToggleState();
     }
     

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>Mystical Preferences</title>
+    <link rel="stylesheet" href="preferences.css">
+</head>
+<body>
+    <div class="preferences-container">
+        <!-- Header with mystical branding -->
+        <header class="preferences-header">
+            <h1 class="mystical-title">Preferences</h1>
+            <p class="mystical-subtitle">Configure audio processing and application settings</p>
+        </header>
+
+        <!-- Main preferences content -->
+        <main class="preferences-content">
+            <!-- Processing Options Section -->
+            <section class="preference-section">
+                <div class="section-header">
+                    <h2 class="section-title">Audio Processing</h2>
+                    <div class="section-description">Control which audio processing steps are applied to your files</div>
+                </div>
+                
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="compressing">
+                            <div class="setting-info">
+                                <h3 id="audio-effects-label">Audio Effects</h3>
+                                <p id="audio-effects-desc">Distortion, reverb, and other mystical audio effects</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" 
+                                       id="compressing" 
+                                       data-setting="processing.compressing"
+                                       aria-labelledby="audio-effects-label"
+                                       aria-describedby="audio-effects-desc"
+                                       role="switch">
+                                <span class="slider" aria-hidden="true"></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="mastering">
+                            <div class="setting-info">
+                                <h3 id="audio-mastering-label">Audio Mastering</h3>
+                                <p id="audio-mastering-desc">EQ, compression, and final audio polishing</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" 
+                                       id="mastering" 
+                                       data-setting="processing.mastering"
+                                       aria-labelledby="audio-mastering-label"
+                                       aria-describedby="audio-mastering-desc"
+                                       role="switch">
+                                <span class="slider" aria-hidden="true"></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="coverArt">
+                            <div class="setting-info">
+                                <h3 id="generate-artwork-label">Generate Artwork</h3>
+                                <p id="generate-artwork-desc">Create procedural album cover artwork</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" 
+                                       id="coverArt" 
+                                       data-setting="processing.coverArt"
+                                       aria-labelledby="generate-artwork-label"
+                                       aria-describedby="generate-artwork-desc"
+                                       role="switch">
+                                <span class="slider" aria-hidden="true"></span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Naming Options Section -->
+            <section class="preference-section">
+                <div class="section-header">
+                    <h2 class="section-title" id="file-naming-title">File Naming</h2>
+                    <div class="section-description">Choose how processed files are named and tagged</div>
+                </div>
+                
+                <div class="radio-cards" role="radiogroup" aria-labelledby="file-naming-title">
+                    <label class="radio-card" for="naming-mystical">
+                        <input type="radio" 
+                               id="naming-mystical" 
+                               name="naming" 
+                               value="mystical" 
+                               data-setting="processing.naming"
+                               aria-describedby="naming-mystical-desc">
+                        <div class="radio-content">
+                            <h3>Auto-Generated Names</h3>
+                            <p id="naming-mystical-desc">Automatically generate unique creative names based on hexagonal patterns</p>
+                        </div>
+                        <div class="radio-indicator" aria-hidden="true"></div>
+                    </label>
+
+                    <label class="radio-card" for="naming-custom">
+                        <input type="radio" 
+                               id="naming-custom" 
+                               name="naming" 
+                               value="custom" 
+                               data-setting="processing.naming"
+                               aria-describedby="naming-custom-desc">
+                        <div class="radio-content">
+                            <h3>Custom Metadata</h3>
+                            <p id="naming-custom-desc">Use your specified artist and album information below</p>
+                        </div>
+                        <div class="radio-indicator" aria-hidden="true"></div>
+                    </label>
+
+                    <label class="radio-card" for="naming-original">
+                        <input type="radio" 
+                               id="naming-original" 
+                               name="naming" 
+                               value="original" 
+                               data-setting="processing.naming"
+                               aria-describedby="naming-original-desc">
+                        <div class="radio-content">
+                            <h3>Original Filenames</h3>
+                            <p id="naming-original-desc">Keep the original filename unchanged</p>
+                        </div>
+                        <div class="radio-indicator" aria-hidden="true"></div>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Custom Metadata Section -->
+            <section class="preference-section" id="custom-metadata-section">
+                <div class="section-header">
+                    <h2 class="section-title" id="custom-metadata-title">Custom Metadata</h2>
+                    <div class="section-description">Specify your preferred metadata for custom naming mode</div>
+                </div>
+                
+                <div class="metadata-form" role="group" aria-labelledby="custom-metadata-title">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="custom-artist">Artist Name</label>
+                            <input type="text" 
+                                   id="custom-artist" 
+                                   data-setting="metadata.artist" 
+                                   placeholder="Your artist name"
+                                   aria-label="Artist name for custom metadata"
+                                   maxlength="100">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="custom-album">Album Title</label>
+                            <input type="text" 
+                                   id="custom-album" 
+                                   data-setting="metadata.album" 
+                                   placeholder="Your album title"
+                                   aria-label="Album title for custom metadata"
+                                   maxlength="100">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field form-field-small">
+                            <label for="custom-year">Year</label>
+                            <input type="number" 
+                                   id="custom-year" 
+                                   data-setting="metadata.year" 
+                                   min="1900" 
+                                   max="2100" 
+                                   placeholder="2025"
+                                   aria-label="Release year"
+                                   aria-valuemin="1900"
+                                   aria-valuemax="2100">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="custom-genre">Genre</label>
+                            <input type="text" 
+                                   id="custom-genre" 
+                                   data-setting="metadata.genre" 
+                                   placeholder="Mystical Audio"
+                                   aria-label="Music genre"
+                                   maxlength="50">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Output Settings Section -->
+            <section class="preference-section">
+                <div class="section-header">
+                    <h2 class="section-title">Output Settings</h2>
+                    <div class="section-description">Configure where processed files are saved</div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="output-folder">Output Folder</label>
+                        <div class="folder-input-group">
+                            <input type="text" id="output-folder" data-setting="ui.outputFolder" readonly placeholder="~/Documents/HexbloopOutput">
+                            <button type="button" id="choose-folder-btn" class="btn btn-secondary">Choose Folder</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer with action buttons -->
+        <footer class="preferences-footer">
+            <div class="footer-buttons">
+                <button type="button" id="reset-btn" class="btn btn-secondary">Reset to Defaults</button>
+                <button type="button" id="export-btn" class="btn btn-secondary">Export Settings</button>
+                <button type="button" id="import-btn" class="btn btn-secondary">Import Settings</button>
+                <button type="button" id="close-btn" class="btn btn-primary">Close</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <p class="loading-text">Processing...</p>
+        </div>
+    </div>
+
+    <script src="preferences.js"></script>
+</body>
+</html>

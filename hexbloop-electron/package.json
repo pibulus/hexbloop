@@ -1,5 +1,6 @@
 {
   "name": "hexbloop-electron",
+  "productName": "Hexbloop",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {

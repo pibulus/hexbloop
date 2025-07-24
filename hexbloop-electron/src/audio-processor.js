@@ -13,16 +13,40 @@ const LunarProcessor = require('./lunar-processor');
 const NameGenerator = require('./name-generator');
 const ArtworkGenerator = require('./artwork-generator');
 const MetadataEmbedder = require('./metadata-embedder');
+const { getPreferencesManager } = require('./menu/preferences');
 
 class AudioProcessor {
     static async processFile(inputPath, outputPath) {
         console.log(`🎵 Processing: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`);
         
-        const bandName = NameGenerator.generateMystical();
-        console.log(`✨ Generated band name: ${bandName}`);
+        // Get user preferences for processing configuration
+        const preferencesManager = getPreferencesManager();
+        const processingConfig = preferencesManager.getProcessingConfig();
         
-        const influences = LunarProcessor.getInfluencedParameters();
-        console.log(`🌙 ${influences.description}`);
+        console.log(`🔮 Processing config:`, processingConfig);
+        
+        // Determine naming and metadata based on preferences
+        let finalName, customMetadata = null;
+        
+        if (processingConfig.stages.naming === 'mystical') {
+            finalName = NameGenerator.generateMystical();
+            console.log(`✨ Generated mystical name: ${finalName}`);
+        } else if (processingConfig.stages.naming === 'custom' && processingConfig.metadata) {
+            finalName = processingConfig.metadata.artist || 'Unknown Artist';
+            customMetadata = processingConfig.metadata;
+            console.log(`📝 Using custom metadata for: ${finalName}`);
+        } else {
+            // Original naming - use original filename without extension
+            finalName = path.parse(path.basename(inputPath)).name;
+            console.log(`📄 Using original name: ${finalName}`);
+        }
+        
+        // Get lunar influences if enabled
+        let influences = null;
+        if (processingConfig.options.lunarInfluence && processingConfig.stages.compressing) {
+            influences = LunarProcessor.getInfluencedParameters();
+            console.log(`🌙 ${influences.description}`);
+        }
         
         // Temp files for processing stages
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
@@ -32,18 +56,84 @@ class AudioProcessor {
         const metadataEmbedder = new MetadataEmbedder();
         
         try {
-            // Step 1: Sox processing with lunar influences
-            await this.processSox(inputPath, tempFile, influences);
+            let currentFile = inputPath;
+            let artworkResult = null;
             
-            // Step 2: FFmpeg mastering
-            await this.processFFmpeg(tempFile, processedFile);
+            // Step 1: Sox processing (conditional)
+            if (processingConfig.stages.compressing && influences) {
+                console.log('🎛️ Applying mystical compression...');
+                await this.processSox(currentFile, tempFile, influences);
+                currentFile = tempFile;
+            } else if (processingConfig.stages.compressing) {
+                console.log('🎛️ Applying standard compression (lunar influence disabled)...');
+                // Use default influences for non-lunar processing
+                const defaultInfluences = {
+                    overdrive: 4.0,
+                    bass: 2.0,
+                    treble: 1.0,
+                    echo: { delay: 0.3, decay: 0.05 },
+                    compand: { attack: 0.2, ratio: 5 }
+                };
+                await this.processSox(currentFile, tempFile, defaultInfluences);
+                currentFile = tempFile;
+            } else {
+                console.log('⏭️ Skipping compression stage');
+            }
             
-            // Step 3: Generate artwork
-            const artworkPath = path.join(path.dirname(outputPath), `${bandName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.svg`);
-            const artworkResult = await artworkGenerator.generateArtwork(bandName, artworkPath);
+            // Step 2: FFmpeg mastering (conditional)
+            if (processingConfig.stages.mastering) {
+                console.log('🎚️ Applying mystical mastering...');
+                const masteringInput = currentFile;
+                const masteringOutput = processingConfig.stages.compressing ? processedFile : tempFile;
+                await this.processFFmpeg(masteringInput, masteringOutput);
+                currentFile = masteringOutput;
+            } else {
+                console.log('⏭️ Skipping mastering stage');
+                // If no mastering but we have a processed file, copy it
+                if (currentFile !== inputPath) {
+                    // Convert to MP3 without mastering
+                    await this.convertToMp3(currentFile, processedFile);
+                    currentFile = processedFile;
+                }
+            }
             
-            // Step 4: Embed metadata and artwork
-            await metadataEmbedder.processFileWithMetadata(processedFile, outputPath, bandName, artworkResult.pngPath);
+            // Step 3: Generate artwork (conditional)
+            if (processingConfig.stages.coverArt) {
+                console.log('🎨 Generating mystical artwork...');
+                const artworkPath = path.join(path.dirname(outputPath), `${finalName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.svg`);
+                artworkResult = await artworkGenerator.generateArtwork(finalName, artworkPath);
+            } else {
+                console.log('⏭️ Skipping artwork generation');
+            }
+            
+            // Step 4: Embed metadata (always happens, but content varies)
+            console.log('📋 Embedding metadata...');
+            const metadataForEmbedding = customMetadata ? {
+                title: customMetadata.title || path.parse(path.basename(inputPath)).name,
+                artist: customMetadata.artist,
+                album: customMetadata.album,
+                year: customMetadata.year,
+                genre: customMetadata.genre
+            } : {
+                title: path.parse(path.basename(inputPath)).name,
+                artist: finalName,
+                album: 'Mystical Transmutations',
+                year: new Date().getFullYear(),
+                genre: 'Mystical Audio'
+            };
+            
+            // If no processing was done, copy the original file and convert to MP3
+            if (currentFile === inputPath) {
+                await this.convertToMp3(inputPath, processedFile);
+                currentFile = processedFile;
+            }
+            
+            await metadataEmbedder.embedMetadata(
+                currentFile, 
+                outputPath, 
+                metadataForEmbedding,
+                artworkResult?.pngPath
+            );
             
             // Clean up temp files
             if (fs.existsSync(tempFile)) {
@@ -68,7 +158,13 @@ class AudioProcessor {
             }
             
             console.log(`✅ Successfully processed: ${path.basename(outputPath)}`);
-            return { success: true, bandName, artwork: artworkResult };
+            return { 
+                success: true, 
+                finalName, 
+                artwork: artworkResult,
+                processingConfig,
+                metadata: metadataForEmbedding
+            };
             
         } catch (error) {
             // Clean up temp files on error
@@ -84,6 +180,17 @@ class AudioProcessor {
     
     static async processSox(inputPath, outputPath, influences) {
         return new Promise((resolve, reject) => {
+            // Ensure influences object exists with defaults
+            if (!influences) {
+                influences = {
+                    overdrive: 4.0,
+                    bass: 2.0,
+                    treble: 1.0,
+                    echo: { delay: 0.3, decay: 0.05 },
+                    compand: { attack: 0.2, ratio: 5 }
+                };
+            }
+            
             // Sox effects chain with lunar-influenced parameters
             const soxProcess = spawn('sox', [
                 inputPath,
@@ -185,6 +292,32 @@ class AudioProcessor {
                 })
                 .on('error', (err) => {
                     console.error('\n❌ FFmpeg mastering failed:', err.message);
+                    reject(err);
+                })
+                .save(outputPath);
+        });
+    }
+    
+    /**
+     * Simple MP3 conversion without mastering effects
+     */
+    static async convertToMp3(inputPath, outputPath) {
+        return new Promise((resolve, reject) => {
+            ffmpeg(inputPath)
+                .audioFrequency(44100)
+                .audioChannels(2)
+                .format('mp3')
+                .audioCodec('libmp3lame')
+                .audioBitrate('320k')
+                .on('start', (commandLine) => {
+                    console.log('🎵 Converting to MP3: ' + commandLine);
+                })
+                .on('end', () => {
+                    console.log('✅ MP3 conversion complete');
+                    resolve();
+                })
+                .on('error', (err) => {
+                    console.error('❌ MP3 conversion failed:', err.message);
                     reject(err);
                 })
                 .save(outputPath);

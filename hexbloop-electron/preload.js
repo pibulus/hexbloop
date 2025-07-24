@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onProcessingUpdate: (callback) => ipcRenderer.on('processing-update', callback),
     onProcessingProgress: (callback) => ipcRenderer.on('processing-progress', callback),
     onFileDropped: (callback) => ipcRenderer.on('file-dropped', callback),
+    onAmbientToggle: (callback) => ipcRenderer.on('toggle-ambient-audio', callback),
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
 });
 

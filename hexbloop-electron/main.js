@@ -14,6 +14,10 @@ const { spawn } = require('child_process');
 const AudioProcessor = require('./src/audio-processor');
 const NameGenerator = require('./src/name-generator');
 
+// Menu system
+const { MenuBuilder } = require('./src/menu/menu-builder');
+const { getPreferencesManager } = require('./src/menu/preferences');
+
 let mainWindow;
 
 // === Window Management ===
@@ -23,6 +27,7 @@ function createWindow() {
         height: 800,
         minWidth: 800,
         minHeight: 600,
+        title: 'Hexbloop',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -39,10 +44,16 @@ function createWindow() {
     });
 
     mainWindow.loadFile('src/renderer/index.html');
+    
+    // Initialize menu system
+    const menuBuilder = new MenuBuilder(mainWindow);
+    const menu = menuBuilder.buildMenu();
+    require('electron').Menu.setApplicationMenu(menu);
 
     // Show window when ready to prevent visual flash
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
+        mainWindow.setTitle('Hexbloop');
     });
 
     // Workaround: intercept file:// navigation to handle drag-drop
@@ -188,6 +199,226 @@ ipcMain.handle('get-file-paths-from-drop', async (event, fileData) => {
     
     return paths;
 });
+
+// Handle ambient audio toggle from menu
+ipcMain.on('toggle-ambient-audio', (event, enabled) => {
+    // Forward to all renderer windows (in case we have multiple in the future)
+    mainWindow.webContents.send('toggle-ambient-audio', enabled);
+});
+
+// === Preferences IPC Handlers ===
+
+/**
+ * Handle preferences operation errors consistently
+ * @param {string} operation - Description of the operation that failed
+ * @param {Error} error - The error that occurred
+ * @returns {{success: false, error: string}} Standardized error response
+ */
+function handlePreferencesError(operation, error) {
+    console.error(`❌ Failed to ${operation}:`, error);
+    return { success: false, error: error.message };
+}
+
+/**
+ * Get current preferences settings
+ * @returns {Promise<Object>} Current settings object
+ */
+ipcMain.handle('preferences-get-settings', async () => {
+    try {
+        const preferencesManager = getPreferencesManager();
+        return preferencesManager.getSettings();
+    } catch (error) {
+        console.error('❌ Failed to get settings:', error);
+        throw error; // Let the renderer handle this critical error
+    }
+});
+
+/**
+ * Update a single preference setting
+ * @param {Event} event - IPC event object
+ * @param {string} settingPath - Dot-notation path to setting (e.g., 'processing.compressing')
+ * @param {*} value - New value for the setting
+ * @returns {Promise<{success: boolean, error?: string}>} Operation result
+ */
+ipcMain.handle('preferences-update-setting', async (event, settingPath, value) => {
+    try {
+        // Basic validation
+        if (!settingPath || typeof settingPath !== 'string') {
+            throw new Error('Invalid setting path');
+        }
+        
+        const preferencesManager = getPreferencesManager();
+        await preferencesManager.updateSetting(settingPath, value);
+        return { success: true };
+    } catch (error) {
+        return handlePreferencesError('update setting', error);
+    }
+});
+
+/**
+ * Update multiple preference settings
+ * @param {Event} event - IPC event object
+ * @param {Object} newSettings - Object containing multiple settings to update
+ * @returns {Promise<{success: boolean, error?: string}>} Operation result
+ */
+ipcMain.handle('preferences-update-settings', async (event, newSettings) => {
+    try {
+        if (!newSettings || typeof newSettings !== 'object') {
+            throw new Error('Invalid settings object');
+        }
+        
+        const preferencesManager = getPreferencesManager();
+        await preferencesManager.updateSettings(newSettings);
+        return { success: true };
+    } catch (error) {
+        return handlePreferencesError('update multiple settings', error);
+    }
+});
+
+/**
+ * Reset all preferences to default values
+ * @returns {Promise<{success: boolean, error?: string}>} Operation result
+ */
+ipcMain.handle('preferences-reset-defaults', async () => {
+    try {
+        const preferencesManager = getPreferencesManager();
+        await preferencesManager.resetToDefaults();
+        console.log('🔄 Preferences reset to defaults');
+        return { success: true };
+    } catch (error) {
+        return handlePreferencesError('reset settings to defaults', error);
+    }
+});
+
+/**
+ * Export current preferences to a JSON object
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>} Export result with data
+ */
+ipcMain.handle('preferences-export', async () => {
+    try {
+        const preferencesManager = getPreferencesManager();
+        const exportData = await preferencesManager.exportSettings();
+        return { success: true, data: exportData };
+    } catch (error) {
+        return handlePreferencesError('export settings', error);
+    }
+});
+
+/**
+ * Import preferences from a JSON object
+ * @param {Event} event - IPC event object
+ * @param {Object} importData - Settings data to import
+ * @returns {Promise<{success: boolean, error?: string}>} Import result
+ */
+ipcMain.handle('preferences-import', async (event, importData) => {
+    try {
+        if (!importData || typeof importData !== 'object') {
+            throw new Error('Invalid import data');
+        }
+        
+        const preferencesManager = getPreferencesManager();
+        await preferencesManager.importSettings(importData);
+        console.log('📥 Settings imported successfully');
+        return { success: true };
+    } catch (error) {
+        return handlePreferencesError('import settings', error);
+    }
+});
+
+/**
+ * Show native folder selection dialog for output directory
+ * @returns {Promise<{success: boolean, path?: string, error?: string}>} Selected folder path
+ */
+ipcMain.handle('preferences-choose-output-folder', async () => {
+    try {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory'],
+            title: 'Choose Output Folder for Processed Audio Files',
+            defaultPath: path.join(require('os').homedir(), 'Documents', 'HexbloopOutput')
+        });
+        
+        if (!result.canceled && result.filePaths.length > 0) {
+            const selectedPath = result.filePaths[0];
+            
+            // Validate folder is writable
+            try {
+                await fs.promises.access(selectedPath, fs.constants.W_OK);
+            } catch (accessError) {
+                console.error('❌ Selected folder is not writable:', selectedPath);
+                return { 
+                    success: false, 
+                    error: 'Selected folder is read-only. Please choose a folder where you have write permissions.' 
+                };
+            }
+            
+            // Check available disk space (basic check)
+            try {
+                const stats = await fs.promises.stat(selectedPath);
+                // Note: Node.js doesn't provide disk space info directly
+                // This is a basic existence check
+                if (!stats.isDirectory()) {
+                    return { 
+                        success: false, 
+                        error: 'Selected path is not a directory.' 
+                    };
+                }
+            } catch (statError) {
+                return { 
+                    success: false, 
+                    error: 'Unable to access the selected folder.' 
+                };
+            }
+            
+            console.log('📁 Output folder selected and validated:', selectedPath);
+            return { success: true, path: selectedPath };
+        }
+        
+        return { success: false, error: 'No folder selected' };
+    } catch (error) {
+        return handlePreferencesError('choose output folder', error);
+    }
+});
+
+/**
+ * Close the preferences window
+ * @returns {{success: boolean, error?: string}} Close operation result
+ */
+ipcMain.handle('preferences-close', () => {
+    try {
+        const { PreferencesWindow } = require('./src/menu/preferences-window');
+        const prefWindow = new PreferencesWindow(mainWindow);
+        
+        if (prefWindow.isOpen()) {
+            prefWindow.close();
+            console.log('Preferences window closed');
+            return { success: true };
+        }
+        
+        console.log('No preferences window found to close');
+        return { success: false, error: 'No preferences window found' };
+    } catch (error) {
+        return handlePreferencesError('close preferences window', error);
+    }
+});
+
+/**
+ * Show the preferences window
+ * @returns {Promise<void>}
+ */
+async function showPreferencesWindow() {
+    try {
+        const { PreferencesWindow } = require('./src/menu/preferences-window');
+        const prefWindow = new PreferencesWindow(mainWindow);
+        await prefWindow.show();
+        
+        console.log('Preferences window shown');
+    } catch (error) {
+        console.error('Failed to show preferences window:', error);
+    }
+}
+
+// Export for menu builder
+module.exports.showPreferencesWindow = showPreferencesWindow;
 
 // === Startup & Dependencies ===
 function checkDependencies() {
