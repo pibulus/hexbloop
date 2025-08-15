@@ -36,7 +36,8 @@
       "Bash(zsh:*)",
       "Bash(npm start)",
       "Bash(open:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(top:*)"
     ],
     "deny": []
   }
