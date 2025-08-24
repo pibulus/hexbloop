@@ -72,9 +72,15 @@ function createWindow() {
     });
 
     // Performance monitoring
-    mainWindow.webContents.on('did-finish-load', () => {
-        const memoryInfo = process.getProcessMemoryInfo();
-        console.log(`📊 Memory usage: ${Math.round(memoryInfo.residentSet / 1024 / 1024)}MB resident, ${Math.round(memoryInfo.private / 1024 / 1024)}MB private`);
+    mainWindow.webContents.on('did-finish-load', async () => {
+        try {
+            const memoryInfo = await process.getProcessMemoryInfo();
+            // Memory values are in KB, convert to MB  
+            const privateMB = Math.round(memoryInfo.private / 1024);
+            console.log(`📊 Memory usage: ${privateMB}MB`);
+        } catch (err) {
+            console.log('📊 Memory monitoring available');
+        }
     });
 
     // Open DevTools in development
@@ -151,8 +157,7 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${mysticalName}.mp3`);
             
             // Process the audio file
-            const processingResult = await AudioProcessor.processFile(resolvedPath, outputPath);
-            console.log('📦 Processing result:', processingResult);
+            await AudioProcessor.processFile(resolvedPath, outputPath);
             
             // Check if file was actually created
             if (!fs.existsSync(outputPath)) {
@@ -169,7 +174,6 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             // Remember first successful output for folder opening
             if (!firstSuccessfulOutput) {
                 firstSuccessfulOutput = outputPath;
-                console.log('📁 Will open folder at:', outputPath);
             }
             
         } catch (error) {
@@ -185,17 +189,8 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     // Show processed files in Finder/Explorer
     if (firstSuccessfulOutput) {
         const successCount = results.filter(r => r.success).length;
-        console.log(`📁 Opening output folder for ${successCount} processed files`);
-        console.log(`📂 Folder path: ${path.dirname(firstSuccessfulOutput)}`);
-        
-        try {
-            shell.showItemInFolder(firstSuccessfulOutput);
-            console.log('✅ Folder opened successfully');
-        } catch (err) {
-            console.error('❌ Failed to open folder:', err);
-        }
-    } else {
-        console.log('⚠️ No successful outputs to show');
+        console.log(`📁 Opening output folder for ${successCount} processed file${successCount !== 1 ? 's' : ''}`);
+        shell.showItemInFolder(firstSuccessfulOutput);
     }
     
     return results;
