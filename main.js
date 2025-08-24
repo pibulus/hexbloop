@@ -121,18 +121,37 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
                 status: 'processing'
             });
             
-            // Validate input file path
-            if (!filePath || !fs.existsSync(filePath)) {
-                throw new Error(`Input file not found: ${filePath}`);
+            // Validate and sanitize input file path
+            if (!filePath || typeof filePath !== 'string') {
+                throw new Error('Invalid file path provided');
+            }
+            
+            // Resolve to absolute path and check it exists
+            const resolvedPath = path.resolve(filePath);
+            if (!fs.existsSync(resolvedPath)) {
+                throw new Error(`Input file not found: ${path.basename(filePath)}`);
+            }
+            
+            // Ensure file is actually a file, not a directory
+            const stats = fs.statSync(resolvedPath);
+            if (!stats.isFile()) {
+                throw new Error(`Path is not a file: ${path.basename(filePath)}`);
+            }
+            
+            // Validate audio file extension
+            const validExtensions = ['.mp3', '.wav', '.m4a', '.aiff', '.flac', '.ogg', '.aac'];
+            const ext = path.extname(resolvedPath).toLowerCase();
+            if (!validExtensions.includes(ext)) {
+                throw new Error(`Unsupported audio format: ${ext}`);
             }
             
             const mysticalName = NameGenerator.generateMystical();
             const outputPath = path.join(outputDirectory, `${mysticalName}.mp3`);
             
-            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(filePath)} -> ${mysticalName}.mp3`);
+            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${mysticalName}.mp3`);
             
             // Process the audio file
-            await AudioProcessor.processFile(filePath, outputPath);
+            await AudioProcessor.processFile(resolvedPath, outputPath);
             
             results.push({
                 success: true,
@@ -421,32 +440,65 @@ async function showPreferencesWindow() {
 module.exports.showPreferencesWindow = showPreferencesWindow;
 
 // === Startup & Dependencies ===
-function checkDependencies() {
+async function checkDependencies() {
     const dependencies = ['ffmpeg', 'sox'];
     const results = {};
     
     for (const dep of dependencies) {
-        try {
-            const process = spawn(dep, ['--version'], { stdio: 'pipe' });
-            process.on('close', (code) => {
-                results[dep] = code === 0;
-                if (code === 0) {
-                    console.log(`✅ ${dep} is available`);
-                } else {
-                    console.log(`⚠️ ${dep} not found (code: ${code})`);
-                }
-            });
-            process.on('error', () => {
-                results[dep] = false;
-                console.log(`❌ ${dep} not found in PATH`);
-            });
-        } catch (error) {
-            results[dep] = false;
-            console.log(`❌ ${dep} check failed:`, error.message);
-        }
+        results[dep] = await checkDependency(dep);
+    }
+    
+    // Store results globally for the audio processor to check
+    global.availableDependencies = results;
+    
+    // Log summary
+    if (!results.sox && !results.ffmpeg) {
+        console.log('⚠️ WARNING: Neither sox nor ffmpeg found. Audio processing will fail.');
+        console.log('Install with: brew install sox ffmpeg');
+    } else if (!results.ffmpeg) {
+        console.log('⚠️ FFmpeg not found. Using sox fallback (lower quality mastering)');
+        console.log('For best results, install with: brew install ffmpeg');
     }
     
     return results;
+}
+
+function checkDependency(command) {
+    return new Promise((resolve) => {
+        const process = spawn(command, ['--version'], { 
+            stdio: 'pipe',
+            shell: false 
+        });
+        
+        let resolved = false;
+        
+        process.on('close', (code) => {
+            if (!resolved) {
+                resolved = true;
+                const available = code === 0;
+                console.log(available ? `✅ ${command} is available` : `⚠️ ${command} not found (code: ${code})`);
+                resolve(available);
+            }
+        });
+        
+        process.on('error', (err) => {
+            if (!resolved) {
+                resolved = true;
+                console.log(`⚠️ ${command} not found in PATH`);
+                resolve(false);
+            }
+        });
+        
+        // Timeout after 2 seconds
+        setTimeout(() => {
+            if (!resolved) {
+                resolved = true;
+                process.kill();
+                console.log(`⚠️ ${command} check timed out`);
+                resolve(false);
+            }
+        }, 2000);
+    });
 }
 
 // === Error Handling ===
