@@ -6,7 +6,7 @@
  */
 
 const ffmpeg = require('fluent-ffmpeg');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const LunarProcessor = require('./lunar-processor');
@@ -14,6 +14,20 @@ const NameGenerator = require('./name-generator');
 const ArtworkGenerator = require('./artwork-generator');
 const MetadataEmbedder = require('./metadata-embedder');
 const { getPreferencesManager } = require('./menu/preferences');
+
+// Try to auto-detect ffmpeg path for macOS (homebrew installations)
+try {
+    const ffmpegPath = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
+    const ffprobePath = execSync('which ffprobe', { encoding: 'utf8' }).trim();
+    
+    if (ffmpegPath && ffprobePath) {
+        ffmpeg.setFfmpegPath(ffmpegPath);
+        ffmpeg.setFfprobePath(ffprobePath);
+        console.log(`🎬 FFmpeg configured: ${ffmpegPath}`);
+    }
+} catch (error) {
+    console.log('⚠️ Could not auto-detect ffmpeg path, using system default');
+}
 
 class AudioProcessor {
     static async processFile(inputPath, outputPath) {

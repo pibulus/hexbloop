@@ -465,17 +465,29 @@ async function checkDependencies() {
 
 function checkDependency(command) {
     return new Promise((resolve) => {
-        const process = spawn(command, ['--version'], { 
-            stdio: 'pipe',
+        // FFmpeg outputs version to stderr, sox to stdout, so we need to capture both
+        const process = spawn(command, ['-version'], { 
+            stdio: ['ignore', 'pipe', 'pipe'],
             shell: false 
         });
         
         let resolved = false;
+        let stdout = '';
+        let stderr = '';
+        
+        process.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+        
+        process.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
         
         process.on('close', (code) => {
             if (!resolved) {
                 resolved = true;
-                const available = code === 0;
+                // FFmpeg returns 0 and outputs to stderr, sox returns 0 and outputs to stdout
+                const available = code === 0 || (command === 'ffmpeg' && stderr.includes('version'));
                 console.log(available ? `✅ ${command} is available` : `⚠️ ${command} not found (code: ${code})`);
                 resolve(available);
             }
