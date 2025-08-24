@@ -151,7 +151,13 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${mysticalName}.mp3`);
             
             // Process the audio file
-            await AudioProcessor.processFile(resolvedPath, outputPath);
+            const processingResult = await AudioProcessor.processFile(resolvedPath, outputPath);
+            console.log('📦 Processing result:', processingResult);
+            
+            // Check if file was actually created
+            if (!fs.existsSync(outputPath)) {
+                throw new Error('Output file was not created');
+            }
             
             results.push({
                 success: true,
@@ -163,6 +169,7 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             // Remember first successful output for folder opening
             if (!firstSuccessfulOutput) {
                 firstSuccessfulOutput = outputPath;
+                console.log('📁 Will open folder at:', outputPath);
             }
             
         } catch (error) {
@@ -177,8 +184,18 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     
     // Show processed files in Finder/Explorer
     if (firstSuccessfulOutput) {
-        console.log(`📁 Opening output folder for ${results.filter(r => r.success).length} processed files`);
-        shell.showItemInFolder(firstSuccessfulOutput);
+        const successCount = results.filter(r => r.success).length;
+        console.log(`📁 Opening output folder for ${successCount} processed files`);
+        console.log(`📂 Folder path: ${path.dirname(firstSuccessfulOutput)}`);
+        
+        try {
+            shell.showItemInFolder(firstSuccessfulOutput);
+            console.log('✅ Folder opened successfully');
+        } catch (err) {
+            console.error('❌ Failed to open folder:', err);
+        }
+    } else {
+        console.log('⚠️ No successful outputs to show');
     }
     
     return results;
@@ -465,8 +482,9 @@ async function checkDependencies() {
 
 function checkDependency(command) {
     return new Promise((resolve) => {
-        // FFmpeg outputs version to stderr, sox to stdout, so we need to capture both
-        const process = spawn(command, ['-version'], { 
+        // FFmpeg uses -version, sox uses --version
+        const versionFlag = command === 'sox' ? '--version' : '-version';
+        const process = spawn(command, [versionFlag], { 
             stdio: ['ignore', 'pipe', 'pipe'],
             shell: false 
         });
