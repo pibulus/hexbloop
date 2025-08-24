@@ -1,0 +1,232 @@
+/* macOS Native Tab Styles for Hexbloop Preferences */
+
+/* Tab Bar - macOS Style */
+.tab-bar {
+    display: flex;
+    background: linear-gradient(180deg, #2a2a3e 0%, #1f1f33 100%);
+    border-bottom: 1px solid rgba(88, 86, 214, 0.2);
+    padding: 0;
+    margin: 0;
+    height: 48px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(20px);
+    -webkit-app-region: drag;
+}
+
+/* Tab Buttons */
+.tab-button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    -webkit-app-region: no-drag;
+    letter-spacing: 0.3px;
+}
+
+.tab-button:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(159, 121, 234, 0.05);
+}
+
+.tab-button.active {
+    color: rgba(255, 255, 255, 0.95);
+    background: rgba(159, 121, 234, 0.1);
+}
+
+/* Active tab indicator */
+.tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(159, 121, 234, 0.8) 50%, 
+        transparent 100%);
+    animation: tab-glow 2s ease-in-out infinite;
+}
+
+@keyframes tab-glow {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+/* Tab Icons */
+.tab-icon {
+    font-size: 16px;
+    color: rgba(159, 121, 234, 0.7);
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover .tab-icon {
+    color: rgba(159, 121, 234, 0.9);
+    transform: rotate(10deg);
+}
+
+.tab-button.active .tab-icon {
+    color: var(--purple-accent);
+    animation: icon-pulse 3s ease-in-out infinite;
+}
+
+@keyframes icon-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Tab Panels */
+.tab-panel {
+    display: none;
+    animation: fadeIn 0.3s ease;
+    padding: 24px;
+    max-height: calc(100vh - 48px - 80px); /* Account for tab bar and footer */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Adjust container for tabs */
+.preferences-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0d0d1a 100%);
+    border: 1px solid rgba(88, 86, 214, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 100px rgba(159, 121, 234, 0.1),
+        inset 0 0 120px rgba(159, 121, 234, 0.02);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Content area with proper scrolling */
+.preferences-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Custom scrollbar for tab panels */
+.tab-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tab-panel::-webkit-scrollbar-track {
+    background: rgba(26, 26, 46, 0.3);
+    border-radius: 4px;
+}
+
+.tab-panel::-webkit-scrollbar-thumb {
+    background: rgba(159, 121, 234, 0.3);
+    border-radius: 4px;
+}
+
+.tab-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(159, 121, 234, 0.5);
+}
+
+/* Footer adjustments for tab layout */
+.preferences-footer {
+    border-top: 1px solid rgba(88, 86, 214, 0.2);
+    background: linear-gradient(180deg, rgba(26, 26, 46, 0.3) 0%, rgba(13, 13, 26, 0.5) 100%);
+    padding: 16px 24px;
+    margin-top: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .tab-button {
+        font-size: 12px;
+        padding: 10px 12px;
+    }
+    
+    .tab-icon {
+        font-size: 14px;
+    }
+    
+    .tab-label {
+        display: none;
+    }
+    
+    .tab-button {
+        justify-content: center;
+    }
+}
+
+/* macOS window vibrancy effect */
+@supports (backdrop-filter: blur(20px)) {
+    .tab-bar {
+        background: linear-gradient(180deg, 
+            rgba(42, 42, 62, 0.85) 0%, 
+            rgba(31, 31, 51, 0.85) 100%);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+    
+    .preferences-container {
+        background: linear-gradient(135deg, 
+            rgba(26, 26, 46, 0.95) 0%, 
+            rgba(13, 13, 26, 0.95) 100%);
+    }
+}
+
+/* Tab transition effects */
+.tab-panel.sliding-in {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Hexagonal tab accent */
+.tab-bar::before {
+    content: '⬢';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: rgba(159, 121, 234, 0.3);
+    animation: hex-rotate 10s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes hex-rotate {
+    to { transform: translateY(-50%) rotate(360deg); }
+}

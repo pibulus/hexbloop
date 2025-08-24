@@ -22,7 +22,7 @@ class MenuBuilder {
         const template = [
             // Application Menu (macOS)
             {
-                label: 'Hexbloop',
+                label: process.platform === 'darwin' ? require('electron').app.getName() : 'Hexbloop',
                 submenu: [
                     {
                         label: 'About Hexbloop',

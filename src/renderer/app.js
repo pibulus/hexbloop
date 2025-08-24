@@ -45,10 +45,14 @@ class HexbloopMystic {
         this.toggleIcon = document.getElementById('toggleIcon');
         this.isAudioPlaying = false;
         
+        // Settings button
+        this.settingsButton = document.getElementById('settingsButton');
+        
         this.initEvents();
         this.initProgressListeners();
         this.initParallax();
         this.initAmbientAudio();
+        this.initSettingsButton();
         console.log('🔥 Mystical hexagon awakened - ready for sacrifices 🤘');
     }
     
@@ -509,6 +513,51 @@ class HexbloopMystic {
         setTimeout(() => {
             this.hexStack.style.filter = '';
         }, 1500);
+    }
+    
+    initAmbientAudio() {
+        // Ambient audio toggle handler
+        if (this.ambientToggle) {
+            this.ambientToggle.addEventListener('click', () => {
+                this.toggleAmbientAudio();
+            });
+        }
+        
+        // Initialize audio element with low volume
+        if (this.ambientAudio) {
+            this.ambientAudio.volume = 0.3;
+        }
+    }
+    
+    toggleAmbientAudio(forceState = null) {
+        if (!this.ambientAudio) return;
+        
+        const shouldPlay = forceState !== null ? forceState : !this.isAudioPlaying;
+        
+        if (shouldPlay) {
+            this.ambientAudio.play().then(() => {
+                this.isAudioPlaying = true;
+                this.ambientToggle.classList.add('active');
+                console.log('🎵 Ambient audio started');
+            }).catch(err => {
+                console.log('🔇 Ambient audio playback failed:', err);
+            });
+        } else {
+            this.ambientAudio.pause();
+            this.isAudioPlaying = false;
+            this.ambientToggle.classList.remove('active');
+            console.log('🔇 Ambient audio paused');
+        }
+    }
+    
+    initSettingsButton() {
+        // Settings button click handler
+        if (this.settingsButton) {
+            this.settingsButton.addEventListener('click', () => {
+                console.log('⚙️ Opening preferences window...');
+                window.electronAPI.openPreferences();
+            });
+        }
     }
 }
 

@@ -4,24 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-    <title>Mystical Preferences</title>
+    <title>Hexbloop Mystical Settings</title>
     <link rel="stylesheet" href="preferences.css">
 </head>
 <body>
+    <!-- Mystical background effects -->
+    <div class="hexagon-particles">
+        <div class="hex-particle hex-particle-1">⬡</div>
+        <div class="hex-particle hex-particle-2">⬢</div>
+        <div class="hex-particle hex-particle-3">⬡</div>
+        <div class="hex-particle hex-particle-4">⬢</div>
+        <div class="hex-particle hex-particle-5">⬡</div>
+        <div class="hex-particle hex-particle-6">⬢</div>
+    </div>
+    
     <div class="preferences-container">
-        <!-- Header with mystical branding -->
-        <header class="preferences-header">
-            <h1 class="mystical-title">Preferences</h1>
-            <p class="mystical-subtitle">Configure audio processing and application settings</p>
-        </header>
+        <!-- macOS-style tab bar -->
+        <div class="tab-bar">
+            <button class="tab-button active" data-tab="processing">
+                <span class="tab-icon">✧</span>
+                <span class="tab-label">Processing</span>
+            </button>
+            <button class="tab-button" data-tab="naming">
+                <span class="tab-icon">⬡</span>
+                <span class="tab-label">Naming</span>
+            </button>
+            <button class="tab-button" data-tab="output">
+                <span class="tab-icon">⬢</span>
+                <span class="tab-label">Output</span>
+            </button>
+        </div>
 
         <!-- Main preferences content -->
         <main class="preferences-content">
-            <!-- Processing Options Section -->
+            <!-- Processing Tab -->
+            <div class="tab-panel active" id="processing-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title">Audio Processing</h2>
-                    <div class="section-description">Control which audio processing steps are applied to your files</div>
+                    <h2 class="section-title">✧ Audio Alchemy ✧</h2>
+                    <div class="section-description">Choose which mystical transformations to apply</div>
                 </div>
                 
                 <div class="settings-grid">
@@ -80,12 +101,14 @@
                     </div>
                 </div>
             </section>
+            </div>
 
-            <!-- Naming Options Section -->
+            <!-- Naming Tab -->
+            <div class="tab-panel" id="naming-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title" id="file-naming-title">File Naming</h2>
-                    <div class="section-description">Choose how processed files are named and tagged</div>
+                    <h2 class="section-title" id="file-naming-title">⬡ Cosmic Nomenclature ⬡</h2>
+                    <div class="section-description">Define how your creations shall be known</div>
                 </div>
                 
                 <div class="radio-cards" role="radiogroup" aria-labelledby="file-naming-title">
@@ -136,8 +159,8 @@
             <!-- Custom Metadata Section -->
             <section class="preference-section" id="custom-metadata-section">
                 <div class="section-header">
-                    <h2 class="section-title" id="custom-metadata-title">Custom Metadata</h2>
-                    <div class="section-description">Specify your preferred metadata for custom naming mode</div>
+                    <h2 class="section-title" id="custom-metadata-title">◈ Earthly Inscriptions ◈</h2>
+                    <div class="section-description">Inscribe your mortal identity upon the waves</div>
                 </div>
                 
                 <div class="metadata-form" role="group" aria-labelledby="custom-metadata-title">
@@ -189,12 +212,14 @@
                     </div>
                 </div>
             </section>
+            </div>
 
-            <!-- Output Settings Section -->
+            <!-- Output Tab -->
+            <div class="tab-panel" id="output-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title">Output Settings</h2>
-                    <div class="section-description">Configure where processed files are saved</div>
+                    <h2 class="section-title">⬢ Portal Destination ⬢</h2>
+                    <div class="section-description">Choose where your transmutations shall manifest</div>
                 </div>
                 
                 <div class="form-row">
@@ -207,6 +232,7 @@
                     </div>
                 </div>
             </section>
+            </div>
 
         </main>
 

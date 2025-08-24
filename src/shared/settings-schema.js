@@ -23,6 +23,28 @@ const DEFAULT_SETTINGS = {
         year: new Date().getFullYear(),  // Custom year
         genre: 'Mystical Audio'  // Custom genre
     },
+    batch: {
+        namingScheme: 'mystical',    // 'mystical' | 'sequential' | 'timestamp' | 'hybrid' | 'preserve'
+        prefix: '',                   // Optional prefix for all files
+        suffix: '',                   // Optional suffix (before extension)
+        numberingStyle: 'none',       // 'none' | 'numeric' | 'alpha' | 'roman'
+        numberingPadding: 3,          // Digits for numeric padding (001, 002, etc.)
+        separator: '_',               // Character between naming elements
+        preserveOriginal: false,      // Include original filename in output
+        sessionFolders: false,        // Organize into session folders
+        folderScheme: 'date'          // 'date' | 'lunar' | 'counter' | 'none'
+    },
+    output: {
+        format: 'mp3',                // 'mp3' | 'wav' | 'flac' | 'aac' | 'ogg' | 'original'
+        quality: 'high',              // 'low' | 'medium' | 'high' | 'maximum'
+        mp3Bitrate: 320,              // kbps for MP3
+        sampleRate: 0                 // 0 = preserve original, or 44100, 48000, etc.
+    },
+    performance: {
+        parallelProcessing: false,    // Enable parallel batch processing
+        maxWorkers: 2,                // Number of parallel workers
+        processingPriority: 'balanced' // 'speed' | 'quality' | 'balanced'
+    },
     ui: {
         ambientAudio: true,     // Background ambient loop
         outputFolder: path.join(os.homedir(), 'Documents', 'HexbloopOutput'),
@@ -50,6 +72,28 @@ const SETTINGS_SCHEMA = {
         album: 'string',
         year: 'number',
         genre: 'string'
+    },
+    batch: {
+        namingScheme: ['mystical', 'sequential', 'timestamp', 'hybrid', 'preserve'],
+        prefix: 'string',
+        suffix: 'string',
+        numberingStyle: ['none', 'numeric', 'alpha', 'roman'],
+        numberingPadding: 'number',
+        separator: 'string',
+        preserveOriginal: 'boolean',
+        sessionFolders: 'boolean',
+        folderScheme: ['date', 'lunar', 'counter', 'none']
+    },
+    output: {
+        format: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'original'],
+        quality: ['low', 'medium', 'high', 'maximum'],
+        mp3Bitrate: 'number',
+        sampleRate: 'number'
+    },
+    performance: {
+        parallelProcessing: 'boolean',
+        maxWorkers: 'number',
+        processingPriority: ['speed', 'quality', 'balanced']
     },
     ui: {
         ambientAudio: 'boolean',

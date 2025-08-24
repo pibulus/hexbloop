@@ -47,6 +47,7 @@ class PreferencesController {
         this.currentSettings = null;
         this.settingElements = new Map();
         this.debouncedUpdates = new Map(); // Store debounced update functions
+        this.activeTab = 'processing'; // Track active tab
         
         this.init();
     }
@@ -102,6 +103,9 @@ class PreferencesController {
     }
     
     bindEvents() {
+        // Tab switching
+        this.setupTabSwitching();
+        
         // Setting change handlers
         this.settingElements.forEach((element, settingPath) => {
             if (element.type === 'checkbox') {
@@ -200,6 +204,41 @@ class PreferencesController {
         this.updateCustomMetadataVisibility();
         
         console.log('🎨 UI updated with current settings');
+    }
+    
+    setupTabSwitching() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanels = document.querySelectorAll('.tab-panel');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+                
+                // Update active states
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabPanels.forEach(panel => panel.classList.remove('active'));
+                
+                // Activate selected tab
+                button.classList.add('active');
+                const targetPanel = document.getElementById(`${targetTab}-tab`);
+                if (targetPanel) {
+                    targetPanel.classList.add('active');
+                    targetPanel.classList.add('sliding-in');
+                    
+                    // Remove animation class after animation completes
+                    setTimeout(() => {
+                        targetPanel.classList.remove('sliding-in');
+                    }, 300);
+                }
+                
+                this.activeTab = targetTab;
+                
+                // Update custom metadata visibility if on naming tab
+                if (targetTab === 'naming') {
+                    this.updateCustomMetadataVisibility();
+                }
+            });
+        });
     }
     
     getSettingValue(settingPath) {

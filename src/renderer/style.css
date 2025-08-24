@@ -619,6 +619,76 @@ body {
     }
 }
 
+/* UI CONTROLS */
+.ambient-toggle {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: rgba(13, 13, 26, 0.8);
+    border: 2px solid rgba(159, 121, 234, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.ambient-toggle:hover {
+    background: rgba(159, 121, 234, 0.2);
+    border-color: rgba(159, 121, 234, 0.6);
+    box-shadow: 0 0 20px rgba(159, 121, 234, 0.4);
+}
+
+.toggle-icon {
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.6);
+    transition: color 0.3s ease;
+}
+
+.ambient-toggle.active .toggle-icon {
+    color: rgba(159, 121, 234, 1);
+    text-shadow: 0 0 10px rgba(159, 121, 234, 0.8);
+}
+
+.settings-button {
+    position: fixed;
+    bottom: 30px;
+    right: 90px;
+    width: 50px;
+    height: 50px;
+    background: rgba(13, 13, 26, 0.8);
+    border: 2px solid rgba(88, 86, 214, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.settings-button:hover {
+    background: rgba(88, 86, 214, 0.2);
+    border-color: rgba(88, 86, 214, 0.6);
+    box-shadow: 0 0 20px rgba(88, 86, 214, 0.4);
+    transform: rotate(90deg);
+}
+
+.settings-icon {
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
+}
+
+.settings-button:hover .settings-icon {
+    color: rgba(88, 86, 214, 1);
+    text-shadow: 0 0 10px rgba(88, 86, 214, 0.8);
+}
+
 /* MYSTICAL SUCCESS GLOW */
 .success-ripple {
     position: absolute;

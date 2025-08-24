@@ -13,12 +13,15 @@ const { spawn } = require('child_process');
 // Audio processing modules
 const AudioProcessor = require('./src/audio-processor');
 const NameGenerator = require('./src/name-generator');
+const BatchNamingEngine = require('./src/batch/batch-naming-engine');
 
 // Menu system
 const { MenuBuilder } = require('./src/menu/menu-builder');
 const { getPreferencesManager } = require('./src/menu/preferences');
+const { PreferencesWindow } = require('./src/menu/preferences-window');
 
 let mainWindow;
+let preferencesWindow;
 
 // === Window Management ===
 function createWindow() {
@@ -89,8 +92,48 @@ function createWindow() {
     }
 }
 
+// === Preferences Window ===
+async function showPreferencesWindow() {
+    try {
+        console.log('🔧 showPreferencesWindow called');
+        
+        if (!mainWindow) {
+            console.error('❌ Main window not available');
+            return;
+        }
+        
+        if (!preferencesWindow) {
+            console.log('📦 Creating new PreferencesWindow instance');
+            preferencesWindow = new PreferencesWindow(mainWindow);
+        }
+        
+        console.log('🎯 Calling preferencesWindow.show()');
+        const window = await preferencesWindow.show();
+        console.log('✅ Preferences window should be visible:', window ? 'YES' : 'NO');
+        
+        // Force show and focus as a fallback
+        if (window && !window.isDestroyed()) {
+            window.show();
+            window.focus();
+            console.log('🔍 Forced show and focus on preferences window');
+        }
+        
+        return window;
+    } catch (error) {
+        console.error('❌ Error showing preferences window:', error);
+        console.error('Stack trace:', error.stack);
+    }
+}
+
+// Export for menu-builder
+module.exports.showPreferencesWindow = showPreferencesWindow;
+
 // === App Lifecycle ===
-app.whenReady().then(createWindow);
+app.setName('Hexbloop');
+app.whenReady().then(() => {
+    app.setName('Hexbloop');
+    createWindow();
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
@@ -105,15 +148,48 @@ app.on('activate', () => {
 });
 
 // === IPC Handlers ===
+ipcMain.handle('open-preferences', async () => {
+    await showPreferencesWindow();
+});
+
 ipcMain.handle('process-audio', async (event, filePaths) => {
     const results = [];
     let firstSuccessfulOutput = null;
     
+    // Get user preferences for batch processing
+    const preferencesManager = getPreferencesManager();
+    const settings = preferencesManager.getSettings();
+    
+    // Initialize batch naming engine with user preferences
+    const namingEngine = new BatchNamingEngine(settings.batch);
+    
+    // Determine output directory (with optional session folder)
+    let outputDirectory = settings.ui.outputFolder || path.join(os.homedir(), 'Documents', 'HexbloopOutput');
+    
+    // Create session folder if enabled
+    const sessionFolder = namingEngine.generateSessionFolder();
+    if (sessionFolder) {
+        outputDirectory = path.join(outputDirectory, sessionFolder);
+    }
+    
     // Ensure output directory exists
-    const outputDirectory = path.join(os.homedir(), 'Documents', 'HexbloopOutput');
     if (!fs.existsSync(outputDirectory)) {
         fs.mkdirSync(outputDirectory, { recursive: true });
         console.log(`✨ Created output directory: ${outputDirectory}`);
+    }
+    
+    // Save manifest if session folders are enabled
+    if (sessionFolder) {
+        const manifest = {
+            timestamp: new Date().toISOString(),
+            moonPhase: namingEngine.moonPhase,
+            fileCount: filePaths.length,
+            settings: settings.batch,
+            files: []
+        };
+        
+        // Will be updated as files are processed
+        results.manifest = manifest;
     }
     
     for (let i = 0; i < filePaths.length; i++) {
@@ -151,10 +227,12 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
                 throw new Error(`Unsupported audio format: ${ext}`);
             }
             
-            const mysticalName = NameGenerator.generateMystical();
-            const outputPath = path.join(outputDirectory, `${mysticalName}.mp3`);
+            // Generate name using batch naming engine
+            const generatedName = namingEngine.generateName(resolvedPath, i, filePaths.length);
+            const outputFormat = settings.output.format || 'mp3';
+            const outputPath = path.join(outputDirectory, `${generatedName}.${outputFormat}`);
             
-            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${mysticalName}.mp3`);
+            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${generatedName}.${outputFormat}`);
             
             // Process the audio file
             await AudioProcessor.processFile(resolvedPath, outputPath);
@@ -168,8 +246,17 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
                 success: true,
                 originalFile: filePath,
                 outputFile: outputPath,
-                mysticalName: mysticalName
+                mysticalName: generatedName
             });
+            
+            // Update manifest if session folders are enabled
+            if (results.manifest) {
+                results.manifest.files.push({
+                    original: path.basename(filePath),
+                    output: `${generatedName}.${outputFormat}`,
+                    success: true
+                });
+            }
             
             // Remember first successful output for folder opening
             if (!firstSuccessfulOutput) {
@@ -186,6 +273,17 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
         }
     }
     
+    // Save manifest file if session folders are enabled
+    if (results.manifest && sessionFolder) {
+        const manifestPath = path.join(outputDirectory, 'manifest.json');
+        try {
+            fs.writeFileSync(manifestPath, JSON.stringify(results.manifest, null, 2));
+            console.log(`📝 Saved session manifest: ${manifestPath}`);
+        } catch (error) {
+            console.error('Failed to save manifest:', error);
+        }
+    }
+    
     // Show processed files in Finder/Explorer
     if (firstSuccessfulOutput) {
         const successCount = results.filter(r => r.success).length;
@@ -194,6 +292,15 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     }
     
     return results;
+});
+
+// Preview batch naming without processing
+ipcMain.handle('preview-batch-naming', async (event, filePaths) => {
+    const preferencesManager = getPreferencesManager();
+    const settings = preferencesManager.getSettings();
+    const namingEngine = new BatchNamingEngine(settings.batch);
+    
+    return namingEngine.previewBatch(filePaths);
 });
 
 ipcMain.handle('select-files', async () => {

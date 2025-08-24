@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     processAudio: (filePaths) => ipcRenderer.invoke('process-audio', filePaths),
     selectFiles: () => ipcRenderer.invoke('select-files'),
     getFilePathsFromDrop: (files) => ipcRenderer.invoke('get-file-paths-from-drop', files),
+    openPreferences: () => ipcRenderer.invoke('open-preferences'),
     
     // New method for getting file paths from dropped files (Electron v32+ compatible)
     getFilePathsFromFiles: (files) => {
