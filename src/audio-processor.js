@@ -13,6 +13,7 @@ const LunarProcessor = require('./lunar-processor');
 const NameGenerator = require('./name-generator');
 const ArtworkGeneratorCanvas = require('./artwork-generator-canvas');
 const MetadataEmbedder = require('./metadata-embedder');
+const AudioAnalyzer = require('./audio-analyzer');
 const { getPreferencesManager } = require('./menu/preferences');
 
 // Try to auto-detect ffmpeg path for macOS (homebrew installations)
@@ -114,6 +115,16 @@ class AudioProcessor {
                 const moonData = LunarProcessor.getMoonPhase();
                 const moonPhase = typeof moonData === 'object' ? moonData.phase : moonData;
                 
+                // Analyze audio for visual features
+                let audioFeatures = null;
+                try {
+                    console.log('🎵 Analyzing audio for visual features...');
+                    audioFeatures = await AudioAnalyzer.analyzeAudio(inputPath);
+                    console.log(`   Energy: ${(audioFeatures.energy * 100).toFixed(0)}% | Tempo: ${audioFeatures.tempo} BPM`);
+                } catch (analysisError) {
+                    console.log('⚠️ Audio analysis skipped:', analysisError.message);
+                }
+                
                 // Auto-select style based on processing characteristics
                 let artStyle = null;
                 if (finalName.toLowerCase().includes('cosmic') || finalName.toLowerCase().includes('astral')) {
@@ -140,12 +151,18 @@ class AudioProcessor {
                     artStyle = 'retro'; // Heavy bass = retro wave
                 }
                 
-                // Generate canvas-based artwork with moon phase and style
+                // Use audio analysis to suggest style if none selected
+                if (!artStyle && audioFeatures) {
+                    artStyle = AudioAnalyzer.suggestArtStyle(audioFeatures, finalName);
+                }
+                
+                // Generate canvas-based artwork with moon phase, style, and audio features
                 const canvas = await artworkGenerator.generate({
                     style: artStyle,
                     title: finalName,
                     moonPhase: moonPhase,
-                    seed: Date.now()
+                    seed: Date.now(),
+                    audioFeatures: audioFeatures // Pass audio features for waveform viz
                 });
                 
                 // Save the artwork as PNG

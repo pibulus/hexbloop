@@ -24,7 +24,8 @@ class ArtworkGeneratorCanvas {
             title = 'Untitled',
             duration = 0,
             moonPhase = 0.5,
-            seed = Date.now()
+            seed = Date.now(),
+            audioFeatures = null // New: audio analysis data
         } = options;
 
         // Clear canvas with dark background
@@ -35,6 +36,9 @@ class ArtworkGeneratorCanvas {
         this.seed = seed;
         this.random = this.seededRandom(seed);
 
+        // Store audio features for use in generators
+        this.audioFeatures = audioFeatures;
+        
         // Generate based on style
         switch (style) {
             case 'cosmic':
@@ -136,6 +140,11 @@ class ArtworkGeneratorCanvas {
             this.ctx.fillRect(0, 0, this.width, this.height);
             this.ctx.restore();
         }
+        
+        // Add waveform visualization if audio features available
+        if (this.audioFeatures && this.audioFeatures.waveform) {
+            this.drawCosmicWaveform(colors[3], moonPhase);
+        }
     }
 
     async generateOrganic(moonPhase) {
@@ -171,6 +180,11 @@ class ArtworkGeneratorCanvas {
         }
         
         this.ctx.globalAlpha = 1;
+        
+        // Add waveform visualization if audio features available
+        if (this.audioFeatures && this.audioFeatures.waveform) {
+            this.drawOrganicWaveform(colors, moonPhase);
+        }
     }
 
     async generateGeometric(moonPhase) {
@@ -199,6 +213,11 @@ class ArtworkGeneratorCanvas {
         }
         
         this.ctx.globalAlpha = 1;
+        
+        // Add waveform visualization if audio features available
+        if (this.audioFeatures && this.audioFeatures.waveform) {
+            this.drawGeometricWaveform(colors, moonPhase);
+        }
     }
 
     async generateGlitch(moonPhase) {
@@ -764,6 +783,121 @@ class ArtworkGeneratorCanvas {
     // ===================================================================
     // HELPER METHODS
     // ===================================================================
+
+    drawCosmicWaveform(color, moonPhase) {
+        if (!this.audioFeatures || !this.audioFeatures.waveform) return;
+        
+        const waveform = this.audioFeatures.waveform;
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        const baseRadius = 200 + moonPhase * 100;
+        const energy = this.audioFeatures.energy || 0.5;
+        
+        // Draw circular waveform
+        this.ctx.save();
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2 + energy * 3;
+        this.ctx.globalAlpha = 0.6 + energy * 0.3;
+        
+        this.ctx.beginPath();
+        for (let i = 0; i < waveform.length; i++) {
+            const angle = (i / waveform.length) * Math.PI * 2 - Math.PI / 2;
+            const amplitude = waveform[i] * 150 * (1 + energy);
+            const radius = baseRadius + amplitude;
+            
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        this.ctx.closePath();
+        this.ctx.stroke();
+        
+        // Add glow effect
+        this.ctx.shadowColor = color;
+        this.ctx.shadowBlur = 20;
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+    }
+
+    drawOrganicWaveform(colors, moonPhase) {
+        if (!this.audioFeatures || !this.audioFeatures.waveform) return;
+        
+        const waveform = this.audioFeatures.waveform;
+        const energy = this.audioFeatures.energy || 0.5;
+        
+        // Draw flowing waveform across the canvas
+        this.ctx.save();
+        this.ctx.strokeStyle = colors[2];
+        this.ctx.lineWidth = 3 + energy * 5;
+        this.ctx.globalAlpha = 0.4 + energy * 0.3;
+        
+        // Draw multiple wave layers
+        for (let layer = 0; layer < 3; layer++) {
+            this.ctx.beginPath();
+            const yOffset = this.height * (0.3 + layer * 0.2);
+            
+            for (let i = 0; i < waveform.length; i++) {
+                const x = (i / waveform.length) * this.width;
+                const amplitude = waveform[i] * 100 * (1 + moonPhase);
+                const y = yOffset + amplitude * Math.sin(i * 0.1 + layer);
+                
+                if (i === 0) {
+                    this.ctx.moveTo(x, y);
+                } else {
+                    this.ctx.lineTo(x, y);
+                }
+            }
+            
+            this.ctx.stroke();
+            this.ctx.globalAlpha *= 0.7; // Fade each layer
+        }
+        
+        this.ctx.restore();
+    }
+
+    drawGeometricWaveform(colors, moonPhase) {
+        if (!this.audioFeatures || !this.audioFeatures.waveform) return;
+        
+        const waveform = this.audioFeatures.waveform;
+        const segments = 32; // Number of geometric segments
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        const baseRadius = 150;
+        
+        this.ctx.save();
+        this.ctx.strokeStyle = colors[3];
+        this.ctx.fillStyle = colors[4] + '40'; // Semi-transparent fill
+        this.ctx.lineWidth = 2;
+        
+        // Create polygon from waveform
+        this.ctx.beginPath();
+        for (let i = 0; i < segments; i++) {
+            const waveIndex = Math.floor((i / segments) * waveform.length);
+            const amplitude = waveform[waveIndex];
+            const angle = (i / segments) * Math.PI * 2;
+            const radius = baseRadius + amplitude * 200 * (1 + moonPhase * 0.5);
+            
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+    }
 
     drawHexagon(x, y, size) {
         this.ctx.beginPath();
