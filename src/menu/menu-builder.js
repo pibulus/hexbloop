@@ -16,7 +16,7 @@ class MenuBuilder {
     }
     
     /**
-     * Build the complete mystical menu structure
+     * Build and set the complete mystical menu structure
      */
     buildMenu() {
         const template = [
@@ -229,7 +229,9 @@ class MenuBuilder {
             }
         ];
         
-        return Menu.buildFromTemplate(template);
+        const menu = Menu.buildFromTemplate(template);
+        Menu.setApplicationMenu(menu);
+        return menu;
     }
     
     /**
