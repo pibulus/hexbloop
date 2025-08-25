@@ -12,15 +12,29 @@ class SpectrumVisualizer {
         this.isActive = false;
         this.resizeHandler = null;
         this.fadeTimeout = null;
+        this.frameThrottle = null;
+        
+        // Performance settings
+        this.lowPerformanceMode = false;
+        this.checkPerformance();
         
         // Visualization settings
-        this.barCount = 32;
+        this.barCount = this.lowPerformanceMode ? 16 : 32; // Reduce bars in low-perf mode
         this.colors = {
             primary: '#9333EA',    // Purple
             secondary: '#EC4899',  // Pink
             accent: '#3B82F6',     // Blue
             glow: '#F59E0B'        // Amber
         };
+    }
+    
+    checkPerformance() {
+        // Enable low performance mode on battery or low-end systems
+        if (navigator.getBattery) {
+            navigator.getBattery().then(battery => {
+                this.lowPerformanceMode = battery.charging === false && battery.level < 0.3;
+            });
+        }
     }
     
     init() {
@@ -95,7 +109,10 @@ class SpectrumVisualizer {
     animate() {
         if (!this.isActive) return;
         
-        this.animationId = requestAnimationFrame(() => this.animate());
+        // Throttle to 30fps for better performance
+        this.animationId = requestAnimationFrame(() => {
+            setTimeout(() => this.animate(), 33); // ~30fps instead of 60fps
+        });
         
         // Generate dynamic mock data (simulating audio processing)
         this.generateMockFrequencies();
@@ -107,8 +124,10 @@ class SpectrumVisualizer {
         // Draw frequency bars
         this.drawBars();
         
-        // Draw circular visualization
-        this.drawCircularSpectrum();
+        // Draw circular visualization (only when processing)
+        if (this.isActive) {
+            this.drawCircularSpectrum();
+        }
     }
     
     generateMockFrequencies() {
@@ -213,6 +232,11 @@ class SpectrumVisualizer {
         if (this.fadeTimeout) {
             clearTimeout(this.fadeTimeout);
             this.fadeTimeout = null;
+        }
+        
+        if (this.frameThrottle) {
+            clearTimeout(this.frameThrottle);
+            this.frameThrottle = null;
         }
         
         // Remove event listeners

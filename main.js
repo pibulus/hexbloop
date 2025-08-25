@@ -164,7 +164,7 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     const namingEngine = new BatchNamingEngine(settings.batch);
     
     // Determine output directory (with optional session folder)
-    let outputDirectory = settings.ui.outputFolder || path.join(os.homedir(), 'Documents', 'HexbloopOutput');
+    let outputDirectory = settings.ui.outputFolder || path.join(app.getPath('documents'), 'HexbloopOutput');
     
     // Create session folder if enabled
     const sessionFolder = namingEngine.generateSessionFolder();
@@ -472,7 +472,7 @@ ipcMain.handle('preferences-choose-output-folder', async () => {
         const result = await dialog.showOpenDialog(mainWindow, {
             properties: ['openDirectory'],
             title: 'Choose Output Folder for Processed Audio Files',
-            defaultPath: path.join(require('os').homedir(), 'Documents', 'HexbloopOutput')
+            defaultPath: path.join(app.getPath('documents'), 'HexbloopOutput')
         });
         
         if (!result.canceled && result.filePaths.length > 0) {
