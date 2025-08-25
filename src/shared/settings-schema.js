@@ -15,7 +15,8 @@ const DEFAULT_SETTINGS = {
         compressing: true,      // Sox effects (lunar-influenced distortion, filters)
         mastering: true,        // FFmpeg mastering (EQ, compression, limiting)
         coverArt: true,         // Procedural artwork generation
-        naming: 'mystical'      // 'mystical' | 'custom' | 'original'
+        naming: 'mystical',     // 'mystical' | 'custom' | 'original'
+        coverArtQuality: 'standard'  // 'standard' | 'professional' - Professional uses advanced rendering
     },
     metadata: {
         artist: '',            // Custom artist name (used when naming === 'custom')
@@ -65,7 +66,8 @@ const SETTINGS_SCHEMA = {
         compressing: 'boolean',
         mastering: 'boolean', 
         coverArt: 'boolean',
-        naming: ['mystical', 'custom', 'original']
+        naming: ['mystical', 'custom', 'original'],
+        coverArtQuality: ['standard', 'professional']
     },
     metadata: {
         artist: 'string',

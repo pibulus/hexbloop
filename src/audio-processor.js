@@ -12,6 +12,7 @@ const fs = require('fs');
 const LunarProcessor = require('./lunar-processor');
 const NameGenerator = require('./name-generator');
 const ArtworkGeneratorCanvas = require('./artwork-generator-canvas');
+const ProfessionalArtworkGenerator = require('./artwork-generator-pro');
 const MetadataEmbedder = require('./metadata-embedder');
 const AudioAnalyzer = require('./audio-analyzer');
 const { getPreferencesManager } = require('./menu/preferences');
@@ -61,8 +62,17 @@ class AudioProcessor {
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
         const processedFile = path.join(path.dirname(outputPath), 'temp_processed.mp3');
         
-        const artworkGenerator = new ArtworkGeneratorCanvas();
+        // Use professional generator if high quality is enabled
+        const useProGenerator = processingConfig?.coverArtQuality === 'professional' || 
+                                settings?.processing?.coverArtQuality === 'professional';
+        const artworkGenerator = useProGenerator 
+            ? new ProfessionalArtworkGenerator() 
+            : new ArtworkGeneratorCanvas();
         const metadataEmbedder = new MetadataEmbedder();
+        
+        if (useProGenerator) {
+            console.log('✨ Using Professional Artwork Generator for gallery-quality output');
+        }
         
         try {
             let currentFile = inputPath;

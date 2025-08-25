@@ -25,16 +25,25 @@ class ArtworkGeneratorCanvas {
             duration = 0,
             moonPhase = 0.5,
             seed = Date.now(),
-            audioFeatures = null // New: audio analysis data
+            audioFeatures = null, // New: audio analysis data
+            bandName = title // Use band name for deterministic generation
         } = options;
 
         // Clear canvas with dark background
         this.ctx.fillStyle = '#0a0a0a';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
+        // Generate DNA from band name for deterministic variation
+        this.dna = this.generateBandNameDNA(bandName);
+        
         // Set random seed for consistent generation
-        this.seed = seed;
-        this.random = this.seededRandom(seed);
+        this.seed = this.dna.primary || seed;
+        this.random = this.seededRandom(this.seed);
+        
+        // Create secondary random generators for different aspects
+        this.randomShape = this.seededRandom(this.dna.shapes);
+        this.randomColor = this.seededRandom(this.dna.colors);
+        this.randomComposition = this.seededRandom(this.dna.composition);
 
         // Store audio features for use in generators
         this.audioFeatures = audioFeatures;
@@ -99,52 +108,223 @@ class ArtworkGeneratorCanvas {
     async generateCosmic(moonPhase) {
         const colors = this.getCosmicPalette(moonPhase);
         
-        // Background gradient
-        const gradient = this.ctx.createRadialGradient(
-            this.width / 2, this.height / 2, 0,
-            this.width / 2, this.height / 2, this.width / 2
-        );
-        gradient.addColorStop(0, colors[0]);
-        gradient.addColorStop(0.5, colors[1]);
-        gradient.addColorStop(1, '#000000');
+        // Determine sub-variation based on DNA
+        const cosmicVariation = this.dna ? (this.dna.primary % 4) : 0;
         
-        this.ctx.fillStyle = gradient;
+        // Dynamic background using complex gradient
+        const bgGradient = this.createComplexGradient(
+            cosmicVariation % 2 === 0 ? 'radial' : 'linear',
+            this.width / 2, this.height / 2,
+            this.width, this.height,
+            colors.slice(0, 3)
+        );
+        
+        this.ctx.fillStyle = bgGradient;
         this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        // Sub-variations
+        switch (cosmicVariation) {
+            case 0: // Spiral galaxy
+                this.drawSpiralGalaxy(colors, moonPhase);
+                break;
+            case 1: // Star cluster
+                this.drawStarCluster(colors, moonPhase);
+                break;
+            case 2: // Black hole
+                this.drawBlackHole(colors, moonPhase);
+                break;
+            case 3: // Pulsar
+                this.drawPulsar(colors, moonPhase);
+                break;
+        }
 
-        // Stars
-        for (let i = 0; i < 200; i++) {
-            const x = this.random() * this.width;
-            const y = this.random() * this.height;
-            const size = this.random() * 3;
-            const opacity = 0.3 + this.random() * 0.7;
+        // Dynamic star field with varied densities
+        const starDensity = 100 + this.dna.density * 300;
+        for (let i = 0; i < starDensity; i++) {
+            const x = this.randomComposition() * this.width;
+            const y = this.randomComposition() * this.height;
+            const size = this.randomShape() * 3 * (1 + this.dna.energy);
+            const opacity = 0.3 + this.randomShape() * 0.7;
             
-            this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            // Some stars are colored
+            if (this.randomShape() > 0.8) {
+                this.ctx.fillStyle = colors[Math.floor(this.randomColor() * colors.length)];
+                this.ctx.globalAlpha = opacity * 0.5;
+            } else {
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.globalAlpha = opacity;
+            }
+            
             this.ctx.beginPath();
             this.ctx.arc(x, y, size, 0, Math.PI * 2);
             this.ctx.fill();
         }
 
-        // Nebula clouds
-        for (let i = 0; i < 5; i++) {
+        // Enhanced nebula clouds using bezier blobs
+        const nebulaCount = 3 + Math.floor(this.dna.complexity * 5);
+        for (let i = 0; i < nebulaCount; i++) {
             this.ctx.save();
-            this.ctx.globalAlpha = 0.1 + this.random() * 0.2;
-            const x = this.random() * this.width;
-            const y = this.random() * this.height;
-            const radius = 100 + this.random() * 200;
+            this.ctx.globalAlpha = 0.05 + this.randomShape() * 0.15;
+            this.ctx.globalCompositeOperation = 'screen';
             
-            const cloudGradient = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
-            cloudGradient.addColorStop(0, colors[2]);
-            cloudGradient.addColorStop(1, 'transparent');
+            const x = this.randomComposition() * this.width;
+            const y = this.randomComposition() * this.height;
+            const baseRadius = 100 + this.randomShape() * 300;
             
-            this.ctx.fillStyle = cloudGradient;
+            // Use bezier blob for organic nebula shape
+            this.ctx.fillStyle = colors[i % colors.length];
+            this.drawBezierBlob(x, y, baseRadius, 12, 0.5);
+            this.ctx.fill();
+            
+            // Add glow
+            const glowGradient = this.ctx.createRadialGradient(x, y, 0, x, y, baseRadius * 1.5);
+            glowGradient.addColorStop(0, colors[(i + 1) % colors.length]);
+            glowGradient.addColorStop(0.5, colors[(i + 2) % colors.length] + '40');
+            glowGradient.addColorStop(1, 'transparent');
+            
+            this.ctx.fillStyle = glowGradient;
             this.ctx.fillRect(0, 0, this.width, this.height);
             this.ctx.restore();
         }
+        
+        this.ctx.globalAlpha = 1;
         
         // Add waveform visualization if audio features available
         if (this.audioFeatures && this.audioFeatures.waveform) {
             this.drawCosmicWaveform(colors[3], moonPhase);
         }
+    }
+    
+    // Cosmic sub-variation: Spiral Galaxy
+    drawSpiralGalaxy(colors, moonPhase) {
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'screen';
+        this.ctx.strokeStyle = colors[2];
+        this.ctx.lineWidth = 2 + this.dna.energy * 3;
+        this.ctx.globalAlpha = 0.4;
+        
+        // Draw multiple spiral arms
+        const arms = 2 + Math.floor(this.dna.complexity * 3);
+        for (let arm = 0; arm < arms; arm++) {
+            const offset = (arm / arms) * Math.PI * 2;
+            this.drawSpiral(centerX, centerY, 'logarithmic', 4, 30);
+            this.ctx.stroke();
+            this.ctx.rotate(offset);
+        }
+        
+        this.ctx.restore();
+    }
+    
+    // Cosmic sub-variation: Star Cluster
+    drawStarCluster(colors, moonPhase) {
+        const clusters = 2 + Math.floor(this.dna.diversity * 3);
+        
+        for (let c = 0; c < clusters; c++) {
+            const clusterX = this.randomComposition() * this.width;
+            const clusterY = this.randomComposition() * this.height;
+            const clusterRadius = 50 + this.randomShape() * 150;
+            const starCount = 20 + Math.floor(this.dna.density * 50);
+            
+            for (let s = 0; s < starCount; s++) {
+                const angle = this.randomShape() * Math.PI * 2;
+                const distance = this.randomShape() * clusterRadius;
+                const x = clusterX + Math.cos(angle) * distance;
+                const y = clusterY + Math.sin(angle) * distance;
+                
+                this.ctx.fillStyle = colors[s % colors.length];
+                this.ctx.globalAlpha = 0.5 + this.randomShape() * 0.5;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, 1 + this.randomShape() * 3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
+        
+        this.ctx.globalAlpha = 1;
+    }
+    
+    // Cosmic sub-variation: Black Hole
+    drawBlackHole(colors, moonPhase) {
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        
+        // Accretion disk
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'screen';
+        
+        for (let i = 0; i < 20; i++) {
+            const radius = 50 + i * 15;
+            const opacity = 0.3 - (i * 0.015);
+            
+            this.ctx.strokeStyle = colors[i % colors.length];
+            this.ctx.globalAlpha = opacity;
+            this.ctx.lineWidth = 3;
+            
+            this.ctx.beginPath();
+            this.ctx.ellipse(centerX, centerY, radius, radius * 0.3, 0, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
+        
+        // Event horizon
+        this.ctx.globalAlpha = 1;
+        this.ctx.fillStyle = '#000000';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        this.ctx.restore();
+    }
+    
+    // Cosmic sub-variation: Pulsar
+    drawPulsar(colors, moonPhase) {
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+        
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'screen';
+        
+        // Pulsar beams
+        const beamAngle = this.dna.primary * 0.001;
+        
+        for (let beam = 0; beam < 2; beam++) {
+            const angle = beamAngle + beam * Math.PI;
+            
+            const gradient = this.ctx.createLinearGradient(
+                centerX, centerY,
+                centerX + Math.cos(angle) * this.width,
+                centerY + Math.sin(angle) * this.width
+            );
+            
+            gradient.addColorStop(0, colors[0]);
+            gradient.addColorStop(0.5, colors[1] + '80');
+            gradient.addColorStop(1, 'transparent');
+            
+            this.ctx.fillStyle = gradient;
+            this.ctx.globalAlpha = 0.6;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX, centerY);
+            this.ctx.lineTo(
+                centerX + Math.cos(angle - 0.1) * this.width,
+                centerY + Math.sin(angle - 0.1) * this.width
+            );
+            this.ctx.lineTo(
+                centerX + Math.cos(angle + 0.1) * this.width,
+                centerY + Math.sin(angle + 0.1) * this.width
+            );
+            this.ctx.closePath();
+            this.ctx.fill();
+        }
+        
+        // Pulsar core
+        this.ctx.fillStyle = colors[2];
+        this.ctx.globalAlpha = 1;
+        this.drawSuperformula(centerX, centerY, 30, 4, 2, 5, 5);
+        this.ctx.fill();
+        
+        this.ctx.restore();
     }
 
     async generateOrganic(moonPhase) {
@@ -643,7 +823,7 @@ class ArtworkGeneratorCanvas {
     }
 
     // ===================================================================
-    // COLOR PALETTES
+    // DYNAMIC COLOR GENERATION SYSTEM
     // ===================================================================
 
     // Helper to convert HSL to hex for canvas compatibility
@@ -657,127 +837,445 @@ class ArtworkGeneratorCanvas {
         };
         return `#${f(0)}${f(8)}${f(4)}`;
     }
+    
+    // Generate dynamic color palette based on harmonic rules
+    generateHarmonicPalette(baseHue, saturation, lightness, scheme = 'complementary', count = 5) {
+        const colors = [];
+        const hue = (baseHue + (this.dna ? this.dna.hueOffset : 0)) % 360;
+        
+        switch (scheme) {
+            case 'complementary':
+                colors.push(this.hslToHex(hue, saturation, lightness));
+                colors.push(this.hslToHex((hue + 180) % 360, saturation, lightness * 0.8));
+                colors.push(this.hslToHex((hue + 30) % 360, saturation * 0.8, lightness * 1.2));
+                colors.push(this.hslToHex((hue + 210) % 360, saturation * 0.9, lightness * 0.9));
+                colors.push(this.hslToHex((hue + 90) % 360, saturation * 0.7, lightness * 1.1));
+                break;
+                
+            case 'triadic':
+                colors.push(this.hslToHex(hue, saturation, lightness));
+                colors.push(this.hslToHex((hue + 120) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 240) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 60) % 360, saturation * 0.8, lightness * 1.2));
+                colors.push(this.hslToHex((hue + 180) % 360, saturation * 0.7, lightness * 0.8));
+                break;
+                
+            case 'tetradic':
+                colors.push(this.hslToHex(hue, saturation, lightness));
+                colors.push(this.hslToHex((hue + 90) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 180) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 270) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 45) % 360, saturation * 0.9, lightness * 1.1));
+                break;
+                
+            case 'analogous':
+                colors.push(this.hslToHex(hue, saturation, lightness));
+                colors.push(this.hslToHex((hue + 30) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue - 30 + 360) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 60) % 360, saturation * 0.9, lightness * 0.9));
+                colors.push(this.hslToHex((hue - 60 + 360) % 360, saturation * 0.9, lightness * 1.1));
+                break;
+                
+            case 'monochromatic':
+                colors.push(this.hslToHex(hue, saturation, lightness * 0.3));
+                colors.push(this.hslToHex(hue, saturation, lightness * 0.5));
+                colors.push(this.hslToHex(hue, saturation, lightness * 0.7));
+                colors.push(this.hslToHex(hue, saturation, lightness * 0.9));
+                colors.push(this.hslToHex(hue, saturation, lightness * 1.1));
+                break;
+                
+            case 'split-complementary':
+                colors.push(this.hslToHex(hue, saturation, lightness));
+                colors.push(this.hslToHex((hue + 150) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 210) % 360, saturation, lightness));
+                colors.push(this.hslToHex((hue + 30) % 360, saturation * 0.8, lightness * 1.1));
+                colors.push(this.hslToHex((hue + 330) % 360, saturation * 0.8, lightness * 0.9));
+                break;
+        }
+        
+        // Add variations based on DNA
+        if (this.dna) {
+            const variationAmount = this.dna.diversity * 20;
+            return colors.map(color => {
+                // Parse hex back to HSL for variation
+                const rgb = parseInt(color.slice(1), 16);
+                const r = (rgb >> 16) & 255;
+                const g = (rgb >> 8) & 255;
+                const b = rgb & 255;
+                
+                // Simple RGB to HSL approximation for variation
+                const max = Math.max(r, g, b) / 255;
+                const min = Math.min(r, g, b) / 255;
+                const l = (max + min) / 2;
+                
+                // Apply slight variations
+                const hVariation = (this.randomColor() - 0.5) * variationAmount;
+                const sVariation = (this.randomColor() - 0.5) * 10;
+                const lVariation = (this.randomColor() - 0.5) * 10;
+                
+                return this.hslToHex(
+                    (hue + hVariation + 360) % 360,
+                    Math.max(0, Math.min(100, saturation + sVariation)),
+                    Math.max(0, Math.min(100, lightness + lVariation))
+                );
+            });
+        }
+        
+        // Extend to requested count if needed
+        while (colors.length < count) {
+            const lastColor = colors[colors.length - 1];
+            colors.push(lastColor);
+        }
+        
+        return colors.slice(0, count);
+    }
+    
+    // Generate gradient with multiple stops
+    createComplexGradient(type, x1, y1, x2, y2, colors) {
+        let gradient;
+        
+        if (type === 'radial') {
+            gradient = this.ctx.createRadialGradient(x1, y1, 0, x1, y1, Math.max(x2, y2));
+        } else if (type === 'conic') {
+            // Fallback to linear for browsers without conic gradient
+            gradient = this.ctx.createLinearGradient(x1, y1, x2, y2);
+        } else {
+            gradient = this.ctx.createLinearGradient(x1, y1, x2, y2);
+        }
+        
+        // Add color stops with DNA-influenced positions
+        const stopVariation = this.dna ? this.dna.chaos * 0.2 : 0;
+        
+        colors.forEach((color, i) => {
+            let position = i / (colors.length - 1);
+            
+            // Add variation to stop positions (except first and last)
+            if (i > 0 && i < colors.length - 1) {
+                position += (this.randomColor() - 0.5) * stopVariation;
+                position = Math.max(0.1, Math.min(0.9, position));
+            }
+            
+            gradient.addColorStop(position, color);
+        });
+        
+        return gradient;
+    }
+    
+    // Get palette based on style with dynamic generation
+    getDynamicPalette(style, moonPhase) {
+        // Determine color scheme based on style and DNA
+        const schemes = ['complementary', 'triadic', 'tetradic', 'analogous', 'split-complementary', 'monochromatic'];
+        const schemeIndex = this.dna ? Math.floor(this.dna.primary % schemes.length) : 0;
+        const scheme = schemes[schemeIndex];
+        
+        // Base color parameters influenced by style and DNA
+        let baseHue, saturation, lightness;
+        
+        switch (style) {
+            case 'cosmic':
+                baseHue = 260 + moonPhase * 60;
+                saturation = 70 + this.dna.energy * 20;
+                lightness = 30 + this.dna.complexity * 20;
+                break;
+            case 'organic':
+                baseHue = 120 + moonPhase * 80;
+                saturation = 40 + this.dna.diversity * 30;
+                lightness = 40 + this.dna.energy * 20;
+                break;
+            case 'geometric':
+                baseHue = this.dna.primary % 360;
+                saturation = 80 + this.dna.chaos * 15;
+                lightness = 50;
+                break;
+            default:
+                baseHue = this.randomColor() * 360;
+                saturation = 50 + this.randomColor() * 50;
+                lightness = 30 + this.randomColor() * 40;
+        }
+        
+        // Generate palette with 3-12 colors based on complexity
+        const colorCount = Math.floor(5 + this.dna.complexity * 7);
+        
+        return this.generateHarmonicPalette(baseHue, saturation, lightness, scheme, colorCount);
+    }
 
+    // Legacy palette getters updated to use dynamic generation
     getCosmicPalette(moonPhase) {
-        return [
-            this.hslToHex(280 + moonPhase * 40, 80, 20),
-            this.hslToHex(260 + moonPhase * 30, 70, 30),
-            this.hslToHex(300 + moonPhase * 60, 90, 60),
-            this.hslToHex(200 + moonPhase * 40, 80, 50),
-            this.hslToHex(180 + moonPhase * 20, 70, 40)
-        ];
+        return this.getDynamicPalette('cosmic', moonPhase);
     }
 
     getOrganicPalette(moonPhase) {
-        return [
-            this.hslToHex(120 + moonPhase * 60, 30, 20),
-            this.hslToHex(140 + moonPhase * 40, 50, 40),
-            this.hslToHex(160 + moonPhase * 30, 60, 50),
-            this.hslToHex(100 + moonPhase * 50, 40, 35),
-            this.hslToHex(80 + moonPhase * 40, 55, 45)
-        ];
+        return this.getDynamicPalette('organic', moonPhase);
     }
 
     getGeometricPalette(moonPhase) {
-        return [
-            this.hslToHex(0 + moonPhase * 60, 90, 50),
-            this.hslToHex(60 + moonPhase * 60, 90, 50),
-            this.hslToHex(180 + moonPhase * 60, 90, 50),
-            this.hslToHex(240 + moonPhase * 60, 90, 50),
-            this.hslToHex(300 + moonPhase * 60, 90, 50)
-        ];
+        return this.getDynamicPalette('geometric', moonPhase);
     }
 
     getGlitchPalette(moonPhase) {
-        return [
-            '#0a0a0a',
-            '#ff00ff',
-            '#00ffff',
-            '#ffff00',
-            '#ff0080',
-            '#00ff80'
-        ];
+        return this.getDynamicPalette('glitch', moonPhase);
     }
 
     getAuroraPalette(moonPhase) {
-        return [
-            this.hslToHex(120 + moonPhase * 60, 100, 50),
-            this.hslToHex(180 + moonPhase * 40, 100, 50),
-            this.hslToHex(280 + moonPhase * 30, 80, 60),
-            this.hslToHex(340 + moonPhase * 20, 70, 50),
-            this.hslToHex(60 + moonPhase * 50, 90, 60)
-        ];
+        return this.getDynamicPalette('aurora', moonPhase);
     }
 
     getCrystalPalette(moonPhase) {
-        return [
-            this.hslToHex(200 + moonPhase * 40, 80, 60),
-            this.hslToHex(280 + moonPhase * 30, 90, 70),
-            this.hslToHex(320 + moonPhase * 20, 70, 65),
-            this.hslToHex(180 + moonPhase * 50, 85, 55),
-            this.hslToHex(240 + moonPhase * 40, 75, 60)
-        ];
+        return this.getDynamicPalette('crystal', moonPhase);
     }
 
     getVaporPalette(moonPhase) {
-        return [
-            '#ff6b9d',
-            '#c44569',
-            '#feca57',
-            '#48dbfb',
-            '#ff9ff3'
-        ];
+        return this.getDynamicPalette('vapor', moonPhase);
     }
 
     getRetroPalette(moonPhase) {
-        return [
-            '#2d3436',
-            '#ff7675',
-            '#74b9ff',
-            '#a29bfe',
-            '#fd79a8',
-            '#fdcb6e'
-        ];
+        return this.getDynamicPalette('retro', moonPhase);
     }
 
     getFractalPalette(moonPhase) {
-        return [
-            this.hslToHex(0 + moonPhase * 360, 80, 50),
-            this.hslToHex(72 + moonPhase * 360, 80, 50),
-            this.hslToHex(144 + moonPhase * 360, 80, 50),
-            this.hslToHex(216 + moonPhase * 360, 80, 50),
-            this.hslToHex(288 + moonPhase * 360, 80, 50)
-        ];
+        return this.getDynamicPalette('fractal', moonPhase);
     }
 
     getNebulaPalette(moonPhase) {
-        return [
-            this.hslToHex(280 + moonPhase * 60, 90, 60),
-            this.hslToHex(200 + moonPhase * 40, 80, 50),
-            this.hslToHex(340 + moonPhase * 30, 85, 55),
-            this.hslToHex(160 + moonPhase * 50, 70, 45),
-            this.hslToHex(60 + moonPhase * 40, 75, 50)
-        ];
+        return this.getDynamicPalette('nebula', moonPhase);
     }
 
     getMatrixPalette(moonPhase) {
-        return [
-            '#00ff00',
-            '#00cc00',
-            '#009900',
-            '#00ff80',
-            '#80ff00'
-        ];
+        return this.getDynamicPalette('matrix', moonPhase);
     }
 
     getMysticPalette(moonPhase) {
-        return [
-            this.hslToHex(280 + moonPhase * 30, 60, 20),
-            this.hslToHex(260 + moonPhase * 40, 50, 30),
-            this.hslToHex(300 + moonPhase * 20, 70, 60),
-            this.hslToHex(240 + moonPhase * 50, 80, 70),
-            this.hslToHex(200 + moonPhase * 60, 60, 50)
-        ];
+        return this.getDynamicPalette('mystic', moonPhase);
+    }
+
+    // ===================================================================
+    // BAND NAME DNA SYSTEM
+    // ===================================================================
+    
+    generateBandNameDNA(bandName) {
+        // Create multiple seeds from band name for different aspects
+        const hashString = (str) => {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        };
+        
+        const countVowels = (str) => (str.match(/[aeiouAEIOU]/g) || []).length;
+        const countConsonants = (str) => (str.match(/[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]/g) || []).length;
+        const uniqueChars = (str) => new Set(str.toLowerCase()).size;
+        
+        return {
+            primary: hashString(bandName),
+            shapes: hashString(bandName + 'shapes'),
+            colors: hashString(bandName + 'colors'),
+            composition: hashString(bandName + 'comp'),
+            complexity: Math.min(bandName.length / 10, 1), // 0-1 scale
+            energy: countVowels(bandName) / Math.max(bandName.length, 1), // vowel ratio
+            chaos: countConsonants(bandName) / Math.max(bandName.length, 1), // consonant ratio
+            diversity: uniqueChars(bandName) / Math.max(bandName.length, 1), // character diversity
+            density: Math.min(bandName.length / 20, 1), // element density 0-1
+            hueOffset: (hashString(bandName) % 360), // color hue offset
+            styleBlend: (hashString(bandName + 'blend') % 100) / 100 // 0-1 blend ratio
+        };
+    }
+    
+    // ===================================================================
+    // ENHANCED SHAPE LIBRARY
+    // ===================================================================
+    
+    // Draw organic blob using bezier curves
+    drawBezierBlob(x, y, baseRadius, points = 8, variance = 0.3) {
+        this.ctx.beginPath();
+        
+        const angleStep = (Math.PI * 2) / points;
+        const controlPoints = [];
+        
+        // Generate control points
+        for (let i = 0; i < points; i++) {
+            const angle = i * angleStep;
+            const radiusVariation = baseRadius * (1 + (this.randomShape() - 0.5) * variance);
+            controlPoints.push({
+                x: x + Math.cos(angle) * radiusVariation,
+                y: y + Math.sin(angle) * radiusVariation
+            });
+        }
+        
+        // Draw smooth bezier curve through points
+        this.ctx.moveTo(controlPoints[0].x, controlPoints[0].y);
+        
+        for (let i = 0; i < points; i++) {
+            const next = (i + 1) % points;
+            const cp1x = controlPoints[i].x + (controlPoints[next].x - controlPoints[i].x) * 0.3;
+            const cp1y = controlPoints[i].y + (controlPoints[next].y - controlPoints[i].y) * 0.3;
+            const cp2x = controlPoints[next].x - (controlPoints[next].x - controlPoints[i].x) * 0.3;
+            const cp2y = controlPoints[next].y - (controlPoints[next].y - controlPoints[i].y) * 0.3;
+            
+            this.ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, controlPoints[next].x, controlPoints[next].y);
+        }
+        
+        this.ctx.closePath();
+    }
+    
+    // Draw Lissajous curve
+    drawLissajousCurve(centerX, centerY, radiusX, radiusY, a, b, delta) {
+        this.ctx.beginPath();
+        
+        const steps = 1000;
+        for (let i = 0; i <= steps; i++) {
+            const t = (i / steps) * Math.PI * 2;
+            const x = centerX + radiusX * Math.sin(a * t + delta);
+            const y = centerY + radiusY * Math.sin(b * t);
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+    }
+    
+    // Draw spiral (Archimedean, logarithmic, or Fermat)
+    drawSpiral(centerX, centerY, type = 'archimedean', turns = 5, spacing = 5) {
+        this.ctx.beginPath();
+        
+        const steps = turns * 100;
+        for (let i = 0; i <= steps; i++) {
+            const t = (i / steps) * turns * Math.PI * 2;
+            let r;
+            
+            switch (type) {
+                case 'archimedean':
+                    r = spacing * t;
+                    break;
+                case 'logarithmic':
+                    r = spacing * Math.exp(t * 0.1);
+                    break;
+                case 'fermat':
+                    r = spacing * Math.sqrt(t) * 10;
+                    break;
+                default:
+                    r = spacing * t;
+            }
+            
+            const x = centerX + r * Math.cos(t);
+            const y = centerY + r * Math.sin(t);
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+    }
+    
+    // Draw superformula shape
+    drawSuperformula(centerX, centerY, size, m, n1, n2, n3) {
+        this.ctx.beginPath();
+        
+        const steps = 360;
+        for (let i = 0; i <= steps; i++) {
+            const angle = (i / steps) * Math.PI * 2;
+            
+            const term1 = Math.pow(Math.abs(Math.cos(m * angle / 4)), n2);
+            const term2 = Math.pow(Math.abs(Math.sin(m * angle / 4)), n3);
+            const r = size / Math.pow(term1 + term2, 1 / n1);
+            
+            const x = centerX + r * Math.cos(angle);
+            const y = centerY + r * Math.sin(angle);
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        
+        this.ctx.closePath();
+    }
+    
+    // Generate Voronoi-like cells
+    drawVoronoiCell(points, index, bounds) {
+        const point = points[index];
+        const neighbors = [];
+        
+        // Find neighboring points (simplified Voronoi)
+        for (let i = 0; i < points.length; i++) {
+            if (i !== index) {
+                const midX = (point.x + points[i].x) / 2;
+                const midY = (point.y + points[i].y) / 2;
+                const angle = Math.atan2(points[i].y - point.y, points[i].x - point.x) + Math.PI / 2;
+                neighbors.push({ midX, midY, angle });
+            }
+        }
+        
+        // Sort neighbors by angle
+        neighbors.sort((a, b) => a.angle - b.angle);
+        
+        // Draw cell
+        this.ctx.beginPath();
+        neighbors.forEach((n, i) => {
+            if (i === 0) {
+                this.ctx.moveTo(n.midX, n.midY);
+            } else {
+                this.ctx.lineTo(n.midX, n.midY);
+            }
+        });
+        this.ctx.closePath();
+    }
+    
+    // Generate flow field particles
+    generateFlowField(width, height, scale = 0.01) {
+        const field = [];
+        const cols = Math.ceil(width / 20);
+        const rows = Math.ceil(height / 20);
+        
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                // Use Perlin-like noise simulation
+                const angle = (Math.sin(x * scale) + Math.cos(y * scale)) * Math.PI;
+                field.push({
+                    x: x * 20,
+                    y: y * 20,
+                    angle: angle,
+                    force: 0.5 + this.randomShape() * 0.5
+                });
+            }
+        }
+        
+        return field;
+    }
+    
+    // Draw metaballs
+    drawMetaballs(balls) {
+        const imageData = this.ctx.createImageData(this.width, this.height);
+        const data = imageData.data;
+        
+        for (let x = 0; x < this.width; x += 2) {
+            for (let y = 0; y < this.height; y += 2) {
+                let sum = 0;
+                
+                balls.forEach(ball => {
+                    const dx = x - ball.x;
+                    const dy = y - ball.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    sum += ball.radius / Math.max(distance, 0.001);
+                });
+                
+                if (sum > 1) {
+                    const index = (y * this.width + x) * 4;
+                    data[index] = 255;
+                    data[index + 1] = 255;
+                    data[index + 2] = 255;
+                    data[index + 3] = 255;
+                }
+            }
+        }
+        
+        this.ctx.putImageData(imageData, 0, 0);
     }
 
     // ===================================================================
