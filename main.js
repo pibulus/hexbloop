@@ -221,7 +221,7 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             }
             
             // Validate audio file extension
-            const validExtensions = ['.mp3', '.wav', '.m4a', '.aiff', '.flac', '.ogg', '.aac'];
+            const validExtensions = ['.mp3', '.wav', '.m4a', '.aiff', '.aif', '.flac', '.ogg', '.aac'];
             const ext = path.extname(resolvedPath).toLowerCase();
             if (!validExtensions.includes(ext)) {
                 throw new Error(`Unsupported audio format: ${ext}`);

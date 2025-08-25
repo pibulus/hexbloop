@@ -298,11 +298,11 @@ class AudioProcessor {
     
     static async convertToMp3(inputPath, outputPath) {
         return new Promise((resolve, reject) => {
-            // Simple conversion to MP3 with high quality
+            // Simple conversion to MP3 with compressed quality
             ffmpeg(inputPath)
                 .format('mp3')
                 .audioCodec('libmp3lame')
-                .audioBitrate('320k')
+                .audioBitrate('192k')  // Reduced from 320k for actual compression
                 .audioFrequency(44100)
                 .audioChannels(2)
                 .on('start', (commandLine) => {
@@ -381,7 +381,9 @@ class AudioProcessor {
             // Configure output format
             switch (format) {
                 case 'mp3':
-                    const mp3Bitrate = settings?.output?.mp3Bitrate || 320;
+                    // Use lower bitrate for actual compression (192k is high quality but compressed)
+                    // 128k = good quality, 192k = very good, 256k = excellent, 320k = maximum
+                    const mp3Bitrate = settings?.output?.mp3Bitrate || 192;
                     command = command
                         .format('mp3')
                         .audioCodec('libmp3lame')

@@ -3,6 +3,10 @@
  * @author Hexbloop Audio Labs
  * @description Ultra-lightweight mystical interface with hexagonal design
  */
+
+// Import spectrum visualizer
+const SpectrumVisualizer = typeof require !== 'undefined' ? require('./spectrum-visualizer') : null;
+
 class HexbloopMystic {
     constructor() {
         this.isProcessing = false;
@@ -13,6 +17,9 @@ class HexbloopMystic {
         this.processingGlow = document.getElementById('processingGlow');
         this.progressIndicator = document.getElementById('progressIndicator');
         this.progressText = document.getElementById('progressText');
+        
+        // Initialize spectrum visualizer
+        this.spectrum = SpectrumVisualizer ? new SpectrumVisualizer() : null;
         
         // Progress tracking
         this.currentFileIndex = 0;
@@ -53,6 +60,12 @@ class HexbloopMystic {
         this.initParallax();
         this.initAmbientAudio();
         this.initSettingsButton();
+        
+        // Initialize spectrum visualizer
+        if (this.spectrum) {
+            this.spectrum.init();
+        }
+        
         console.log('🔥 Mystical hexagon awakened - ready for sacrifices 🤘');
     }
     
@@ -253,6 +266,11 @@ class HexbloopMystic {
             
             this.progressIndicator.classList.add('active');
             
+            // Start spectrum visualization when processing begins
+            if (this.spectrum && current === 1) {
+                this.spectrum.startVisualization();
+            }
+            
             // Let the hexagon speak through its geometric nature
             const hexagonalPhrase = this.generateHexagonalPhrase(current, total);
             this.progressText.textContent = `${hexagonalPhrase} • ${fileName}`;
@@ -268,6 +286,18 @@ class HexbloopMystic {
                 speed = 6; // Satisfied completion rhythm
             }
             this.pentagram.style.animationDuration = `${speed}s`;
+            
+            // Pulse spectrum on each file
+            if (this.spectrum) {
+                this.spectrum.pulse();
+            }
+        }
+        
+        // Stop visualization when processing completes
+        if (status === 'complete' && this.spectrum) {
+            setTimeout(() => {
+                this.spectrum.stopVisualization();
+            }, 2000);
         }
     }
     
@@ -417,6 +447,11 @@ class HexbloopMystic {
         this.isProcessing = true;
         this.startProcessing();
         
+        // Start spectrum visualization
+        if (this.spectrum) {
+            this.spectrum.startVisualization();
+        }
+        
         try {
             console.log('🎵 Processing mystical audio:', paths);
             
@@ -437,6 +472,13 @@ class HexbloopMystic {
         } finally {
             this.isProcessing = false;
             this.stopProcessing();
+            
+            // Stop spectrum visualization after a delay
+            if (this.spectrum) {
+                setTimeout(() => {
+                    this.spectrum.stopVisualization();
+                }, 3000);
+            }
         }
     }
     
