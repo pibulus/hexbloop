@@ -48,6 +48,10 @@ class HexbloopMystic {
         
         // Ambient audio system
         this.ambientAudio = document.getElementById('ambientAudio');
+        
+        // Track timeouts and event listeners for cleanup
+        this.activeTimeouts = new Set();
+        this.eventListeners = [];
         this.ambientToggle = document.getElementById('ambientToggle');
         this.toggleIcon = document.getElementById('toggleIcon');
         this.isAudioPlaying = false;
@@ -601,9 +605,61 @@ class HexbloopMystic {
             });
         }
     }
+    
+    // Add custom setTimeout that tracks timeouts
+    setTrackedTimeout(callback, delay) {
+        const timeoutId = setTimeout(() => {
+            this.activeTimeouts.delete(timeoutId);
+            callback();
+        }, delay);
+        this.activeTimeouts.add(timeoutId);
+        return timeoutId;
+    }
+    
+    // Cleanup method to prevent memory leaks
+    destroy() {
+        console.log('🧹 Cleaning up Hexbloop resources...');
+        
+        // Clear all active timeouts
+        this.activeTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+        this.activeTimeouts.clear();
+        
+        // Clear drag leave timeout
+        if (this.dragLeaveTimeout) {
+            clearTimeout(this.dragLeaveTimeout);
+            this.dragLeaveTimeout = null;
+        }
+        
+        // Cleanup spectrum visualizer
+        if (this.spectrum) {
+            this.spectrum.destroy();
+            this.spectrum = null;
+        }
+        
+        // Remove all tracked event listeners
+        this.eventListeners.forEach(({ element, event, handler }) => {
+            element.removeEventListener(event, handler);
+        });
+        this.eventListeners = [];
+        
+        // Pause and cleanup ambient audio
+        if (this.ambientAudio) {
+            this.ambientAudio.pause();
+            this.ambientAudio.src = '';
+        }
+        
+        console.log('✨ Cleanup complete');
+    }
 }
 
 // Initialize when DOM loads
 document.addEventListener('DOMContentLoaded', () => {
     window.hexbloopMystic = new HexbloopMystic();
+});
+
+// Cleanup on window unload
+window.addEventListener('beforeunload', () => {
+    if (window.hexbloopMystic) {
+        window.hexbloopMystic.destroy();
+    }
 });

@@ -10,6 +10,8 @@ class SpectrumVisualizer {
         this.analyser = null;
         this.animationId = null;
         this.isActive = false;
+        this.resizeHandler = null;
+        this.fadeTimeout = null;
         
         // Visualization settings
         this.barCount = 32;
@@ -35,7 +37,8 @@ class SpectrumVisualizer {
         
         // Set canvas size
         this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
+        this.resizeHandler = () => this.resizeCanvas();
+        window.addEventListener('resize', this.resizeHandler);
         
         // Apply initial styles
         this.canvas.style.position = 'absolute';
@@ -75,11 +78,17 @@ class SpectrumVisualizer {
             this.animationId = null;
         }
         
+        // Clear any existing fade timeout
+        if (this.fadeTimeout) {
+            clearTimeout(this.fadeTimeout);
+        }
+        
         // Clear canvas after fade
-        setTimeout(() => {
+        this.fadeTimeout = setTimeout(() => {
             if (this.ctx) {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             }
+            this.fadeTimeout = null;
         }, 1000);
     }
     
@@ -190,6 +199,41 @@ class SpectrumVisualizer {
         setTimeout(() => {
             this.canvas.style.filter = 'blur(2px)';
         }, 500);
+    }
+    
+    // Cleanup method to prevent memory leaks
+    destroy() {
+        // Stop animation
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        
+        // Clear timeouts
+        if (this.fadeTimeout) {
+            clearTimeout(this.fadeTimeout);
+            this.fadeTimeout = null;
+        }
+        
+        // Remove event listeners
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
+        }
+        
+        // Clear canvas and remove from DOM
+        if (this.canvas) {
+            if (this.ctx) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+            if (this.canvas.parentNode) {
+                this.canvas.parentNode.removeChild(this.canvas);
+            }
+            this.canvas = null;
+            this.ctx = null;
+        }
+        
+        this.isActive = false;
     }
 }
 
