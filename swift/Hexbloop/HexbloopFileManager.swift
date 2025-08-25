@@ -82,50 +82,21 @@ class HexbloopFileManager {
         return tempDirectory.appendingPathComponent("\(uuid).\(fileExtension)")
     }
     
-    // Clean up temporary files with improved error handling and logging
+    // Clean up temporary files
     func cleanupTempFiles() {
         do {
-            // Check if the temp directory exists
-            var isDirectory: ObjCBool = false
-            if !FileManager.default.fileExists(atPath: tempDirectory.path, isDirectory: &isDirectory) || !isDirectory.boolValue {
-                print("⚠️ Temp directory doesn't exist, creating it")
-                try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
-                return
-            }
-            
-            // Get all files in the temp directory
             let fileURLs = try FileManager.default.contentsOfDirectory(
                 at: tempDirectory,
                 includingPropertiesForKeys: nil
             )
             
-            if fileURLs.isEmpty {
-                print("ℹ️ No temporary files to clean up")
-                return
-            }
-            
-            // Track successful and failed deletions
-            var successCount = 0
-            var failedFiles: [String] = []
-            
             for fileURL in fileURLs {
-                do {
-                    try FileManager.default.removeItem(at: fileURL)
-                    successCount += 1
-                } catch {
-                    // If we can't delete a file, track it but continue with others
-                    failedFiles.append(fileURL.lastPathComponent)
-                    print("⚠️ Could not delete temporary file: \(fileURL.lastPathComponent)")
-                }
+                try FileManager.default.removeItem(at: fileURL)
             }
             
-            if failedFiles.isEmpty {
-                print("🧹 Successfully cleaned up \(successCount) temporary files")
-            } else {
-                print("⚠️ Cleaned up \(successCount) files, but failed to delete \(failedFiles.count) files")
-            }
+            print("🧹 Cleaned up temporary files")
         } catch {
-            print("❌ Error during temp file cleanup: \(error.localizedDescription)")
+            print("❌ Error cleaning up temporary files: \(error)")
         }
     }
     
@@ -146,26 +117,9 @@ class HexbloopFileManager {
         }
     }
     
-    // Reveal a file in Finder with error handling
+    // Reveal a file in Finder
     func revealInFinder(url: URL) {
-        // Check if file exists before attempting to reveal
-        var isDirectory: ObjCBool = false
-        if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) {
-            // For directories, try to select the directory itself
-            if isDirectory.boolValue {
-                // Open Finder with this directory as the root
-                NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.path)
-            } else {
-                // For a file, select it in its parent directory
-                NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
-            }
-            print("📂 Revealed in Finder: \(url.path)")
-        } else {
-            // If the file doesn't exist, open the parent directory
-            let parentDir = url.deletingLastPathComponent()
-            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: parentDir.path)
-            print("⚠️ Could not find file to reveal, opening parent directory: \(parentDir.path)")
-        }
+        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
     }
     
     // Open a file with the default application

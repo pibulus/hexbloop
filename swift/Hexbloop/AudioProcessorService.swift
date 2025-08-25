@@ -10,7 +10,7 @@ class AudioProcessorService: ObservableObject {
     @Published var progress: Float = 0.0
     
     // Core audio engine
-    private let audioEngine: MacAudioEngine
+    private let audioEngine = MacAudioEngine()
     
     // File manager
     private let fileManager = HexbloopFileManager.shared
@@ -20,10 +20,6 @@ class AudioProcessorService: ObservableObject {
         case processingFailed(String)
         case invalidFile(String)
         case metadataFailed(String)
-    }
-    
-    init() {
-        self.audioEngine = MacAudioEngine()
     }
     
     // Process audio file with progress updates
@@ -168,23 +164,16 @@ class AudioProcessorService: ObservableObject {
         return outputURL
     }
     
-    // Batch process multiple files with cancellation support
+    // Batch process multiple files
     func batchProcessAudio(
         files: [URL],
         with parameters: ProcessingParameters,
-        progressCallback: @escaping (String, Float) -> Void,
-        shouldCancel: @escaping () -> Bool = { false }
+        progressCallback: @escaping (String, Float) -> Void
     ) async -> [URL] {
         var processedFiles: [URL] = []
         
-        // Process each file sequentially with cancellation support
+        // Process each file sequentially
         for (index, fileURL) in files.enumerated() {
-            // Check for cancellation before processing each file
-            if shouldCancel() {
-                print("⚠️ Batch processing cancelled after \(processedFiles.count) of \(files.count) files")
-                break
-            }
-            
             do {
                 // Update overall progress
                 let fileProgress = Float(index) / Float(files.count)
@@ -197,14 +186,8 @@ class AudioProcessorService: ObservableObject {
                 // Update progress for this file
                 progressCallback("Completed \(fileURL.lastPathComponent)", (Float(index + 1) / Float(files.count)))
             } catch {
-                print("❌ Error processing file \(fileURL.lastPathComponent): \(error.localizedDescription)")
-                // Record the error but continue with the next file to be resilient
-            }
-            
-            // Check for cancellation after processing each file
-            if shouldCancel() {
-                print("⚠️ Batch processing cancelled after \(processedFiles.count) of \(files.count) files")
-                break
+                print("Error processing file \(fileURL.lastPathComponent): \(error.localizedDescription)")
+                // Continue with next file
             }
         }
         
