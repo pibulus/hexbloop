@@ -59,10 +59,6 @@ function createWindow() {
         mainWindow.setTitle('Hexbloop');
     });
 
-    // Set up the application menu
-    const menuBuilder = new MenuBuilder(mainWindow);
-    menuBuilder.buildMenu();
-
     // Workaround: intercept file:// navigation to handle drag-drop
     mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
         const parsedUrl = new URL(navigationUrl);
