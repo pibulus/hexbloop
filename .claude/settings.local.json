@@ -37,7 +37,12 @@
       "Bash(npm start)",
       "Bash(open:*)",
       "Bash(npm uninstall:*)",
-      "Bash(top:*)"
+      "Bash(top:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "mcp__openai__openai_chat",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": []
   }

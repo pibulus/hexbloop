@@ -11,7 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const LunarProcessor = require('./lunar-processor');
 const NameGenerator = require('./name-generator');
-const ArtworkGenerator = require('./artwork-generator');
+const ArtworkGeneratorCanvas = require('./artwork-generator-canvas');
 const MetadataEmbedder = require('./metadata-embedder');
 const { getPreferencesManager } = require('./menu/preferences');
 
@@ -60,7 +60,7 @@ class AudioProcessor {
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
         const processedFile = path.join(path.dirname(outputPath), 'temp_processed.mp3');
         
-        const artworkGenerator = new ArtworkGenerator();
+        const artworkGenerator = new ArtworkGeneratorCanvas();
         const metadataEmbedder = new MetadataEmbedder();
         
         try {
@@ -108,8 +108,55 @@ class AudioProcessor {
             // Step 3: Generate artwork (conditional)
             if (processingConfig.stages.coverArt) {
                 console.log('🎨 Generating mystical artwork...');
-                const artworkPath = path.join(path.dirname(outputPath), `${finalName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.svg`);
-                artworkResult = await artworkGenerator.generateArtwork(finalName, artworkPath);
+                const artworkPath = path.join(path.dirname(outputPath), `${finalName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.png`);
+                
+                // Get moon phase for artwork generation
+                const moonData = LunarProcessor.getMoonPhase();
+                const moonPhase = typeof moonData === 'object' ? moonData.phase : moonData;
+                
+                // Auto-select style based on processing characteristics
+                let artStyle = null;
+                if (finalName.toLowerCase().includes('cosmic') || finalName.toLowerCase().includes('astral')) {
+                    artStyle = 'cosmic';
+                } else if (finalName.toLowerCase().includes('crystal') || finalName.toLowerCase().includes('gem')) {
+                    artStyle = 'crystal';
+                } else if (finalName.toLowerCase().includes('wave') || finalName.toLowerCase().includes('flow')) {
+                    artStyle = 'aurora';
+                } else if (finalName.toLowerCase().includes('glitch') || finalName.toLowerCase().includes('corrupt')) {
+                    artStyle = 'glitch';
+                } else if (finalName.toLowerCase().includes('botanical') || finalName.toLowerCase().includes('plant')) {
+                    artStyle = 'organic';
+                } else if (finalName.toLowerCase().includes('vapor') || finalName.toLowerCase().includes('dream')) {
+                    artStyle = 'vapor';
+                } else if (finalName.toLowerCase().includes('retro') || finalName.toLowerCase().includes('synth')) {
+                    artStyle = 'retro';
+                } else if (finalName.toLowerCase().includes('matrix') || finalName.toLowerCase().includes('digital')) {
+                    artStyle = 'matrix';
+                } else if (finalName.toLowerCase().includes('mystic') || finalName.toLowerCase().includes('magic')) {
+                    artStyle = 'mystic';
+                } else if (influences && influences.overdrive > 5) {
+                    artStyle = 'glitch'; // High overdrive = glitch aesthetic
+                } else if (influences && influences.bass > 3) {
+                    artStyle = 'retro'; // Heavy bass = retro wave
+                }
+                
+                // Generate canvas-based artwork with moon phase and style
+                const canvas = await artworkGenerator.generate({
+                    style: artStyle,
+                    title: finalName,
+                    moonPhase: moonPhase,
+                    seed: Date.now()
+                });
+                
+                // Save the artwork as PNG
+                await artworkGenerator.saveToFile(artworkPath, 'png');
+                
+                artworkResult = {
+                    pngPath: artworkPath,
+                    style: artStyle || 'cosmic'
+                };
+                
+                console.log(`🎨 Generated ${artworkResult.style} style artwork (moon phase: ${(moonPhase * 100).toFixed(0)}%)`);
             } else {
                 console.log('⏭️ Skipping artwork generation');
             }
@@ -153,10 +200,6 @@ class AudioProcessor {
             
             // Clean up artwork files if they exist
             try {
-                if (artworkResult && artworkResult.svgPath && fs.existsSync(artworkResult.svgPath)) {
-                    fs.unlinkSync(artworkResult.svgPath);
-                    console.log('🧹 Cleaned up SVG artwork file');
-                }
                 if (artworkResult && artworkResult.pngPath && fs.existsSync(artworkResult.pngPath)) {
                     fs.unlinkSync(artworkResult.pngPath);
                     console.log('🧹 Cleaned up PNG artwork file');
