@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const LunarProcessor = require('./lunar-processor');
 const NameGenerator = require('./name-generator');
+const VibrantEnhancedArtworkGenerator = require('./artwork-generator-vibrant-enhanced');
 const RadArtworkGenerator = require('./artwork-generator-rad');
 const Hex6EnhancedArtworkGenerator = require('./artwork-generator-hex6-enhanced');
 const MetadataEmbedder = require('./metadata-embedder');
@@ -62,10 +63,10 @@ class AudioProcessor {
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
         const processedFile = path.join(path.dirname(outputPath), 'temp_processed.mp3');
         
-        // Use Enhanced Hex6 Artwork Generator for dramatically varied, dense artwork
-        const artworkGenerator = new Hex6EnhancedArtworkGenerator();
+        // Use Vibrant Enhanced Artwork Generator for maximum variety
+        const artworkGenerator = new VibrantEnhancedArtworkGenerator();
         const metadataEmbedder = new MetadataEmbedder();
-        console.log('✨ Using Enhanced Hex6 Generator - 6×6×6 system with dramatic variation');
+        console.log('🎨 Using Vibrant Enhanced Generator - Maximum variety with metaballs, flow fields, and audio-responsive themes!');
         
         try {
             let currentFile = inputPath;
@@ -129,37 +130,43 @@ class AudioProcessor {
                 }
                 
                 // Auto-select style based on processing characteristics
-                // Enhanced generator has 6 styles: plasma, cosmic, bioform, neural, crystal, liquid
+                // Enhanced generator has 8 styles: neon-plasma, cosmic-flow, vapor-dream, cyber-matrix, sunset-liquid, electric-storm, crystal-prism, ocean-aurora
                 let artStyle = null;
                 if (finalName.toLowerCase().includes('cosmic') || finalName.toLowerCase().includes('astral') || 
                     finalName.toLowerCase().includes('star') || finalName.toLowerCase().includes('space')) {
-                    artStyle = 'cosmic';
+                    artStyle = 'cosmic-flow';
                 } else if (finalName.toLowerCase().includes('electric') || finalName.toLowerCase().includes('power') ||
                            finalName.toLowerCase().includes('volt') || finalName.toLowerCase().includes('surge')) {
-                    artStyle = 'plasma';
-                } else if (finalName.toLowerCase().includes('botanical') || finalName.toLowerCase().includes('plant') ||
-                           finalName.toLowerCase().includes('nature') || finalName.toLowerCase().includes('growth')) {
-                    artStyle = 'bioform';
+                    artStyle = 'electric-storm';
+                } else if (finalName.toLowerCase().includes('neon') || finalName.toLowerCase().includes('plasma') ||
+                           finalName.toLowerCase().includes('glow') || finalName.toLowerCase().includes('light')) {
+                    artStyle = 'neon-plasma';
                 } else if (finalName.toLowerCase().includes('wave') || finalName.toLowerCase().includes('flow') ||
                            finalName.toLowerCase().includes('liquid') || finalName.toLowerCase().includes('dream')) {
-                    artStyle = 'liquid';
+                    artStyle = 'sunset-liquid';
                 } else if (finalName.toLowerCase().includes('crystal') || finalName.toLowerCase().includes('gem') ||
                            finalName.toLowerCase().includes('diamond') || finalName.toLowerCase().includes('hex')) {
-                    artStyle = 'crystal';
-                } else if (finalName.toLowerCase().includes('neural') || finalName.toLowerCase().includes('mind') ||
-                           finalName.toLowerCase().includes('brain') || finalName.toLowerCase().includes('synapse')) {
-                    artStyle = 'neural';
+                    artStyle = 'crystal-prism';
+                } else if (finalName.toLowerCase().includes('vapor') || finalName.toLowerCase().includes('retro') ||
+                           finalName.toLowerCase().includes('synth') || finalName.toLowerCase().includes('80s')) {
+                    artStyle = 'vapor-dream';
+                } else if (finalName.toLowerCase().includes('ocean') || finalName.toLowerCase().includes('water') ||
+                           finalName.toLowerCase().includes('sea') || finalName.toLowerCase().includes('aurora')) {
+                    artStyle = 'ocean-aurora';
+                } else if (finalName.toLowerCase().includes('cyber') || finalName.toLowerCase().includes('matrix') ||
+                           finalName.toLowerCase().includes('digital') || finalName.toLowerCase().includes('tech')) {
+                    artStyle = 'cyber-matrix';
                 } else if (influences && influences.overdrive > 5) {
-                    artStyle = 'plasma'; // High overdrive = plasma energy
+                    artStyle = 'electric-storm'; // High overdrive = electric energy
                 } else if (influences && influences.bass > 3) {
-                    artStyle = 'liquid'; // Heavy bass = liquid flow
+                    artStyle = 'sunset-liquid'; // Heavy bass = liquid flow
                 } else if (audioFeatures && audioFeatures.energy > 0.7) {
-                    artStyle = 'plasma'; // High energy audio
+                    artStyle = 'neon-plasma'; // High energy audio
                 } else if (audioFeatures && audioFeatures.energy < 0.3) {
-                    artStyle = 'bioform'; // Low energy = organic growth
+                    artStyle = 'ocean-aurora'; // Low energy = calm auroras
                 } else {
                     // Default to style based on moon phase for variety
-                    const styles = ['plasma', 'cosmic', 'bioform', 'neural', 'crystal', 'liquid'];
+                    const styles = ['neon-plasma', 'cosmic-flow', 'vapor-dream', 'cyber-matrix', 'sunset-liquid', 'electric-storm', 'crystal-prism', 'ocean-aurora'];
                     const moonIndex = Math.floor((moonPhase || Math.random()) * styles.length);
                     artStyle = styles[moonIndex];
                 }
@@ -170,7 +177,8 @@ class AudioProcessor {
                     title: finalName,
                     moonPhase: moonPhase,
                     seed: Date.now(),
-                    audioFeatures: audioFeatures // Pass audio features for waveform viz
+                    audioEnergy: audioFeatures ? audioFeatures.energy : 0.5,
+                    tempo: audioFeatures ? audioFeatures.tempo : 120
                 });
                 
                 // Save the artwork as PNG
@@ -178,7 +186,7 @@ class AudioProcessor {
                 
                 artworkResult = {
                     pngPath: artworkPath,
-                    style: artStyle || 'cosmic'
+                    style: artStyle || 'cosmic-flow'
                 };
                 
                 console.log(`🎨 Generated ${artworkResult.style} style artwork (moon phase: ${(moonPhase * 100).toFixed(0)}%)`);

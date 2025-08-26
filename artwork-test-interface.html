@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexbloop Artwork Generator Test Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Mono', Monaco, monospace;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a0e2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5em;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+        }
+        
+        .controls {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        .control-group h3 {
+            margin-bottom: 15px;
+            color: #8338ec;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .style-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .style-btn {
+            padding: 12px;
+            background: rgba(131, 56, 236, 0.2);
+            border: 2px solid #8338ec;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            font-size: 0.95em;
+        }
+        
+        .style-btn:hover {
+            background: rgba(131, 56, 236, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(131, 56, 236, 0.3);
+        }
+        
+        .style-btn.active {
+            background: #8338ec;
+            box-shadow: 0 0 20px rgba(131, 56, 236, 0.5);
+        }
+        
+        .slider-control {
+            margin-bottom: 15px;
+        }
+        
+        .slider-control label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #3a86ff;
+        }
+        
+        .slider-control input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .slider-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, #ff006e, #8338ec);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(131, 56, 236, 0.5);
+        }
+        
+        .generate-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff);
+            border: none;
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 20px;
+        }
+        
+        .generate-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(131, 56, 236, 0.4);
+        }
+        
+        .generate-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .output {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .canvas-container {
+            background: #000;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 640px;
+            position: relative;
+        }
+        
+        #artworkCanvas {
+            border-radius: 10px;
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .info-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(131, 56, 236, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(131, 56, 236, 0.3);
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff006e, #8338ec);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(131, 56, 236, 0.2);
+            border-top: 3px solid #8338ec;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .preset-btn {
+            padding: 8px;
+            background: rgba(58, 134, 255, 0.2);
+            border: 1px solid #3a86ff;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(58, 134, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔮 Hexbloop Artwork Test Interface</h1>
+        
+        <div class="main-grid">
+            <div class="controls">
+                <div class="control-group">
+                    <h3>🎨 Style Selection</h3>
+                    <div class="style-buttons">
+                        <button class="style-btn active" data-style="plasma">Plasma</button>
+                        <button class="style-btn" data-style="cosmic">Cosmic</button>
+                        <button class="style-btn" data-style="bioform">Bioform</button>
+                        <button class="style-btn" data-style="neural">Neural</button>
+                        <button class="style-btn" data-style="crystal">Crystal</button>
+                        <button class="style-btn" data-style="liquid">Liquid</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>🎛️ Parameters (6x6x6)</h3>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Density</span>
+                            <span id="densityValue">0.5</span>
+                        </label>
+                        <input type="range" id="density" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Scale</span>
+                            <span id="scaleValue">0.5</span>
+                        </label>
+                        <input type="range" id="scale" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Turbulence</span>
+                            <span id="turbulenceValue">0.5</span>
+                        </label>
+                        <input type="range" id="turbulence" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Luminosity</span>
+                            <span id="luminosityValue">0.5</span>
+                        </label>
+                        <input type="range" id="luminosity" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Saturation</span>
+                            <span id="saturationValue">0.5</span>
+                        </label>
+                        <input type="range" id="saturation" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Symmetry</span>
+                            <span id="symmetryValue">0.5</span>
+                        </label>
+                        <input type="range" id="symmetry" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>🌙 Inputs</h3>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Audio Energy</span>
+                            <span id="audioEnergyValue">0.5</span>
+                        </label>
+                        <input type="range" id="audioEnergy" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Moon Phase</span>
+                            <span id="moonPhaseValue">0.5</span>
+                        </label>
+                        <input type="range" id="moonPhase" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    
+                    <div class="slider-control">
+                        <label>
+                            <span>Chaos</span>
+                            <span id="chaosValue">0.5</span>
+                        </label>
+                        <input type="range" id="chaos" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>🎯 Presets</h3>
+                    <div class="preset-buttons">
+                        <button class="preset-btn" onclick="loadPreset('minimal')">Minimal</button>
+                        <button class="preset-btn" onclick="loadPreset('balanced')">Balanced</button>
+                        <button class="preset-btn" onclick="loadPreset('extreme')">Extreme</button>
+                        <button class="preset-btn" onclick="loadPreset('organic')">Organic</button>
+                        <button class="preset-btn" onclick="loadPreset('digital')">Digital</button>
+                        <button class="preset-btn" onclick="loadPreset('random')">Random</button>
+                    </div>
+                </div>
+                
+                <button class="generate-btn" onclick="generateArtwork()">
+                    Generate Artwork
+                </button>
+            </div>
+            
+            <div class="output">
+                <div class="canvas-container">
+                    <canvas id="artworkCanvas" width="600" height="600"></canvas>
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <div class="info-row">
+                        <span>Current Style:</span>
+                        <span id="currentStyle">Plasma</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Generation #:</span>
+                        <span id="generationCount">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Color Shift:</span>
+                        <span id="colorShift">0°</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Complexity Score:</span>
+                        <span id="complexityScore">50%</span>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalGenerations">0</div>
+                        <div class="stat-label">Total Generations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="uniqueStyles">6</div>
+                        <div class="stat-label">Unique Styles</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="possibleCombos">∞</div>
+                        <div class="stat-label">Possible Combos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize canvas
+        const canvas = document.getElementById('artworkCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Track state
+        let currentStyle = 'plasma';
+        let generation = 0;
+        let totalGenerations = 0;
+        
+        // Style button handlers
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentStyle = this.dataset.style;
+                document.getElementById('currentStyle').textContent = 
+                    currentStyle.charAt(0).toUpperCase() + currentStyle.slice(1);
+            });
+        });
+        
+        // Slider value updates
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                document.getElementById(this.id + 'Value').textContent = this.value;
+            });
+        });
+        
+        // Load presets
+        function loadPreset(preset) {
+            const presets = {
+                minimal: {
+                    density: 0.2, scale: 0.3, turbulence: 0.1,
+                    luminosity: 0.6, saturation: 0.4, symmetry: 0.8
+                },
+                balanced: {
+                    density: 0.5, scale: 0.5, turbulence: 0.5,
+                    luminosity: 0.5, saturation: 0.5, symmetry: 0.5
+                },
+                extreme: {
+                    density: 1, scale: 1, turbulence: 1,
+                    luminosity: 1, saturation: 1, symmetry: 0
+                },
+                organic: {
+                    density: 0.6, scale: 0.7, turbulence: 0.8,
+                    luminosity: 0.4, saturation: 0.6, symmetry: 0.2
+                },
+                digital: {
+                    density: 0.4, scale: 0.5, turbulence: 0.2,
+                    luminosity: 0.8, saturation: 0.7, symmetry: 0.9
+                },
+                random: {
+                    density: Math.random(), scale: Math.random(), turbulence: Math.random(),
+                    luminosity: Math.random(), saturation: Math.random(), symmetry: Math.random()
+                }
+            };
+            
+            const settings = presets[preset];
+            Object.keys(settings).forEach(key => {
+                const slider = document.getElementById(key);
+                if (slider) {
+                    slider.value = settings[key];
+                    document.getElementById(key + 'Value').textContent = settings[key].toFixed(2);
+                }
+            });
+        }
+        
+        // Generate artwork
+        async function generateArtwork() {
+            document.getElementById('loading').classList.add('active');
+            
+            // Get all parameter values
+            const params = {
+                style: currentStyle,
+                density: parseFloat(document.getElementById('density').value),
+                scale: parseFloat(document.getElementById('scale').value),
+                turbulence: parseFloat(document.getElementById('turbulence').value),
+                luminosity: parseFloat(document.getElementById('luminosity').value),
+                saturation: parseFloat(document.getElementById('saturation').value),
+                symmetry: parseFloat(document.getElementById('symmetry').value),
+                audioEnergy: parseFloat(document.getElementById('audioEnergy').value),
+                moonPhase: parseFloat(document.getElementById('moonPhase').value),
+                chaos: parseFloat(document.getElementById('chaos').value)
+            };
+            
+            // Try server first, fall back to client-side generation
+            try {
+                const response = await fetch('http://localhost:5000/generate-test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(params)
+                });
+                
+                if (!response.ok) throw new Error('Server not available');
+                
+                const blob = await response.blob();
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    updateStats(params);
+                };
+                img.src = URL.createObjectURL(blob);
+            } catch (error) {
+                console.log('Server not running, using client-side fallback visualization');
+                // Generate a simple visualization based on parameters
+                generateClientSideArt(params);
+                updateStats(params);
+            }
+        }
+        
+        function updateStats(params) {
+            // Update stats
+            generation++;
+            totalGenerations++;
+            document.getElementById('generationCount').textContent = generation;
+            document.getElementById('totalGenerations').textContent = totalGenerations;
+            
+            // Calculate color shift
+            const colorShift = Math.round((generation * 30 + params.audioEnergy * 180) % 360);
+            document.getElementById('colorShift').textContent = colorShift + '°';
+            
+            // Calculate complexity
+            const complexity = Math.round((params.density + params.scale + params.turbulence) / 3 * 100);
+            document.getElementById('complexityScore').textContent = complexity + '%';
+            
+            document.getElementById('loading').classList.remove('active');
+        }
+        
+        function generateClientSideArt(params) {
+            // Simple client-side visualization for testing
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const density = Math.floor(20 + params.density * 80);
+            const hueBase = (generation * 30 + params.audioEnergy * 180) % 360;
+            
+            for (let i = 0; i < density; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const radius = 10 + params.scale * 50 * Math.random();
+                const hue = (hueBase + i * 10) % 360;
+                const sat = 50 + params.saturation * 50;
+                const lum = 30 + params.luminosity * 40;
+                
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                gradient.addColorStop(0, `hsla(${hue}, ${sat}%, ${lum}%, 0.9)`);
+                gradient.addColorStop(0.5, `hsla(${hue}, ${sat}%, ${lum * 0.7}%, 0.5)`);
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+            }
+            
+            // Add style label
+            ctx.font = 'bold 16px monospace';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.textAlign = 'center';
+            ctx.fillText(currentStyle.toUpperCase() + ' (Client Preview)', canvas.width/2, canvas.height - 30);
+        }
+        
+        // Initialize with a generation
+        window.onload = () => {
+            generateArtwork();
+        };
+    </script>
+</body>
+</html>

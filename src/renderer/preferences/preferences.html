@@ -33,6 +33,10 @@
                 <span class="tab-icon">⬢</span>
                 <span class="tab-label">Output</span>
             </button>
+            <button class="tab-button" data-tab="artwork">
+                <span class="tab-icon">🎨</span>
+                <span class="tab-label">Artwork</span>
+            </button>
         </div>
 
         <!-- Main preferences content -->
@@ -230,6 +234,143 @@
                             <button type="button" id="choose-folder-btn" class="btn btn-secondary">Choose Folder</button>
                         </div>
                     </div>
+                </div>
+            </section>
+            </div>
+
+            <!-- Artwork Tab -->
+            <div class="tab-panel" id="artwork-tab">
+            <section class="preference-section">
+                <div class="section-header">
+                    <h2 class="section-title">🎨 Visual Alchemy 🎨</h2>
+                    <div class="section-description">Fine-tune the hex6 artwork generation system</div>
+                </div>
+                
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <label class="setting-select" for="artwork-style">
+                            <div class="setting-info">
+                                <h3>Default Style</h3>
+                                <p>Choose the primary artwork generation style</p>
+                            </div>
+                            <select id="artwork-style" data-setting="artwork.defaultStyle">
+                                <option value="auto">Auto-Select (Based on Audio)</option>
+                                <option value="plasma">Plasma - Neon flowing blobs</option>
+                                <option value="cosmic">Cosmic - Starfields & nebulae</option>
+                                <option value="bioform">Bioform - Organic cells</option>
+                                <option value="neural">Neural - Electric networks</option>
+                                <option value="crystal">Crystal - Hexagonal prisms</option>
+                                <option value="liquid">Liquid - Flowing water</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="section-header" style="margin-top: 30px;">
+                    <h3 class="section-subtitle">⬡ 6×6×6 Parameters ⬡</h3>
+                    <div class="section-description">Adjust the core generation parameters</div>
+                </div>
+                
+                <div class="parameter-sliders">
+                    <div class="slider-group">
+                        <label for="artwork-density">
+                            <span>Density</span>
+                            <span class="slider-value" id="artwork-density-value">0.5</span>
+                        </label>
+                        <input type="range" id="artwork-density" data-setting="artwork.density" 
+                               min="0" max="1" step="0.05" value="0.5">
+                        <p class="slider-description">Controls number of elements (100-400 for plasma)</p>
+                    </div>
+                    
+                    <div class="slider-group">
+                        <label for="artwork-scale">
+                            <span>Scale</span>
+                            <span class="slider-value" id="artwork-scale-value">0.5</span>
+                        </label>
+                        <input type="range" id="artwork-scale" data-setting="artwork.scale" 
+                               min="0" max="1" step="0.05" value="0.5">
+                        <p class="slider-description">Size variation of elements</p>
+                    </div>
+                    
+                    <div class="slider-group">
+                        <label for="artwork-turbulence">
+                            <span>Turbulence</span>
+                            <span class="slider-value" id="artwork-turbulence-value">0.5</span>
+                        </label>
+                        <input type="range" id="artwork-turbulence" data-setting="artwork.turbulence" 
+                               min="0" max="1" step="0.05" value="0.5">
+                        <p class="slider-description">Chaos and organic movement</p>
+                    </div>
+                    
+                    <div class="slider-group">
+                        <label for="artwork-luminosity">
+                            <span>Luminosity</span>
+                            <span class="slider-value" id="artwork-luminosity-value">0.5</span>
+                        </label>
+                        <input type="range" id="artwork-luminosity" data-setting="artwork.luminosity" 
+                               min="0" max="1" step="0.05" value="0.5">
+                        <p class="slider-description">Brightness and glow intensity</p>
+                    </div>
+                    
+                    <div class="slider-group">
+                        <label for="artwork-saturation">
+                            <span>Saturation</span>
+                            <span class="slider-value" id="artwork-saturation-value">0.5</span>
+                        </label>
+                        <input type="range" id="artwork-saturation" data-setting="artwork.saturation" 
+                               min="0" max="1" step="0.05" value="0.5">
+                        <p class="slider-description">Color intensity (grayscale to hyper-saturated)</p>
+                    </div>
+                    
+                    <div class="slider-group">
+                        <label for="artwork-symmetry">
+                            <span>Symmetry</span>
+                            <span class="slider-value" id="artwork-symmetry-value">0.5</span>
+                        </label>
+                        <input type="range" id="artwork-symmetry" data-setting="artwork.symmetry" 
+                               min="0" max="1" step="0.05" value="0.5">
+                        <p class="slider-description">Pattern organization (chaos to perfect order)</p>
+                    </div>
+                </div>
+                
+                <div class="settings-grid" style="margin-top: 30px;">
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="artwork-colorVariation">
+                            <div class="setting-info">
+                                <h3>Color Variation</h3>
+                                <p>Enable dynamic color shifting based on audio and generation</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="artwork-colorVariation" 
+                                       data-setting="artwork.colorVariation" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="artwork-hexBoost">
+                            <div class="setting-info">
+                                <h3>Hexagonal Boost</h3>
+                                <p>Apply sacred geometry overlay every 6th generation</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="artwork-hexBoost" 
+                                       data-setting="artwork.hexBoost" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="info-panel" style="margin-top: 30px;">
+                    <h4>🔮 System Information</h4>
+                    <p><strong>Generator:</strong> Hex6 Enhanced (6×6×6 system)</p>
+                    <p><strong>Styles:</strong> 6 (Plasma, Cosmic, Bioform, Neural, Crystal, Liquid)</p>
+                    <p><strong>Parameters:</strong> 6 continuous (Density, Scale, Turbulence, Luminosity, Saturation, Symmetry)</p>
+                    <p><strong>Inputs:</strong> 6 external (Audio Energy, Moon Phase, Time, Entropy, Memory, Chaos)</p>
+                    <p><strong>Total Combinations:</strong> ∞ (continuous parameter space)</p>
+                    <p><strong>Color System:</strong> Dynamic HSL with harmonic palette generation</p>
                 </div>
             </section>
             </div>

@@ -205,34 +205,37 @@ class Hex6EnhancedArtworkGenerator {
         const style = this.styles[this.styleIndex];
         
         if (style === 'plasma') {
-            // Bright neons - pinks, yellows, cyans
+            // Bright neons that shift based on inputs
+            const hueShift = (baseHue) % 360; // Use the calculated base hue
             const neonColors = [
-                { h: 320, s: 100, l: 60 }, // Hot pink
-                { h: 45, s: 100, l: 65 },  // Electric yellow
-                { h: 180, s: 100, l: 55 }, // Cyan
-                { h: 270, s: 90, l: 65 },  // Purple
-                { h: 90, s: 80, l: 60 },   // Lime
-                { h: 20, s: 100, l: 60 }   // Orange
+                { h: (320 + hueShift) % 360, s: 100, l: 60 }, // Hot pink variant
+                { h: (45 + hueShift) % 360, s: 100, l: 65 },  // Yellow variant
+                { h: (180 + hueShift) % 360, s: 100, l: 55 }, // Cyan variant
+                { h: (270 + hueShift) % 360, s: 90, l: 65 },  // Purple variant
+                { h: (90 + hueShift) % 360, s: 80, l: 60 },   // Lime variant
+                { h: (20 + hueShift) % 360, s: 100, l: 60 }   // Orange variant
             ];
             this.palette = neonColors.concat(neonColors); // Duplicate for 12 colors
         } else if (style === 'cosmic') {
-            // Space colors but BRIGHT - blues, purples, pinks with stars
+            // Space colors that shift with base hue
+            const cosmicBase = (200 + baseHue * 0.5) % 360; // Influenced by base hue
             for (let i = 0; i < 12; i++) {
                 this.palette.push({
-                    h: 200 + i * 15, // Blues to purples
+                    h: (cosmicBase + i * 15) % 360, // Shifting blues to purples
                     s: 70 + Math.sin(i) * 30,
                     l: 50 + Math.cos(i) * 20 // Brighter!
                 });
             }
         } else if (style === 'bioform') {
-            // Organic greens, teals, warm colors
+            // Organic colors that shift naturally
+            const bioShift = (baseHue * 0.3) % 120; // Stays in green/organic range
             const bioColors = [
-                { h: 120, s: 70, l: 50 }, // Green
-                { h: 160, s: 60, l: 55 }, // Teal
-                { h: 80, s: 70, l: 60 },  // Yellow-green
-                { h: 40, s: 80, l: 55 },  // Gold
-                { h: 200, s: 50, l: 60 }, // Sky blue
-                { h: 140, s: 60, l: 50 }  // Mint
+                { h: (120 + bioShift) % 360, s: 70, l: 50 }, // Green variant
+                { h: (160 + bioShift) % 360, s: 60, l: 55 }, // Teal variant
+                { h: (80 + bioShift) % 360, s: 70, l: 60 },  // Yellow-green variant
+                { h: (40 + bioShift) % 360, s: 80, l: 55 },  // Gold variant
+                { h: (200 + bioShift * 0.5) % 360, s: 50, l: 60 }, // Sky blue variant
+                { h: (140 + bioShift) % 360, s: 60, l: 50 }  // Mint variant
             ];
             this.palette = bioColors.concat(bioColors);
         } else if (style === 'liquid') {
@@ -316,73 +319,93 @@ class Hex6EnhancedArtworkGenerator {
     }
     
     renderEnhancedPlasma(layer) {
-        // MASSIVELY enhanced plasma with flow fields
-        const density = Math.floor(50 + this.parameters.density * 200); // Up to 250 elements
-        const scale = 20 + this.parameters.scale * 100; // Dramatic size range
+        // Much more dense plasma with true neon glow
+        const density = Math.floor(100 + this.parameters.density * 300); // 100-400 blobs
+        const scale = this.parameters.scale;
         const turbulence = this.parameters.turbulence;
         
-        // Use lighter blending modes for brighter output
-        this.ctx.globalCompositeOperation = layer === 0 ? 'source-over' : 'lighter';
+        // Use screen/lighter for maximum vibrancy
+        this.ctx.globalCompositeOperation = layer === 0 ? 'source-over' : 'screen';
         
-        // Create flowing plasma blobs
+        // Generate random positions with seeded randomness for consistency
+        const seed = this.generation + layer * 1000;
+        
         for (let i = 0; i < density; i++) {
-            const t = (i / density) * Math.PI * 2;
-            const turb = turbulence * 50;
+            // Distributed across canvas with some clustering
+            const clusterCenter = Math.floor(i / 20);
+            const clusterX = this.pseudoRandom(seed + clusterCenter * 100) * this.width;
+            const clusterY = this.pseudoRandom(seed + clusterCenter * 100 + 1) * this.height;
             
-            // Complex movement pattern
-            const baseX = this.width/2 + Math.cos(t + this.generation * 0.1) * scale;
-            const baseY = this.height/2 + Math.sin(t + this.generation * 0.1) * scale;
+            // Individual blob position within cluster
+            const spread = 150 + turbulence * 100;
+            const x = clusterX + (this.pseudoRandom(seed + i * 2) - 0.5) * spread;
+            const y = clusterY + (this.pseudoRandom(seed + i * 2 + 1) - 0.5) * spread;
             
-            // Add turbulent flow
-            const flowX = this.noise2D(baseX * 0.01, this.generation * 0.05) * turb;
-            const flowY = this.noise2D(baseY * 0.01, this.generation * 0.05) * turb;
+            // Variable sizes for organic look
+            const sizeMultiplier = 0.2 + this.pseudoRandom(seed + i * 3) * 1.5;
+            const radius = (15 + this.pseudoRandom(seed + i * 4) * 40) * scale * sizeMultiplier;
             
-            const x = baseX + flowX;
-            const y = baseY + flowY;
+            // Pick color from palette
+            const color = this.palette[(i + layer * 2) % this.palette.length];
             
-            // Variable size based on position and noise
-            const size = scale * (0.3 + this.noise2D(i * 0.1, layer * 0.5) * 0.7);
+            // Create bright neon gradient
+            const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
             
-            // Multi-stop gradient for BRIGHT VISIBLE glow
-            const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, size);
-            const color = this.palette[(i + layer * 3) % this.palette.length];
+            // Much stronger opacity and brightness
+            const brightL = Math.min(color.l * 1.3, 90); // Boost brightness
+            gradient.addColorStop(0, `hsla(${color.h}, ${color.s}%, ${brightL}%, 1)`);
+            gradient.addColorStop(0.2, `hsla(${color.h}, ${color.s}%, ${color.l}%, 0.9)`);
+            gradient.addColorStop(0.4, `hsla(${color.h}, ${color.s * 0.9}%, ${color.l * 0.9}%, 0.6)`);
+            gradient.addColorStop(0.7, `hsla(${color.h + 10}, ${color.s * 0.8}%, ${color.l * 0.8}%, 0.3)`);
+            gradient.addColorStop(1, `hsla(${color.h + 20}, ${color.s * 0.7}%, ${color.l * 0.7}%, 0)`);
             
-            // VIBRANT NEON gradient like the rad generator
-            gradient.addColorStop(0, `hsla(${color.h}, ${color.s}%, ${color.l}%, 0.95)`);
-            gradient.addColorStop(0.3, `hsla(${color.h}, ${color.s * 0.9}%, ${color.l * 0.9}%, 0.8)`);
-            gradient.addColorStop(0.5, `hsla(${color.h + 10}, ${color.s * 0.8}%, ${color.l * 0.8}%, 0.5)`);
-            gradient.addColorStop(0.8, `hsla(${color.h + 20}, ${color.s * 0.7}%, ${color.l * 0.7}%, 0.2)`);
-            gradient.addColorStop(1, 'transparent');
-            
+            // Draw circular blob
             this.ctx.fillStyle = gradient;
-            this.ctx.fillRect(x - size, y - size, size * 2, size * 2);
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+            this.ctx.fill();
             
-            // Add connecting strands for density
-            if (i > 0 && turbulence > 0.3) {
-                const prevT = ((i - 1) / density) * Math.PI * 2;
-                const prevX = this.width/2 + Math.cos(prevT + this.generation * 0.1) * scale + 
-                             this.noise2D((i-1) * 0.01, this.generation * 0.05) * turb;
-                const prevY = this.height/2 + Math.sin(prevT + this.generation * 0.1) * scale +
-                             this.noise2D((i-1) * 0.02, this.generation * 0.05) * turb;
+            // Add extra glow for larger blobs
+            if (radius > 30 * scale) {
+                const glowGradient = this.ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 2);
+                glowGradient.addColorStop(0, `hsla(${color.h}, ${color.s}%, ${color.l}%, 0)`);
+                glowGradient.addColorStop(0.5, `hsla(${color.h}, ${color.s * 0.8}%, ${color.l * 1.2}%, 0.2)`);
+                glowGradient.addColorStop(1, `hsla(${color.h + 15}, ${color.s * 0.6}%, ${color.l}%, 0)`);
                 
-                this.ctx.strokeStyle = `hsla(${color.h}, ${color.s}%, ${color.l}%, ${0.1})`;
-                this.ctx.lineWidth = 0.5 + turbulence * 2;
+                this.ctx.fillStyle = glowGradient;
                 this.ctx.beginPath();
-                this.ctx.moveTo(prevX, prevY);
-                this.ctx.quadraticCurveTo(
-                    (x + prevX) / 2 + this.noise2D(i, layer) * 20,
-                    (y + prevY) / 2 + this.noise2D(i + 1, layer) * 20,
-                    x, y
-                );
-                this.ctx.stroke();
+                this.ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+                this.ctx.fill();
             }
         }
         
-        // Apply variable blur for depth
-        if (layer < 3) {
-            this.ctx.filter = `blur(${5 + layer * 5 + turbulence * 10}px)`;
-            this.ctx.drawImage(this.canvas, 0, 0);
-            this.ctx.filter = 'none';
+        // Add flowing connections between nearby blobs on upper layers
+        if (layer > 0 && turbulence > 0.3) {
+            this.ctx.globalAlpha = 0.3;
+            
+            // Create connection network
+            for (let i = 0; i < density / 4; i++) {
+                const x1 = this.pseudoRandom(seed + i * 10) * this.width;
+                const y1 = this.pseudoRandom(seed + i * 10 + 1) * this.height;
+                const x2 = x1 + (this.pseudoRandom(seed + i * 10 + 2) - 0.5) * 200;
+                const y2 = y1 + (this.pseudoRandom(seed + i * 10 + 3) - 0.5) * 200;
+                
+                const connectionColor = this.palette[(i + layer) % this.palette.length];
+                
+                // Flowing curved connection
+                this.ctx.strokeStyle = `hsla(${connectionColor.h}, ${connectionColor.s}%, ${connectionColor.l}%, 0.2)`;
+                this.ctx.lineWidth = 1 + turbulence * 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                
+                const cpX = (x1 + x2) / 2 + this.noise2D(i, layer) * 50 * turbulence;
+                const cpY = (y1 + y2) / 2 + this.noise2D(i + 1, layer) * 50 * turbulence;
+                
+                this.ctx.quadraticCurveTo(cpX, cpY, x2, y2);
+                this.ctx.stroke();
+            }
+            
+            this.ctx.globalAlpha = 1;
         }
     }
     
@@ -983,6 +1006,11 @@ class Hex6EnhancedArtworkGenerator {
         x = ((x >> 16) ^ x) * 0x45d9f3b;
         x = (x >> 16) ^ x;
         return (x & 0x7fffffff) / 0x7fffffff;
+    }
+    
+    seededRandom(seed) {
+        // More predictable seeded random for consistent results
+        return this.pseudoRandom(Math.floor(seed * 1000000));
     }
     
     fade(t) {
