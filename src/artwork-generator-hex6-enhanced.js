@@ -105,8 +105,48 @@ class Hex6EnhancedArtworkGenerator {
         // Generate enhanced color palette
         this.generateEnhancedPalette();
         
-        // Clear canvas
-        this.ctx.fillStyle = 'black';
+        // Balanced background - not black but not washed out
+        const bgGradient = this.ctx.createRadialGradient(
+            this.width/2, this.height/2, 0,
+            this.width/2, this.height/2, this.width * 0.7
+        );
+        
+        // Style-specific backgrounds with good contrast
+        const currentStyle = this.styles[this.styleIndex];
+        if (currentStyle === 'plasma') {
+            // Dark but colorful for plasma to pop
+            const bg1 = this.palette[0];
+            bgGradient.addColorStop(0, `hsla(${bg1.h}, 40%, 10%, 1)`);
+            bgGradient.addColorStop(0.5, `hsla(${bg1.h + 60}, 30%, 8%, 1)`);
+            bgGradient.addColorStop(1, `hsla(${bg1.h + 120}, 20%, 5%, 1)`);
+        } else if (currentStyle === 'liquid') {
+            // Deep ocean background
+            bgGradient.addColorStop(0, 'hsl(200, 50%, 12%)');
+            bgGradient.addColorStop(0.5, 'hsl(210, 40%, 8%)');
+            bgGradient.addColorStop(1, 'hsl(220, 30%, 4%)');
+        } else if (currentStyle === 'cosmic') {
+            // Deep space with color
+            bgGradient.addColorStop(0, 'hsl(250, 60%, 8%)');
+            bgGradient.addColorStop(0.5, 'hsl(270, 50%, 6%)');
+            bgGradient.addColorStop(1, 'hsl(290, 40%, 4%)');
+        } else if (currentStyle === 'bioform') {
+            // Dark organic
+            bgGradient.addColorStop(0, 'hsl(80, 20%, 10%)');
+            bgGradient.addColorStop(0.5, 'hsl(100, 15%, 8%)');
+            bgGradient.addColorStop(1, 'hsl(120, 10%, 5%)');
+        } else if (currentStyle === 'neural' || currentStyle === 'crystal') {
+            // Very dark for contrast
+            bgGradient.addColorStop(0, 'hsl(0, 0%, 8%)');
+            bgGradient.addColorStop(0.5, 'hsl(0, 0%, 5%)');
+            bgGradient.addColorStop(1, 'hsl(0, 0%, 2%)');
+        } else {
+            // Default dark gradient
+            const bg = this.palette[0];
+            bgGradient.addColorStop(0, `hsla(${bg.h}, 20%, 10%, 1)`);
+            bgGradient.addColorStop(1, `hsla(${bg.h + 90}, 10%, 5%, 1)`);
+        }
+        
+        this.ctx.fillStyle = bgGradient;
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         // Render with enhanced complexity
@@ -156,20 +196,85 @@ class Hex6EnhancedArtworkGenerator {
     generateEnhancedPalette() {
         this.palette = [];
         const baseHue = (this.generation * 30 + this.inputs.audioEnergy * 180) % 360;
-        const sat = 30 + this.parameters.saturation * 70;
-        const lum = 20 + this.parameters.luminosity * 40;
         
-        // Generate rich, varied palettes
-        for (let i = 0; i < 12; i++) {  // More colors for variation
-            const hueShift = Math.sin(i * 0.5) * 60;
-            const satShift = Math.cos(i * 0.3) * 20;
-            const lumShift = Math.sin(i * 0.7) * 15;
-            
-            this.palette.push({
-                h: (baseHue + hueShift + i * 15) % 360,
-                s: Math.max(10, Math.min(100, sat + satShift)),
-                l: Math.max(10, Math.min(90, lum + lumShift))
-            });
+        // MUCH BRIGHTER palettes - like the rad generator!
+        const sat = 50 + this.parameters.saturation * 50; // 50-100% saturation
+        const lum = 40 + this.parameters.luminosity * 30; // 40-70% lightness (brighter!)
+        
+        // Style-specific bright palettes
+        const style = this.styles[this.styleIndex];
+        
+        if (style === 'plasma') {
+            // Bright neons - pinks, yellows, cyans
+            const neonColors = [
+                { h: 320, s: 100, l: 60 }, // Hot pink
+                { h: 45, s: 100, l: 65 },  // Electric yellow
+                { h: 180, s: 100, l: 55 }, // Cyan
+                { h: 270, s: 90, l: 65 },  // Purple
+                { h: 90, s: 80, l: 60 },   // Lime
+                { h: 20, s: 100, l: 60 }   // Orange
+            ];
+            this.palette = neonColors.concat(neonColors); // Duplicate for 12 colors
+        } else if (style === 'cosmic') {
+            // Space colors but BRIGHT - blues, purples, pinks with stars
+            for (let i = 0; i < 12; i++) {
+                this.palette.push({
+                    h: 200 + i * 15, // Blues to purples
+                    s: 70 + Math.sin(i) * 30,
+                    l: 50 + Math.cos(i) * 20 // Brighter!
+                });
+            }
+        } else if (style === 'bioform') {
+            // Organic greens, teals, warm colors
+            const bioColors = [
+                { h: 120, s: 70, l: 50 }, // Green
+                { h: 160, s: 60, l: 55 }, // Teal
+                { h: 80, s: 70, l: 60 },  // Yellow-green
+                { h: 40, s: 80, l: 55 },  // Gold
+                { h: 200, s: 50, l: 60 }, // Sky blue
+                { h: 140, s: 60, l: 50 }  // Mint
+            ];
+            this.palette = bioColors.concat(bioColors);
+        } else if (style === 'liquid') {
+            // Ocean colors - bright blues, aquas, foams
+            for (let i = 0; i < 12; i++) {
+                this.palette.push({
+                    h: 170 + i * 8, // Aqua range
+                    s: 60 + Math.sin(i * 0.5) * 40,
+                    l: 55 + Math.sin(i * 0.3) * 15
+                });
+            }
+        } else if (style === 'neural') {
+            // Electric colors - bright purples, blues, pinks
+            for (let i = 0; i < 12; i++) {
+                this.palette.push({
+                    h: 260 + i * 10,
+                    s: 80 + Math.sin(i) * 20,
+                    l: 55 + i * 2 // Getting brighter
+                });
+            }
+        } else if (style === 'crystal') {
+            // Rainbow prisms! All colors, bright and shimmering
+            for (let i = 0; i < 12; i++) {
+                this.palette.push({
+                    h: (i * 30) % 360, // Full spectrum
+                    s: 70 + Math.sin(i) * 30,
+                    l: 60 + Math.cos(i) * 10
+                });
+            }
+        } else {
+            // Default: vibrant rainbow
+            for (let i = 0; i < 12; i++) {
+                const hueShift = Math.sin(i * 0.5) * 60;
+                const satShift = Math.cos(i * 0.3) * 20;
+                const lumShift = Math.sin(i * 0.7) * 15;
+                
+                this.palette.push({
+                    h: (baseHue + hueShift + i * 30) % 360,
+                    s: Math.max(50, Math.min(100, sat + satShift)),
+                    l: Math.max(40, Math.min(80, lum + lumShift))
+                });
+            }
         }
     }
     
@@ -179,7 +284,8 @@ class Hex6EnhancedArtworkGenerator {
         // Multi-layer rendering for ALL styles
         for (let layer = 0; layer < 4; layer++) {
             this.ctx.save();
-            this.ctx.globalAlpha = 0.7 - layer * 0.15;
+            // Higher opacity for more vibrant colors
+            this.ctx.globalAlpha = 0.9 - layer * 0.1; // Was 0.7 - layer * 0.15
             
             switch(currentStyle) {
                 case 'plasma':
@@ -215,7 +321,8 @@ class Hex6EnhancedArtworkGenerator {
         const scale = 20 + this.parameters.scale * 100; // Dramatic size range
         const turbulence = this.parameters.turbulence;
         
-        this.ctx.globalCompositeOperation = layer === 0 ? 'source-over' : 'screen';
+        // Use lighter blending modes for brighter output
+        this.ctx.globalCompositeOperation = layer === 0 ? 'source-over' : 'lighter';
         
         // Create flowing plasma blobs
         for (let i = 0; i < density; i++) {
@@ -236,15 +343,15 @@ class Hex6EnhancedArtworkGenerator {
             // Variable size based on position and noise
             const size = scale * (0.3 + this.noise2D(i * 0.1, layer * 0.5) * 0.7);
             
-            // Multi-stop gradient for complex glow
+            // Multi-stop gradient for BRIGHT VISIBLE glow
             const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, size);
             const color = this.palette[(i + layer * 3) % this.palette.length];
             
-            // Enhanced gradient with more stops
-            gradient.addColorStop(0, `hsla(${color.h}, ${color.s}%, ${color.l + 20}%, ${0.8})`);
-            gradient.addColorStop(0.2, `hsla(${color.h}, ${color.s}%, ${color.l + 10}%, ${0.6})`);
-            gradient.addColorStop(0.5, `hsla(${color.h}, ${color.s}%, ${color.l}%, ${0.3})`);
-            gradient.addColorStop(0.8, `hsla(${color.h + 10}, ${color.s * 0.8}%, ${color.l * 0.7}%, ${0.1})`);
+            // VIBRANT NEON gradient like the rad generator
+            gradient.addColorStop(0, `hsla(${color.h}, ${color.s}%, ${color.l}%, 0.95)`);
+            gradient.addColorStop(0.3, `hsla(${color.h}, ${color.s * 0.9}%, ${color.l * 0.9}%, 0.8)`);
+            gradient.addColorStop(0.5, `hsla(${color.h + 10}, ${color.s * 0.8}%, ${color.l * 0.8}%, 0.5)`);
+            gradient.addColorStop(0.8, `hsla(${color.h + 20}, ${color.s * 0.7}%, ${color.l * 0.7}%, 0.2)`);
             gradient.addColorStop(1, 'transparent');
             
             this.ctx.fillStyle = gradient;
@@ -284,7 +391,7 @@ class Hex6EnhancedArtworkGenerator {
         const scale = this.parameters.scale;
         
         if (layer === 0) {
-            // Deep space gradient with variation
+            // Brighter space gradient - not pitch black!
             const g1 = this.ctx.createRadialGradient(
                 this.width * (0.3 + this.noise2D(1, 1) * 0.4),
                 this.height * (0.3 + this.noise2D(2, 2) * 0.4),
@@ -294,9 +401,10 @@ class Hex6EnhancedArtworkGenerator {
             );
             
             const deepColor = this.palette[0];
-            g1.addColorStop(0, `hsla(${deepColor.h}, ${deepColor.s}%, 5%, 1)`);
-            g1.addColorStop(0.5, `hsla(${deepColor.h + 180}, ${deepColor.s * 0.5}%, 2%, 1)`);
-            g1.addColorStop(1, 'black');
+            // Much brighter background - deep blue/purple instead of black
+            g1.addColorStop(0, `hsla(${deepColor.h}, ${deepColor.s * 0.7}%, 20%, 1)`);
+            g1.addColorStop(0.5, `hsla(${deepColor.h + 180}, ${deepColor.s * 0.5}%, 15%, 1)`);
+            g1.addColorStop(1, `hsla(${deepColor.h + 90}, 40%, 10%, 1)`);
             
             this.ctx.fillStyle = g1;
             this.ctx.fillRect(0, 0, this.width, this.height);
@@ -566,12 +674,16 @@ class Hex6EnhancedArtworkGenerator {
         
         // First fill background on layer 0
         if (layer === 0) {
+            // Bright prismatic background for crystals
             const bgGradient = this.ctx.createRadialGradient(
                 this.width/2, this.height/2, 0,
                 this.width/2, this.height/2, this.width/2
             );
-            bgGradient.addColorStop(0, 'rgba(10, 10, 30, 1)');
-            bgGradient.addColorStop(1, 'rgba(0, 0, 10, 1)');
+            // Lighter, more colorful background
+            const bgColor = this.palette[0];
+            bgGradient.addColorStop(0, `hsla(${bgColor.h}, 30%, 25%, 1)`);
+            bgGradient.addColorStop(0.5, `hsla(${bgColor.h + 60}, 20%, 20%, 1)`);
+            bgGradient.addColorStop(1, `hsla(${bgColor.h + 120}, 25%, 15%, 1)`);
             this.ctx.fillStyle = bgGradient;
             this.ctx.fillRect(0, 0, this.width, this.height);
         }
