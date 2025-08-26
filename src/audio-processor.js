@@ -11,9 +11,8 @@ const path = require('path');
 const fs = require('fs');
 const LunarProcessor = require('./lunar-processor');
 const NameGenerator = require('./name-generator');
-const VibrantEnhancedArtworkGenerator = require('./artwork-generator-vibrant-enhanced');
-const RadArtworkGenerator = require('./artwork-generator-rad');
-const Hex6EnhancedArtworkGenerator = require('./artwork-generator-hex6-enhanced');
+const VibrantRefinedArtworkGenerator = require('./artwork-generator-vibrant-refined');
+// Legacy generators moved to old-generators/
 const MetadataEmbedder = require('./metadata-embedder');
 const AudioAnalyzer = require('./audio-analyzer');
 const { getPreferencesManager } = require('./menu/preferences');
@@ -63,10 +62,10 @@ class AudioProcessor {
         const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
         const processedFile = path.join(path.dirname(outputPath), 'temp_processed.mp3');
         
-        // Use Vibrant Enhanced Artwork Generator for maximum variety
-        const artworkGenerator = new VibrantEnhancedArtworkGenerator();
+        // Use Vibrant Refined Artwork Generator for maximum variety
+        const artworkGenerator = new VibrantRefinedArtworkGenerator();
         const metadataEmbedder = new MetadataEmbedder();
-        console.log('🎨 Using Vibrant Enhanced Generator - Maximum variety with metaballs, flow fields, and audio-responsive themes!');
+        console.log('🎨 Using Vibrant Refined Generator - Full audio responsiveness with proper color theory!');
         
         try {
             let currentFile = inputPath;
