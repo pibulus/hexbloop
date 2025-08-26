@@ -260,6 +260,30 @@ class HexbloopMystic {
         }
     }
     
+    initSettingsButton() {
+        // Add settings button handler to open preferences window
+        if (this.settingsButton) {
+            this.settingsButton.addEventListener('click', () => {
+                console.log('⚙️ Opening preferences window...');
+                // Send IPC message to open preferences window
+                if (window.electronAPI && window.electronAPI.openPreferences) {
+                    window.electronAPI.openPreferences();
+                } else {
+                    console.log('⚠️ Preferences API not available');
+                }
+            });
+            
+            // Add hover effect
+            this.settingsButton.addEventListener('mouseenter', () => {
+                this.settingsButton.classList.add('hover');
+            });
+            
+            this.settingsButton.addEventListener('mouseleave', () => {
+                this.settingsButton.classList.remove('hover');
+            });
+        }
+    }
+    
     updateProgress(data) {
         const { current, total, fileName, status } = data;
         this.currentFileIndex = current;

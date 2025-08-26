@@ -802,6 +802,91 @@ body {
     }
 }
 
+/* Ambient Audio Toggle */
+.ambient-toggle {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(147, 51, 234, 0.3);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.ambient-toggle:hover {
+    background: rgba(147, 51, 234, 0.1);
+    border-color: rgba(147, 51, 234, 0.5);
+    transform: scale(1.1);
+}
+
+.ambient-toggle.playing {
+    background: rgba(147, 51, 234, 0.2);
+    border-color: rgba(147, 51, 234, 0.6);
+    animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+.toggle-icon {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.ambient-toggle.playing .toggle-icon {
+    color: rgba(147, 51, 234, 0.9);
+}
+
+/* Settings Button */
+.settings-button {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(88, 86, 214, 0.3);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.settings-button:hover {
+    background: rgba(88, 86, 214, 0.1);
+    border-color: rgba(88, 86, 214, 0.5);
+    transform: scale(1.1) rotate(45deg);
+}
+
+.settings-icon {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 20px;
+    transition: all 0.3s ease;
+}
+
+.settings-button:hover .settings-icon {
+    color: rgba(88, 86, 214, 0.9);
+}
+
+@keyframes gentle-pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
 /* Performance optimizations */
 .hexagon-stack,
 .hexagon,

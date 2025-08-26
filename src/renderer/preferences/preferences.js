@@ -118,6 +118,21 @@ class PreferencesController {
                         this.updateSetting(settingPath, e.target.value);
                     }
                 });
+            } else if (element.type === 'range') {
+                // Handle range sliders with live updates
+                element.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    
+                    // Update display value
+                    const displayId = element.id + '-value';
+                    const displayElement = document.getElementById(displayId);
+                    if (displayElement) {
+                        displayElement.textContent = value + '%';
+                    }
+                    
+                    // Update setting
+                    this.updateSetting(settingPath, value);
+                });
             } else if (element.type === 'text' || element.type === 'number') {
                 // Create debounced update function for this specific input
                 const debouncedUpdate = debounce((value) => {
@@ -195,6 +210,15 @@ class PreferencesController {
                 element.checked = Boolean(value);
             } else if (element.type === 'radio') {
                 element.checked = element.value === value;
+            } else if (element.type === 'range') {
+                element.value = value || 50; // Default to 50 for sliders
+                
+                // Update display value
+                const displayId = element.id + '-value';
+                const displayElement = document.getElementById(displayId);
+                if (displayElement) {
+                    displayElement.textContent = (value || 50) + '%';
+                }
             } else if (element.type === 'text' || element.type === 'number') {
                 element.value = value || '';
             }
@@ -264,6 +288,16 @@ class PreferencesController {
      * @throws {Error} If validation fails
      */
     sanitizeInput(settingPath, value) {
+        // Handle artwork sliders
+        if (settingPath.startsWith('artwork.') && 
+            (settingPath.includes('Sensitivity') || 
+             settingPath.includes('Influence') || 
+             settingPath.includes('Variation'))) {
+            const num = parseFloat(value);
+            if (isNaN(num)) return 50; // Default to 50
+            return Math.min(100, Math.max(0, num)); // Clamp to 0-100
+        }
+        
         // Handle metadata fields
         if (settingPath.startsWith('metadata.')) {
             if (settingPath === 'metadata.year') {

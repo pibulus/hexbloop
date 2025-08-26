@@ -243,7 +243,7 @@
             <section class="preference-section">
                 <div class="section-header">
                     <h2 class="section-title">🎨 Visual Alchemy 🎨</h2>
-                    <div class="section-description">Fine-tune the hex6 artwork generation system</div>
+                    <div class="section-description">Configure the vibrant refined artwork generation system</div>
                 </div>
                 
                 <div class="settings-grid">
@@ -254,109 +254,95 @@
                                 <p>Choose the primary artwork generation style</p>
                             </div>
                             <select id="artwork-style" data-setting="artwork.defaultStyle">
-                                <option value="auto">Auto-Select (Based on Audio)</option>
-                                <option value="plasma">Plasma - Neon flowing blobs</option>
-                                <option value="cosmic">Cosmic - Starfields & nebulae</option>
-                                <option value="bioform">Bioform - Organic cells</option>
-                                <option value="neural">Neural - Electric networks</option>
-                                <option value="crystal">Crystal - Hexagonal prisms</option>
-                                <option value="liquid">Liquid - Flowing water</option>
+                                <option value="auto">Auto-Select (Based on Audio & Name)</option>
+                                <option value="neon-plasma">Neon Plasma - Electric metaballs with glow</option>
+                                <option value="cosmic-flow">Cosmic Flow - Starfields & flowing nebulae</option>
+                                <option value="vapor-dream">Vapor Dream - Retro pastel with grids</option>
+                                <option value="cyber-matrix">Cyber Matrix - Digital rain & glitch art</option>
+                                <option value="sunset-liquid">Sunset Liquid - Warm flowing sunset</option>
+                                <option value="electric-storm">Electric Storm - Lightning & energy</option>
+                                <option value="crystal-prism">Crystal Prism - Rainbow geometric crystals</option>
+                                <option value="ocean-aurora">Ocean Aurora - Northern lights over water</option>
                             </select>
                         </label>
                     </div>
                 </div>
                 
                 <div class="section-header" style="margin-top: 30px;">
-                    <h3 class="section-subtitle">⬡ 6×6×6 Parameters ⬡</h3>
-                    <div class="section-description">Adjust the core generation parameters</div>
+                    <h3 class="section-subtitle">✨ Audio Responsiveness ✨</h3>
+                    <div class="section-description">Control how artwork responds to audio</div>
                 </div>
                 
                 <div class="parameter-sliders">
                     <div class="slider-group">
-                        <label for="artwork-density">
-                            <span>Density</span>
-                            <span class="slider-value" id="artwork-density-value">0.5</span>
+                        <label for="artwork-energySensitivity">
+                            <span>Energy Sensitivity</span>
+                            <span class="slider-value" id="artwork-energySensitivity-value">50%</span>
                         </label>
-                        <input type="range" id="artwork-density" data-setting="artwork.density" 
-                               min="0" max="1" step="0.05" value="0.5">
-                        <p class="slider-description">Controls number of elements (100-400 for plasma)</p>
+                        <input type="range" id="artwork-energySensitivity" data-setting="artwork.energySensitivity" 
+                               min="0" max="100" step="5" value="50">
+                        <p class="slider-description">How strongly artwork responds to audio energy (0-100%)</p>
                     </div>
                     
                     <div class="slider-group">
-                        <label for="artwork-scale">
-                            <span>Scale</span>
-                            <span class="slider-value" id="artwork-scale-value">0.5</span>
+                        <label for="artwork-tempoInfluence">
+                            <span>Tempo Influence</span>
+                            <span class="slider-value" id="artwork-tempoInfluence-value">50%</span>
                         </label>
-                        <input type="range" id="artwork-scale" data-setting="artwork.scale" 
-                               min="0" max="1" step="0.05" value="0.5">
-                        <p class="slider-description">Size variation of elements</p>
+                        <input type="range" id="artwork-tempoInfluence" data-setting="artwork.tempoInfluence" 
+                               min="0" max="100" step="5" value="50">
+                        <p class="slider-description">How much BPM affects visual movement (0-100%)</p>
                     </div>
                     
                     <div class="slider-group">
-                        <label for="artwork-turbulence">
-                            <span>Turbulence</span>
-                            <span class="slider-value" id="artwork-turbulence-value">0.5</span>
+                        <label for="artwork-colorVariation">
+                            <span>Color Variation</span>
+                            <span class="slider-value" id="artwork-colorVariation-value">30%</span>
                         </label>
-                        <input type="range" id="artwork-turbulence" data-setting="artwork.turbulence" 
-                               min="0" max="1" step="0.05" value="0.5">
-                        <p class="slider-description">Chaos and organic movement</p>
-                    </div>
-                    
-                    <div class="slider-group">
-                        <label for="artwork-luminosity">
-                            <span>Luminosity</span>
-                            <span class="slider-value" id="artwork-luminosity-value">0.5</span>
-                        </label>
-                        <input type="range" id="artwork-luminosity" data-setting="artwork.luminosity" 
-                               min="0" max="1" step="0.05" value="0.5">
-                        <p class="slider-description">Brightness and glow intensity</p>
-                    </div>
-                    
-                    <div class="slider-group">
-                        <label for="artwork-saturation">
-                            <span>Saturation</span>
-                            <span class="slider-value" id="artwork-saturation-value">0.5</span>
-                        </label>
-                        <input type="range" id="artwork-saturation" data-setting="artwork.saturation" 
-                               min="0" max="1" step="0.05" value="0.5">
-                        <p class="slider-description">Color intensity (grayscale to hyper-saturated)</p>
-                    </div>
-                    
-                    <div class="slider-group">
-                        <label for="artwork-symmetry">
-                            <span>Symmetry</span>
-                            <span class="slider-value" id="artwork-symmetry-value">0.5</span>
-                        </label>
-                        <input type="range" id="artwork-symmetry" data-setting="artwork.symmetry" 
-                               min="0" max="1" step="0.05" value="0.5">
-                        <p class="slider-description">Pattern organization (chaos to perfect order)</p>
+                        <input type="range" id="artwork-colorVariation" data-setting="artwork.colorVariation" 
+                               min="0" max="100" step="5" value="30">
+                        <p class="slider-description">Palette randomization per style (0-100%)</p>
                     </div>
                 </div>
                 
                 <div class="settings-grid" style="margin-top: 30px;">
                     <div class="setting-card">
-                        <label class="setting-toggle" for="artwork-colorVariation">
+                        <label class="setting-toggle" for="artwork-useAudioFeatures">
                             <div class="setting-info">
-                                <h3>Color Variation</h3>
-                                <p>Enable dynamic color shifting based on audio and generation</p>
+                                <h3>Audio Reactive</h3>
+                                <p>Generate artwork based on audio energy and tempo</p>
                             </div>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="artwork-colorVariation" 
-                                       data-setting="artwork.colorVariation" checked>
+                                <input type="checkbox" id="artwork-useAudioFeatures" 
+                                       data-setting="artwork.useAudioFeatures" checked>
                                 <span class="slider"></span>
                             </div>
                         </label>
                     </div>
                     
                     <div class="setting-card">
-                        <label class="setting-toggle" for="artwork-hexBoost">
+                        <label class="setting-toggle" for="artwork-useMoonPhase">
                             <div class="setting-info">
-                                <h3>Hexagonal Boost</h3>
-                                <p>Apply sacred geometry overlay every 6th generation</p>
+                                <h3>Moon Phase Influence</h3>
+                                <p>Let lunar cycles affect artwork generation</p>
                             </div>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="artwork-hexBoost" 
-                                       data-setting="artwork.hexBoost" checked>
+                                <input type="checkbox" id="artwork-useMoonPhase" 
+                                       data-setting="artwork.useMoonPhase" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="artwork-useFileNames">
+                            <div class="setting-info">
+                                <h3>Name-Based Seeds</h3>
+                                <p>File names influence artwork patterns and colors</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="artwork-useFileNames" 
+                                       data-setting="artwork.useFileNames" checked>
                                 <span class="slider"></span>
                             </div>
                         </label>
@@ -364,13 +350,13 @@
                 </div>
                 
                 <div class="info-panel" style="margin-top: 30px;">
-                    <h4>🔮 System Information</h4>
-                    <p><strong>Generator:</strong> Hex6 Enhanced (6×6×6 system)</p>
-                    <p><strong>Styles:</strong> 6 (Plasma, Cosmic, Bioform, Neural, Crystal, Liquid)</p>
-                    <p><strong>Parameters:</strong> 6 continuous (Density, Scale, Turbulence, Luminosity, Saturation, Symmetry)</p>
-                    <p><strong>Inputs:</strong> 6 external (Audio Energy, Moon Phase, Time, Entropy, Memory, Chaos)</p>
-                    <p><strong>Total Combinations:</strong> ∞ (continuous parameter space)</p>
-                    <p><strong>Color System:</strong> Dynamic HSL with harmonic palette generation</p>
+                    <h4>✨ System Information</h4>
+                    <p><strong>Generator:</strong> Vibrant Refined (Audio-Responsive System)</p>
+                    <p><strong>Styles:</strong> 8 (Neon Plasma, Cosmic Flow, Vapor Dream, Cyber Matrix, Sunset Liquid, Electric Storm, Crystal Prism, Ocean Aurora)</p>
+                    <p><strong>Audio Response:</strong> Energy (0-1) and Tempo (60-180 BPM)</p>
+                    <p><strong>Palettes:</strong> 3 variations per style with 30% randomization</p>
+                    <p><strong>Resolution:</strong> 1024x1024 high-quality canvas</p>
+                    <p><strong>Special Effects:</strong> Glow, gradients, particle systems, geometric patterns</p>
                 </div>
             </section>
             </div>
