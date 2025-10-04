@@ -22,15 +22,15 @@
         <!-- macOS-style tab bar -->
         <div class="tab-bar">
             <button class="tab-button active" data-tab="processing">
-                <span class="tab-icon">✧</span>
-                <span class="tab-label">Processing</span>
+                <span class="tab-icon">🎚️</span>
+                <span class="tab-label">Audio</span>
             </button>
             <button class="tab-button" data-tab="naming">
-                <span class="tab-icon">⬡</span>
+                <span class="tab-icon">✨</span>
                 <span class="tab-label">Naming</span>
             </button>
             <button class="tab-button" data-tab="output">
-                <span class="tab-icon">⬢</span>
+                <span class="tab-icon">📂</span>
                 <span class="tab-label">Output</span>
             </button>
             <button class="tab-button" data-tab="artwork">
@@ -45,16 +45,16 @@
             <div class="tab-panel active" id="processing-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title">✧ Audio Alchemy ✧</h2>
-                    <div class="section-description">Choose which mystical transformations to apply</div>
+                    <h2 class="section-title">Audio Processing</h2>
+                    <div class="section-description">Choose which effects to apply to your audio</div>
                 </div>
                 
                 <div class="settings-grid">
                     <div class="setting-card">
                         <label class="setting-toggle" for="compressing">
                             <div class="setting-info">
-                                <h3 id="audio-effects-label">Audio Effects</h3>
-                                <p id="audio-effects-desc">Distortion, reverb, and other mystical audio effects</p>
+                                <h3 id="audio-effects-label">Moon-Influenced Effects</h3>
+                                <p id="audio-effects-desc">Distortion and filtering based on current lunar phase</p>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" 
@@ -71,8 +71,8 @@
                     <div class="setting-card">
                         <label class="setting-toggle" for="mastering">
                             <div class="setting-info">
-                                <h3 id="audio-mastering-label">Audio Mastering</h3>
-                                <p id="audio-mastering-desc">EQ, compression, and final audio polishing</p>
+                                <h3 id="audio-mastering-label">Professional Mastering</h3>
+                                <p id="audio-mastering-desc">EQ, compression, and limiting for polished sound</p>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" 
@@ -111,21 +111,21 @@
             <div class="tab-panel" id="naming-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title" id="file-naming-title">⬡ Cosmic Nomenclature ⬡</h2>
-                    <div class="section-description">Define how your creations shall be known</div>
+                    <h2 class="section-title" id="file-naming-title">File Naming</h2>
+                    <div class="section-description">Choose how to name your processed audio files</div>
                 </div>
                 
                 <div class="radio-cards" role="radiogroup" aria-labelledby="file-naming-title">
                     <label class="radio-card" for="naming-mystical">
-                        <input type="radio" 
-                               id="naming-mystical" 
-                               name="naming" 
-                               value="mystical" 
+                        <input type="radio"
+                               id="naming-mystical"
+                               name="naming"
+                               value="mystical"
                                data-setting="processing.naming"
                                aria-describedby="naming-mystical-desc">
                         <div class="radio-content">
-                            <h3>Auto-Generated Names</h3>
-                            <p id="naming-mystical-desc">Automatically generate unique creative names based on hexagonal patterns</p>
+                            <h3>Generated Names</h3>
+                            <p id="naming-mystical-desc">Unique names inspired by the audio and lunar phase (e.g. CRYSTALWAVE4400)</p>
                         </div>
                         <div class="radio-indicator" aria-hidden="true"></div>
                     </label>
@@ -163,8 +163,8 @@
             <!-- Custom Metadata Section -->
             <section class="preference-section" id="custom-metadata-section">
                 <div class="section-header">
-                    <h2 class="section-title" id="custom-metadata-title">◈ Earthly Inscriptions ◈</h2>
-                    <div class="section-description">Inscribe your mortal identity upon the waves</div>
+                    <h2 class="section-title" id="custom-metadata-title">Custom Metadata</h2>
+                    <div class="section-description">Add your artist info to the audio files</div>
                 </div>
                 
                 <div class="metadata-form" role="group" aria-labelledby="custom-metadata-title">
@@ -222,8 +222,8 @@
             <div class="tab-panel" id="output-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title">⬢ Portal Destination ⬢</h2>
-                    <div class="section-description">Choose where your transmutations shall manifest</div>
+                    <h2 class="section-title">Output Location</h2>
+                    <div class="section-description">Choose where to save your processed files</div>
                 </div>
                 
                 <div class="form-row">
@@ -242,66 +242,66 @@
             <div class="tab-panel" id="artwork-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title">🎨 Visual Alchemy 🎨</h2>
-                    <div class="section-description">Configure the vibrant refined artwork generation system</div>
+                    <h2 class="section-title">Artwork Generation</h2>
+                    <div class="section-description">Control how album artwork is created from your audio</div>
                 </div>
                 
                 <div class="settings-grid">
                     <div class="setting-card">
                         <label class="setting-select" for="artwork-style">
                             <div class="setting-info">
-                                <h3>Default Style</h3>
-                                <p>Choose the primary artwork generation style</p>
+                                <h3>Visual Style</h3>
+                                <p>Default style for artwork (auto-selects based on audio if set to Auto)</p>
                             </div>
                             <select id="artwork-style" data-setting="artwork.defaultStyle">
-                                <option value="auto">Auto-Select (Based on Audio & Name)</option>
-                                <option value="neon-plasma">Neon Plasma - Electric metaballs with glow</option>
-                                <option value="cosmic-flow">Cosmic Flow - Starfields & flowing nebulae</option>
-                                <option value="vapor-dream">Vapor Dream - Retro pastel with grids</option>
-                                <option value="cyber-matrix">Cyber Matrix - Digital rain & glitch art</option>
-                                <option value="sunset-liquid">Sunset Liquid - Warm flowing sunset</option>
-                                <option value="electric-storm">Electric Storm - Lightning & energy</option>
-                                <option value="crystal-prism">Crystal Prism - Rainbow geometric crystals</option>
-                                <option value="ocean-aurora">Ocean Aurora - Northern lights over water</option>
+                                <option value="auto">Auto (matches audio vibe)</option>
+                                <option value="neon-plasma">Neon Plasma</option>
+                                <option value="cosmic-flow">Cosmic Flow</option>
+                                <option value="vapor-dream">Vapor Dream</option>
+                                <option value="cyber-matrix">Cyber Matrix</option>
+                                <option value="sunset-liquid">Sunset Liquid</option>
+                                <option value="electric-storm">Electric Storm</option>
+                                <option value="crystal-prism">Crystal Prism</option>
+                                <option value="ocean-aurora">Ocean Aurora</option>
                             </select>
                         </label>
                     </div>
                 </div>
                 
                 <div class="section-header" style="margin-top: 30px;">
-                    <h3 class="section-subtitle">✨ Audio Responsiveness ✨</h3>
-                    <div class="section-description">Control how artwork responds to audio</div>
+                    <h3 class="section-subtitle">Audio Responsiveness</h3>
+                    <div class="section-description">Fine-tune how the artwork reacts to your audio</div>
                 </div>
-                
+
                 <div class="parameter-sliders">
                     <div class="slider-group">
                         <label for="artwork-energySensitivity">
-                            <span>Energy Sensitivity</span>
+                            <span>Energy</span>
                             <span class="slider-value" id="artwork-energySensitivity-value">50%</span>
                         </label>
-                        <input type="range" id="artwork-energySensitivity" data-setting="artwork.energySensitivity" 
+                        <input type="range" id="artwork-energySensitivity" data-setting="artwork.energySensitivity"
                                min="0" max="100" step="5" value="50">
-                        <p class="slider-description">How strongly artwork responds to audio energy (0-100%)</p>
+                        <p class="slider-description">How much the audio's intensity affects the visuals</p>
                     </div>
-                    
+
                     <div class="slider-group">
                         <label for="artwork-tempoInfluence">
-                            <span>Tempo Influence</span>
+                            <span>Tempo</span>
                             <span class="slider-value" id="artwork-tempoInfluence-value">50%</span>
                         </label>
-                        <input type="range" id="artwork-tempoInfluence" data-setting="artwork.tempoInfluence" 
+                        <input type="range" id="artwork-tempoInfluence" data-setting="artwork.tempoInfluence"
                                min="0" max="100" step="5" value="50">
-                        <p class="slider-description">How much BPM affects visual movement (0-100%)</p>
+                        <p class="slider-description">How much the BPM influences visual movement</p>
                     </div>
-                    
+
                     <div class="slider-group">
                         <label for="artwork-colorVariation">
                             <span>Color Variation</span>
                             <span class="slider-value" id="artwork-colorVariation-value">30%</span>
                         </label>
-                        <input type="range" id="artwork-colorVariation" data-setting="artwork.colorVariation" 
+                        <input type="range" id="artwork-colorVariation" data-setting="artwork.colorVariation"
                                min="0" max="100" step="5" value="30">
-                        <p class="slider-description">Palette randomization per style (0-100%)</p>
+                        <p class="slider-description">Randomness in the color palette</p>
                     </div>
                 </div>
                 
@@ -309,39 +309,39 @@
                     <div class="setting-card">
                         <label class="setting-toggle" for="artwork-useAudioFeatures">
                             <div class="setting-info">
-                                <h3>Audio Reactive</h3>
-                                <p>Generate artwork based on audio energy and tempo</p>
+                                <h3>Audio Analysis</h3>
+                                <p>Use audio features (energy, tempo) to shape the artwork</p>
                             </div>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="artwork-useAudioFeatures" 
+                                <input type="checkbox" id="artwork-useAudioFeatures"
                                        data-setting="artwork.useAudioFeatures" checked>
                                 <span class="slider"></span>
                             </div>
                         </label>
                     </div>
-                    
+
                     <div class="setting-card">
                         <label class="setting-toggle" for="artwork-useMoonPhase">
                             <div class="setting-info">
-                                <h3>Moon Phase Influence</h3>
-                                <p>Let lunar cycles affect artwork generation</p>
+                                <h3>Lunar Influence</h3>
+                                <p>Current moon phase affects colors and patterns</p>
                             </div>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="artwork-useMoonPhase" 
+                                <input type="checkbox" id="artwork-useMoonPhase"
                                        data-setting="artwork.useMoonPhase" checked>
                                 <span class="slider"></span>
                             </div>
                         </label>
                     </div>
-                    
+
                     <div class="setting-card">
                         <label class="setting-toggle" for="artwork-useFileNames">
                             <div class="setting-info">
-                                <h3>Name-Based Seeds</h3>
-                                <p>File names influence artwork patterns and colors</p>
+                                <h3>Filename Seeds</h3>
+                                <p>Filename influences the artwork patterns</p>
                             </div>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="artwork-useFileNames" 
+                                <input type="checkbox" id="artwork-useFileNames"
                                        data-setting="artwork.useFileNames" checked>
                                 <span class="slider"></span>
                             </div>
@@ -350,13 +350,10 @@
                 </div>
                 
                 <div class="info-panel" style="margin-top: 30px;">
-                    <h4>✨ System Information</h4>
-                    <p><strong>Generator:</strong> Vibrant Refined (Audio-Responsive System)</p>
-                    <p><strong>Styles:</strong> 8 (Neon Plasma, Cosmic Flow, Vapor Dream, Cyber Matrix, Sunset Liquid, Electric Storm, Crystal Prism, Ocean Aurora)</p>
-                    <p><strong>Audio Response:</strong> Energy (0-1) and Tempo (60-180 BPM)</p>
-                    <p><strong>Palettes:</strong> 3 variations per style with 30% randomization</p>
-                    <p><strong>Resolution:</strong> 1024x1024 high-quality canvas</p>
-                    <p><strong>Special Effects:</strong> Glow, gradients, particle systems, geometric patterns</p>
+                    <h4>About Artwork Generation</h4>
+                    <p><strong>8 visual styles</strong> that respond to your audio's energy and tempo</p>
+                    <p><strong>1024×1024 resolution</strong> with procedural effects and color palettes</p>
+                    <p><strong>Auto mode</strong> selects styles based on audio characteristics and filename hints</p>
                 </div>
             </section>
             </div>
