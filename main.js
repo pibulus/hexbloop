@@ -221,10 +221,20 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             }
             
             // Validate audio file extension
-            const validExtensions = ['.mp3', '.wav', '.m4a', '.aiff', '.aif', '.flac', '.ogg', '.aac'];
+            // Expanded support for all sox and ffmpeg compatible formats
+            const validExtensions = [
+                // Core formats (well-tested)
+                '.mp3', '.wav', '.m4a', '.aiff', '.aif', '.flac', '.ogg', '.aac',
+                // Additional lossless formats
+                '.ape', '.alac', '.wv',  // APE, ALAC, WavPack
+                // Additional lossy formats
+                '.opus', '.wma', '.mka',  // Opus, Windows Media, Matroska
+                // Legacy/specialty formats
+                '.au', '.snd', '.voc', '.8svx', '.amb', '.caf'  // Various legacy
+            ];
             const ext = path.extname(resolvedPath).toLowerCase();
             if (!validExtensions.includes(ext)) {
-                throw new Error(`Unsupported audio format: ${ext}`);
+                throw new Error(`Unsupported audio format: ${ext}. Supported: ${validExtensions.slice(0, 8).join(', ')} and more.`);
             }
             
             // Generate name using batch naming engine
@@ -299,19 +309,25 @@ ipcMain.handle('preview-batch-naming', async (event, filePaths) => {
     const preferencesManager = getPreferencesManager();
     const settings = preferencesManager.getSettings();
     const namingEngine = new BatchNamingEngine(settings.batch);
-    
-    return namingEngine.previewBatch(filePaths);
+    const outputFormat = settings.output.format || 'mp3';
+
+    return namingEngine.previewBatch(filePaths, outputFormat);
 });
 
 ipcMain.handle('select-files', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openFile', 'multiSelections'],
         filters: [
-            { name: 'Audio Files', extensions: ['mp3', 'wav', 'm4a', 'aiff', 'flac', 'ogg'] },
+            { name: 'Audio Files', extensions: [
+                'mp3', 'wav', 'm4a', 'aiff', 'aif', 'flac', 'ogg', 'aac',
+                'opus', 'wma', 'ape', 'alac', 'wv', 'mka',
+                'au', 'snd', 'voc', '8svx', 'amb', 'caf'
+            ]},
+            { name: 'Common Formats', extensions: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg'] },
             { name: 'All Files', extensions: ['*'] }
         ]
     });
-    
+
     return result.filePaths;
 });
 

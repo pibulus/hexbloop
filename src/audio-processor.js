@@ -101,10 +101,10 @@ class AudioProcessor {
                 currentFile = masteringOutput;
             } else {
                 console.log('⏭️ Skipping mastering stage');
-                // If no mastering but we have a processed file, copy it
+                // If no mastering but we have a processed file, convert it
                 if (currentFile !== inputPath) {
                     // Convert to MP3 without mastering
-                    await this.convertToMp3(currentFile, processedFile);
+                    await this.convertToMp3(currentFile, processedFile, settings);
                     currentFile = processedFile;
                 }
             }
@@ -209,9 +209,9 @@ class AudioProcessor {
                 genre: 'Mystical Audio'
             };
             
-            // If no processing was done, copy the original file and convert to MP3
+            // If no processing was done, convert the original file
             if (currentFile === inputPath) {
-                await this.convertToMp3(inputPath, processedFile);
+                await this.convertToMp3(inputPath, processedFile, settings);
                 currentFile = processedFile;
             }
             
@@ -273,17 +273,20 @@ class AudioProcessor {
                     compand: { attack: 0.2, ratio: 5 }
                 };
             }
-            
+
             // Sox effects chain with lunar-influenced parameters
+            // BEST PRACTICE: gain -h provides headroom BEFORE effects, gain -r reclaims AFTER
+            // This prevents clipping from cascading effects
             const soxProcess = spawn('sox', [
                 inputPath,
                 outputPath,
-                'gain', '-n', '-1.5',                    // Normalize
+                'gain', '-h',                             // Add headroom BEFORE effects (prevents clipping)
                 'overdrive', influences.overdrive.toString(), '2.5',  // Distortion
                 'bass', `+${influences.bass}`,            // Low freq boost
                 'treble', influences.treble >= 0 ? `+${influences.treble}` : influences.treble.toString(),  // High freq adjust
                 'echo', influences.echo.delay.toString(), influences.echo.decay.toString(), '6.5', '0.045',  // Echo effect
                 'compand', `${influences.compand.attack},0.6`, '6:-70,-60,-20', '-2', '-90', '0.25',  // Compression
+                'gain', '-r',                             // Reclaim headroom AFTER effects (maximize volume safely)
                 'rate', '44100',                          // Sample rate
                 'dither'                                  // Dithering
             ]);
@@ -311,17 +314,21 @@ class AudioProcessor {
         });
     }
     
-    static async convertToMp3(inputPath, outputPath) {
+    /**
+     * Convert to MP3 with configurable bitrate
+     */
+    static async convertToMp3(inputPath, outputPath, settings = {}) {
         return new Promise((resolve, reject) => {
-            // Simple conversion to MP3 with compressed quality
+            const bitrate = settings?.output?.mp3Bitrate || 192;
+
             ffmpeg(inputPath)
                 .format('mp3')
                 .audioCodec('libmp3lame')
-                .audioBitrate('192k')  // Reduced from 320k for actual compression
+                .audioBitrate(`${bitrate}k`)
                 .audioFrequency(44100)
                 .audioChannels(2)
                 .on('start', (commandLine) => {
-                    console.log('🎵 Converting to MP3: ' + commandLine);
+                    console.log(`🎵 Converting to MP3 (${bitrate}k): ` + commandLine);
                 })
                 .on('end', () => {
                     console.log('✨ MP3 conversion complete');
@@ -373,15 +380,34 @@ class AudioProcessor {
             const format = settings?.output?.format || outputExt || 'mp3';
             const quality = settings?.output?.quality || 'high';
             const sampleRate = settings?.output?.sampleRate || 44100;
-            
-            // Mastering chain: EQ → Compression → Limiting
+
+            // PROFESSIONAL MASTERING CHAIN (2025 best practices):
+            // EQ → Compression → Limiting → Loudness Normalization → Safety Limiter
             const filterComplex = [
+                // 1. EQUALIZATION: Shape frequency response before dynamics
                 'equalizer=f=100:t=q:w=1:g=0.3',      // Low bass boost
                 'equalizer=f=800:t=q:w=1.2:g=0.5',    // Low-mid presence
                 'equalizer=f=1600:t=q:w=1:g=0.4',     // Mid clarity
                 'equalizer=f=5000:t=q:w=1:g=0.3',     // High-mid sparkle
-                'acompressor=threshold=-12dB:ratio=2:attack=100:release=1000:makeup=1.5',  // Gentle compression
-                'alimiter=limit=0.97'                  // Brick wall limiter
+
+                // 2. COMPRESSION: Tighter ratio for mastering (4:1 instead of 2:1)
+                //    Lower threshold (-18dB) catches more dynamics
+                //    Faster attack (5ms) for transient control
+                //    Moderate release (50ms) for natural sound
+                //    Makeup gain (+4dB) compensates for reduction
+                'acompressor=threshold=-18dB:ratio=4:attack=5:release=50:makeup=4',
+
+                // 3. FIRST LIMITING: Catch peaks at -0.5dB (95% = -0.45dB)
+                'alimiter=limit=0.95',
+
+                // 4. LOUDNESS NORMALIZATION: EBU R128 standard
+                //    Integrated loudness: -16 LUFS (streaming standard)
+                //    True peak: -1.5dB (headroom for codec)
+                //    Loudness range: 11 LU (moderate dynamics)
+                'loudnorm=I=-16:TP=-1.5:LRA=11',
+
+                // 5. SAFETY LIMITER: Final protection at -0.3dB (97%)
+                'alimiter=limit=0.97'
             ].join(',');
             
             let command = ffmpeg(inputPath)
@@ -471,31 +497,6 @@ class AudioProcessor {
         });
     }
     
-    /**
-     * Simple MP3 conversion without mastering effects
-     */
-    static async convertToMp3(inputPath, outputPath) {
-        return new Promise((resolve, reject) => {
-            ffmpeg(inputPath)
-                .audioFrequency(44100)
-                .audioChannels(2)
-                .format('mp3')
-                .audioCodec('libmp3lame')
-                .audioBitrate('320k')
-                .on('start', (commandLine) => {
-                    console.log('🎵 Converting to MP3: ' + commandLine);
-                })
-                .on('end', () => {
-                    console.log('✅ MP3 conversion complete');
-                    resolve();
-                })
-                .on('error', (err) => {
-                    console.error('❌ MP3 conversion failed:', err.message);
-                    reject(err);
-                })
-                .save(outputPath);
-        });
-    }
 }
 
 module.exports = AudioProcessor;
