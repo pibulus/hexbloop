@@ -7,17 +7,24 @@ const { createCanvas } = require('canvas');
 const fs = require('fs').promises;
 
 class VibrantRefinedArtworkGenerator {
-    constructor() {
-        this.width = 800;
-        this.height = 800;
+    constructor(options = {}) {
+        this.width = options.width || 800;
+        this.height = options.height || 800;
         this.canvas = createCanvas(this.width, this.height);
         this.ctx = this.canvas.getContext('2d');
+
+        // BEST PRACTICE: Set canvas quality settings for best rendering
+        this.ctx.patternQuality = options.patternQuality || 'best';  // 'fast', 'good', 'best'
+        this.ctx.quality = options.quality || 'best';                // 'fast', 'good', 'best', 'nearest', 'bilinear'
+        this.ctx.imageSmoothingEnabled = options.imageSmoothing !== false;
+        this.ctx.imageSmoothingQuality = options.imageSmoothingQuality || 'high';  // 'low', 'medium', 'high'
+
         this.noiseOffset = Math.random() * 1000;
-        
+
         // Expanded styles with better names
         this.styles = [
             'neon-plasma',
-            'cosmic-flow', 
+            'cosmic-flow',
             'vapor-dream',
             'cyber-matrix',
             'sunset-liquid',
@@ -139,93 +146,134 @@ class VibrantRefinedArtworkGenerator {
     // ===================================================================
     
     renderMetaballs(balls, colors) {
+        // BEST PRACTICE: Use offscreen canvas for pre-rendering and proper filter application
         const tempCanvas = createCanvas(this.width, this.height);
         const tempCtx = tempCanvas.getContext('2d');
-        
+
+        // Set quality for rendering
+        tempCtx.patternQuality = 'best';
+        tempCtx.quality = 'best';
+
         for (let i = 0; i < balls.length; i++) {
             const ball = balls[i];
+
+            // OPTIMIZATION: Bounding sphere check - only render if ball is visible
+            if (ball.x + ball.radius * 2 < 0 || ball.x - ball.radius * 2 > this.width ||
+                ball.y + ball.radius * 2 < 0 || ball.y - ball.radius * 2 > this.height) {
+                continue; // Skip balls completely outside canvas
+            }
+
+            // OPTIMIZATION: Use whole numbers for pixel alignment
+            const x = Math.floor(ball.x);
+            const y = Math.floor(ball.y);
+            const radius = Math.floor(ball.radius);
+
             const gradient = tempCtx.createRadialGradient(
-                ball.x, ball.y, 0,
-                ball.x, ball.y, ball.radius * 2
+                x, y, 0,
+                x, y, radius * 2
             );
-            
+
             const color = this.hexToRgb(colors[i % colors.length]);
-            
+
+            // BEST PRACTICE: Finite support function - gradient goes to zero at max radius
             gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 1)`);
             gradient.addColorStop(0.3, `rgba(${color.r}, ${color.g}, ${color.b}, 0.9)`);
             gradient.addColorStop(0.5, `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`);
             gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
-            
+
             tempCtx.fillStyle = gradient;
+
+            // OPTIMIZATION: Use whole numbers for fillRect to avoid antialiasing overhead
             tempCtx.fillRect(
-                ball.x - ball.radius * 2,
-                ball.y - ball.radius * 2,
-                ball.radius * 4,
-                ball.radius * 4
+                Math.floor(x - radius * 2),
+                Math.floor(y - radius * 2),
+                Math.floor(radius * 4),
+                Math.floor(radius * 4)
             );
         }
-        
-        // Apply blur and contrast for smooth blending
-        tempCtx.filter = 'blur(20px) contrast(2) brightness(1.5)';
+
+        // BEST PRACTICE: Apply filter, then render filtered canvas to avoid filter being ignored
+        // Create second temp canvas for filter application
+        const filteredCanvas = createCanvas(this.width, this.height);
+        const filteredCtx = filteredCanvas.getContext('2d');
+
+        // First draw unfiltered content
+        filteredCtx.drawImage(tempCanvas, 0, 0);
+
+        // Apply blur and contrast for smooth metaball blending
+        filteredCtx.filter = 'blur(20px) contrast(2) brightness(1.5)';
+        filteredCtx.drawImage(tempCanvas, 0, 0);
+
+        // Composite to main canvas
         this.ctx.save();
         this.ctx.globalCompositeOperation = 'screen';
-        this.ctx.drawImage(tempCanvas, 0, 0);
+        this.ctx.drawImage(filteredCanvas, 0, 0);
         this.ctx.restore();
     }
     
     renderFlowField(colors, particleCount = 100) {
         this.ctx.save();
         this.ctx.globalCompositeOperation = 'lighter';
-        
+
         for (let i = 0; i < particleCount; i++) {
-            let x = Math.random() * this.width;
-            let y = Math.random() * this.height;
+            // OPTIMIZATION: Use whole numbers for initial position
+            let x = Math.floor(Math.random() * this.width);
+            let y = Math.floor(Math.random() * this.height);
             const color = colors[Math.floor(Math.random() * colors.length)];
-            
+
             this.ctx.strokeStyle = color;
             this.ctx.lineWidth = 1 + Math.random() * 2;
             this.ctx.globalAlpha = 0.3 + Math.random() * 0.4;
-            
+
             this.ctx.beginPath();
             this.ctx.moveTo(x, y);
-            
+
             // Follow flow field
             for (let step = 0; step < 50; step++) {
                 const angle = this.noise2D(x * 0.01, y * 0.01) * Math.PI * 2;
                 x += Math.cos(angle) * 5;
                 y += Math.sin(angle) * 5;
-                
+
                 // Wrap around edges
                 if (x < 0) x = this.width;
                 if (x > this.width) x = 0;
                 if (y < 0) y = this.height;
                 if (y > this.height) y = 0;
-                
-                this.ctx.lineTo(x, y);
+
+                // OPTIMIZATION: Floor coordinates for pixel alignment
+                this.ctx.lineTo(Math.floor(x), Math.floor(y));
             }
-            
+
             this.ctx.stroke();
         }
-        
+
         this.ctx.restore();
     }
     
     renderParticles(colors, count = 200, sizeRange = { min: 1, max: 5 }) {
         for (let i = 0; i < count; i++) {
-            const x = Math.random() * this.width;
-            const y = Math.random() * this.height;
+            // OPTIMIZATION: Use whole numbers for pixel alignment
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
             const size = sizeRange.min + Math.random() * (sizeRange.max - sizeRange.min);
             const color = colors[Math.floor(Math.random() * colors.length)];
-            
+
             const glow = this.ctx.createRadialGradient(x, y, 0, x, y, size * 3);
             const rgb = this.hexToRgb(color);
-            
+
             glow.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`);
             glow.addColorStop(0.3, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`);
             glow.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
-            
+
             this.ctx.fillStyle = glow;
-            this.ctx.fillRect(x - size * 3, y - size * 3, size * 6, size * 6);
+
+            // OPTIMIZATION: Floor fillRect coordinates for pixel alignment
+            this.ctx.fillRect(
+                Math.floor(x - size * 3),
+                Math.floor(y - size * 3),
+                Math.floor(size * 6),
+                Math.floor(size * 6)
+            );
         }
     }
     
@@ -867,7 +915,22 @@ class VibrantRefinedArtworkGenerator {
             moonPhase = 0.5,
             title = ''
         } = options;
+
+        // BEST PRACTICE: Validate and clamp audio parameters to prevent visual glitches
+        const validatedEnergy = Math.max(0, Math.min(1, audioEnergy));
+        const validatedTempo = Math.max(60, Math.min(200, tempo));
+        const validatedMoonPhase = Math.max(0, Math.min(1, moonPhase));
+
+        if (audioEnergy !== validatedEnergy) {
+            console.warn(`⚠️ Audio energy clamped from ${audioEnergy} to ${validatedEnergy} (valid range: 0-1)`);
+        }
+        if (tempo !== validatedTempo) {
+            console.warn(`⚠️ Tempo clamped from ${tempo} to ${validatedTempo} (valid range: 60-200)`);
+        }
         
+        // BEST PRACTICE: Store original Math.random and restore after generation
+        const originalRandom = Math.random;
+
         // Use seed for reproducible randomness
         this.seed = seed;
         Math.random = () => {
@@ -875,8 +938,8 @@ class VibrantRefinedArtworkGenerator {
             return this.seed / 2147483647;
         };
         
-        // Get palette with variations
-        const colors = this.getPalette(style, audioEnergy, tempo);
+        // Get palette with variations (use validated parameters)
+        const colors = this.getPalette(style, validatedEnergy, validatedTempo);
         
         // Clear canvas with subtle gradient
         const bgGradient = this.ctx.createRadialGradient(
@@ -899,27 +962,27 @@ class VibrantRefinedArtworkGenerator {
                 break;
                 
             case 'neon-plasma':
-                this.renderNeonPlasma(colors, audioEnergy, tempo);
+                this.renderNeonPlasma(colors, validatedEnergy, validatedTempo);
                 break;
-                
+
             case 'cosmic-flow':
-                this.renderCosmicFlow(colors, audioEnergy, tempo);
+                this.renderCosmicFlow(colors, validatedEnergy, validatedTempo);
                 break;
-                
+
             case 'vapor-dream':
-                this.renderVaporDream(colors, audioEnergy, tempo);
+                this.renderVaporDream(colors, validatedEnergy, validatedTempo);
                 break;
-                
+
             case 'sunset-liquid':
-                this.renderSunsetLiquid(colors, audioEnergy, tempo);
+                this.renderSunsetLiquid(colors, validatedEnergy, validatedTempo);
                 break;
-                
+
             case 'electric-storm':
-                this.renderElectricStorm(colors, audioEnergy, tempo);
+                this.renderElectricStorm(colors, validatedEnergy, validatedTempo);
                 break;
-                
+
             case 'crystal-prism':
-                this.renderCrystalPrism(colors, audioEnergy, tempo);
+                this.renderCrystalPrism(colors, validatedEnergy, validatedTempo);
                 break;
                 
             // ... other styles remain similar but with added randomization
@@ -944,7 +1007,10 @@ class VibrantRefinedArtworkGenerator {
             this.ctx.fillText(title, this.width / 2, this.height - 30);
             this.ctx.restore();
         }
-        
+
+        // CRITICAL: Restore original Math.random to prevent side effects
+        Math.random = originalRandom;
+
         return this.canvas;
     }
     
@@ -966,13 +1032,40 @@ class VibrantRefinedArtworkGenerator {
         return (n - Math.floor(n)) * 2 - 1;
     }
     
-    async saveToFile(outputPath, format = 'png') {
-        const buffer = format === 'png' 
-            ? this.canvas.toBuffer('image/png')
-            : this.canvas.toBuffer('image/jpeg', { quality: 0.95 });
-        
+    async saveToFile(outputPath, format = 'png', options = {}) {
+        // BEST PRACTICE: Use optimal PNG compression and quality settings
+        const buffer = format === 'png'
+            ? this.canvas.toBuffer('image/png', {
+                compressionLevel: options.compressionLevel || 6,  // 0-9, 6 is balanced
+                filters: this.canvas.PNG_FILTER_NONE,              // Faster encoding
+                palette: undefined,
+                backgroundIndex: 0,
+                resolution: options.resolution || 300               // 300 PPI for print quality
+            })
+            : this.canvas.toBuffer('image/jpeg', { quality: options.quality || 0.95 });
+
         await fs.writeFile(outputPath, buffer);
         console.log(`✅ Saved artwork to ${outputPath}`);
+    }
+
+    /**
+     * Stream-based export for memory efficiency (best for large images)
+     */
+    async saveToFileStream(outputPath) {
+        return new Promise((resolve, reject) => {
+            const out = require('fs').createWriteStream(outputPath);
+            const stream = this.canvas.createPNGStream({
+                compressionLevel: 6,
+                filters: this.canvas.PNG_FILTER_NONE
+            });
+
+            stream.pipe(out);
+            out.on('finish', () => {
+                console.log(`✅ Streamed artwork to ${outputPath}`);
+                resolve();
+            });
+            out.on('error', reject);
+        });
     }
 }
 
