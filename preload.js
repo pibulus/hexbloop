@@ -12,12 +12,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectFiles: () => ipcRenderer.invoke('select-files'),
     getFilePathsFromDrop: (files) => ipcRenderer.invoke('get-file-paths-from-drop', files),
     openPreferences: () => ipcRenderer.invoke('open-preferences'),
-    
+    getSettings: () => ipcRenderer.invoke('get-settings'),
+
     // New method for getting file paths from dropped files (Electron v32+ compatible)
     getFilePathsFromFiles: (files) => {
         return files.map(file => webUtils.getPathForFile(file));
     },
-    
+
     // Event listeners for progress updates
     onProcessingUpdate: (callback) => ipcRenderer.on('processing-update', callback),
     onProcessingProgress: (callback) => ipcRenderer.on('processing-progress', callback),

@@ -344,6 +344,19 @@ ipcMain.on('toggle-ambient-audio', (event, enabled) => {
     mainWindow.webContents.send('toggle-ambient-audio', enabled);
 });
 
+// Get current settings for renderer
+ipcMain.handle('get-settings', async () => {
+    try {
+        const preferencesManager = getPreferencesManager();
+        return preferencesManager.getSettings();
+    } catch (error) {
+        console.error('❌ Failed to get settings for renderer:', error);
+        // Return defaults if there's an error
+        const { DEFAULT_SETTINGS } = require('./src/shared/settings-schema');
+        return DEFAULT_SETTINGS;
+    }
+});
+
 // === Preferences IPC Handlers ===
 
 /**
@@ -538,25 +551,6 @@ ipcMain.handle('preferences-close', () => {
         return handlePreferencesError('close preferences window', error);
     }
 });
-
-/**
- * Show the preferences window
- * @returns {Promise<void>}
- */
-async function showPreferencesWindow() {
-    try {
-        const { PreferencesWindow } = require('./src/menu/preferences-window');
-        const prefWindow = new PreferencesWindow(mainWindow);
-        await prefWindow.show();
-        
-        console.log('Preferences window shown');
-    } catch (error) {
-        console.error('Failed to show preferences window:', error);
-    }
-}
-
-// Export for menu builder
-module.exports.showPreferencesWindow = showPreferencesWindow;
 
 // === Startup & Dependencies ===
 async function checkDependencies() {
