@@ -15,8 +15,7 @@ const DEFAULT_SETTINGS = {
         compressing: true,      // Sox effects (lunar-influenced distortion, filters)
         mastering: true,        // FFmpeg mastering (EQ, compression, limiting)
         coverArt: true,         // Procedural artwork generation
-        naming: 'mystical',     // 'mystical' | 'custom' | 'original'
-        coverArtQuality: 'standard'  // 'standard' | 'professional' - Professional uses advanced rendering
+        naming: 'mystical'      // 'mystical' | 'custom' | 'original'
     },
     metadata: {
         artist: '',            // Custom artist name (used when naming === 'custom')
@@ -38,23 +37,26 @@ const DEFAULT_SETTINGS = {
     output: {
         format: 'mp3',                // 'mp3' | 'wav' | 'flac' | 'aac' | 'ogg' | 'original'
         quality: 'high',              // 'low' | 'medium' | 'high' | 'maximum'
-        mp3Bitrate: 320,              // kbps for MP3
+        mp3Bitrate: 192,              // kbps for MP3 (192k = high quality compressed)
         sampleRate: 0                 // 0 = preserve original, or 44100, 48000, etc.
     },
-    performance: {
-        parallelProcessing: false,    // Enable parallel batch processing
-        maxWorkers: 2,                // Number of parallel workers
-        processingPriority: 'balanced' // 'speed' | 'quality' | 'balanced'
+    artwork: {
+        defaultStyle: 'auto',         // 'auto' | 'neon-grid' | 'sunset-liquid' | 'cosmic-void' | etc.
+        energySensitivity: 50,        // 0-100: How much audio energy affects visuals
+        tempoInfluence: 50,           // 0-100: How much tempo affects animation
+        colorVariation: 50,           // 0-100: Color palette variation range
+        useAudioFeatures: true,       // Use audio analysis for artwork generation
+        useMoonPhase: true,           // Include lunar influence in artwork
+        useFileNames: true,           // Use filename for style hints
+        compressionLevel: 6,          // PNG compression 0-9 (6 = balanced)
+        imageFormat: 'png',           // 'png' | 'jpg'
+        resolution: 1000              // Artwork size in pixels
     },
     ui: {
-        ambientAudio: true,     // Background ambient loop
-        outputFolder: path.join(os.homedir(), 'Documents', 'HexbloopOutput'),
-        showProcessingPhrases: true  // Display hexagonal communication during processing
+        outputFolder: path.join(os.homedir(), 'Documents', 'HexbloopOutput')
     },
     advanced: {
-        lunarInfluence: true,   // Enable moon phase processing variations
-        debugMode: false,       // Show detailed processing logs
-        preserveTempFiles: false // Keep intermediate processing files
+        lunarInfluence: true   // Enable moon phase processing variations
     }
 };
 
@@ -64,10 +66,9 @@ const DEFAULT_SETTINGS = {
 const SETTINGS_SCHEMA = {
     processing: {
         compressing: 'boolean',
-        mastering: 'boolean', 
+        mastering: 'boolean',
         coverArt: 'boolean',
-        naming: ['mystical', 'custom', 'original'],
-        coverArtQuality: ['standard', 'professional']
+        naming: ['mystical', 'custom', 'original']
     },
     metadata: {
         artist: 'string',
@@ -92,20 +93,23 @@ const SETTINGS_SCHEMA = {
         mp3Bitrate: 'number',
         sampleRate: 'number'
     },
-    performance: {
-        parallelProcessing: 'boolean',
-        maxWorkers: 'number',
-        processingPriority: ['speed', 'quality', 'balanced']
+    artwork: {
+        defaultStyle: ['auto', 'neon-grid', 'sunset-liquid', 'cosmic-void', 'crystal-prism', 'glitch-storm', 'vapor-dream', 'data-flow', 'organic-chaos'],
+        energySensitivity: 'number',
+        tempoInfluence: 'number',
+        colorVariation: 'number',
+        useAudioFeatures: 'boolean',
+        useMoonPhase: 'boolean',
+        useFileNames: 'boolean',
+        compressionLevel: 'number',
+        imageFormat: ['png', 'jpg'],
+        resolution: 'number'
     },
     ui: {
-        ambientAudio: 'boolean',
-        outputFolder: 'string',
-        showProcessingPhrases: 'boolean'
+        outputFolder: 'string'
     },
     advanced: {
-        lunarInfluence: 'boolean',
-        debugMode: 'boolean',
-        preserveTempFiles: 'boolean'
+        lunarInfluence: 'boolean'
     }
 };
 

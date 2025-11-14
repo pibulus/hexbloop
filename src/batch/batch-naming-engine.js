@@ -302,13 +302,15 @@ class BatchNamingEngine {
     
     /**
      * Preview names for a batch of files
+     * @param {string[]} filePaths - Array of file paths
+     * @param {string} outputFormat - Desired output format (mp3, wav, flac, etc.)
      */
-    previewBatch(filePaths) {
+    previewBatch(filePaths, outputFormat = 'mp3') {
         return filePaths.map((filePath, index) => {
             const name = this.generateName(filePath, index, filePaths.length);
             return {
                 original: path.basename(filePath),
-                generated: `${name}.mp3`, // TODO: Support other formats
+                generated: `${name}.${outputFormat}`,
                 folder: this.generateSessionFolder()
             };
         });

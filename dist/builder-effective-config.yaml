@@ -1,0 +1,46 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.hexbloop.audio
+productName: Hexbloop
+files:
+  - filter:
+      - main.js
+      - preload.js
+      - src/**
+      - assets/**
+      - build/entitlements.mac.plist
+      - '!test/**'
+      - '!docs/**'
+      - '!**/*.test.js'
+      - '!*_AUDIT_*.md'
+      - '!AUDIT_REPORT.md'
+      - '!README.md'
+      - '!GLOSSARY.md'
+      - '!CLAUDE.md'
+      - '!swift/**'
+      - '!dist/**'
+      - '!*.log'
+      - '!.git/**'
+mac:
+  category: public.app-category.music
+  icon: assets/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+dmg:
+  contents:
+    - x: 130
+      'y': 220
+    - x: 410
+      'y': 220
+      type: link
+      path: /Applications
+win:
+  target: nsis
+  icon: assets/icon.ico
+linux:
+  target: AppImage
+  icon: assets
+electronVersion: 37.6.0

@@ -44,7 +44,10 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
       "mcp__peekaboo__image",
-      "mcp__peekaboo__analyze"
+      "mcp__peekaboo__analyze",
+      "Bash(sox:*)",
+      "Bash(codesign:*)",
+      "Bash(spctl:*)"
     ],
     "deny": []
   }
