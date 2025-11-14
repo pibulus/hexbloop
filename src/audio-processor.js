@@ -18,6 +18,14 @@ const MetadataEmbedder = require('./metadata-embedder');
 const AudioAnalyzer = require('./audio-analyzer');
 const { getPreferencesManager } = require('./menu/preferences');
 
+const DEFAULT_COMPRESSION_PROFILE = {
+    overdrive: 4.0,
+    bass: 2.0,
+    treble: 1.0,
+    echo: { delay: 0.3, decay: 0.05 },
+    compand: { attack: 0.2, ratio: 5 }
+};
+
 // Try to auto-detect ffmpeg path for macOS (homebrew installations)
 try {
     const ffmpegPath = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
@@ -52,12 +60,7 @@ class AudioProcessor {
             console.log(`📝 Using custom metadata`);
         }
         
-        // Get lunar influences if enabled
-        let influences = null;
-        if (processingConfig.options.lunarInfluence && processingConfig.stages.compressing) {
-            influences = LunarProcessor.getInfluencedParameters();
-            console.log(`🌙 ${influences.description}`);
-        }
+        const compressionProfile = processingConfig.stages.compressing ? DEFAULT_COMPRESSION_PROFILE : null;
         
         // Create unique temp directory for this processing job
         const uniqueId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -76,21 +79,9 @@ class AudioProcessor {
             let artworkResult = null;
             
             // Step 1: Sox processing (conditional)
-            if (processingConfig.stages.compressing && influences) {
+            if (compressionProfile) {
                 console.log('🎛️ Applying mystical compression...');
-                await this.processSox(currentFile, tempFile, influences);
-                currentFile = tempFile;
-            } else if (processingConfig.stages.compressing) {
-                console.log('🎛️ Applying standard compression (lunar influence disabled)...');
-                // Use default influences for non-lunar processing
-                const defaultInfluences = {
-                    overdrive: 4.0,
-                    bass: 2.0,
-                    treble: 1.0,
-                    echo: { delay: 0.3, decay: 0.05 },
-                    compand: { attack: 0.2, ratio: 5 }
-                };
-                await this.processSox(currentFile, tempFile, defaultInfluences);
+                await this.processSox(currentFile, tempFile, compressionProfile);
                 currentFile = tempFile;
             } else {
                 console.log('⏭️ Skipping compression stage');
@@ -159,10 +150,6 @@ class AudioProcessor {
                 } else if (finalName.toLowerCase().includes('cyber') || finalName.toLowerCase().includes('matrix') ||
                            finalName.toLowerCase().includes('digital') || finalName.toLowerCase().includes('tech')) {
                     artStyle = 'cyber-matrix';
-                } else if (influences && influences.overdrive > 5) {
-                    artStyle = 'electric-storm'; // High overdrive = electric energy
-                } else if (influences && influences.bass > 3) {
-                    artStyle = 'sunset-liquid'; // Heavy bass = liquid flow
                 } else if (audioFeatures && audioFeatures.energy > 0.7) {
                     artStyle = 'neon-plasma'; // High energy audio
                 } else if (audioFeatures && audioFeatures.energy < 0.3) {

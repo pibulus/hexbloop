@@ -55,9 +55,6 @@ const DEFAULT_SETTINGS = {
     ui: {
         outputFolder: path.join(os.homedir(), 'Documents', 'HexbloopOutput'),
         ambientAudio: true        // Ambient soundscape in the main window
-    },
-    advanced: {
-        lunarInfluence: true   // Enable moon phase processing variations
     }
 };
 
@@ -109,9 +106,6 @@ const SETTINGS_SCHEMA = {
     ui: {
         outputFolder: 'string',
         ambientAudio: 'boolean'
-    },
-    advanced: {
-        lunarInfluence: 'boolean'
     }
 };
 

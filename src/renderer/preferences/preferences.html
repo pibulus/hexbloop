@@ -104,23 +104,6 @@
                         </label>
                     </div>
 
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="lunarInfluence">
-                            <div class="setting-info">
-                                <h3 id="lunar-influence-label">Lunar Influence</h3>
-                                <p id="lunar-influence-desc">Let moon phases shape the compression flavor</p>
-                            </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox"
-                                       id="lunarInfluence"
-                                       data-setting="advanced.lunarInfluence"
-                                       aria-labelledby="lunar-influence-label"
-                                       aria-describedby="lunar-influence-desc"
-                                       role="switch">
-                                <span class="slider" aria-hidden="true"></span>
-                            </div>
-                        </label>
-                    </div>
                 </div>
             </section>
             </div>
@@ -230,6 +213,100 @@
                                    placeholder="Mystical Audio"
                                    aria-label="Music genre"
                                    maxlength="50">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Batch Naming Options -->
+            <section class="preference-section" id="batch-naming-section">
+                <div class="section-header">
+                    <h2 class="section-title">Batch Naming Options</h2>
+                    <div class="section-description">Control how filenames are generated for each batch</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="batch-naming-scheme">Naming Scheme</label>
+                        <select id="batch-naming-scheme" data-setting="batch.namingScheme">
+                            <option value="mystical">Mystical (procedural)</option>
+                            <option value="sequential">Sequential (track_001)</option>
+                            <option value="timestamp">Timestamp</option>
+                            <option value="hybrid">Hybrid (mystical + number)</option>
+                            <option value="preserve">Preserve original</option>
+                        </select>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="batch-separator">Separator</label>
+                        <input type="text" id="batch-separator" data-setting="batch.separator" maxlength="3" placeholder="_">
+                        <p class="field-description">Character between name parts</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="batch-prefix">Prefix</label>
+                        <input type="text" id="batch-prefix" data-setting="batch.prefix" placeholder="e.g. HEX">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="batch-suffix">Suffix</label>
+                        <input type="text" id="batch-suffix" data-setting="batch.suffix" placeholder="e.g. MIX">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="batch-numbering-style">Numbering</label>
+                        <select id="batch-numbering-style" data-setting="batch.numberingStyle">
+                            <option value="none">None</option>
+                            <option value="numeric">Numeric (001)</option>
+                            <option value="alpha">Alphabetic (A, B, ...)</option>
+                            <option value="roman">Roman (i, ii, ...)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-field form-field-small">
+                        <label for="batch-numbering-padding">Digits</label>
+                        <input type="number" id="batch-numbering-padding" data-setting="batch.numberingPadding" min="1" max="6">
+                    </div>
+                </div>
+
+                <div class="settings-grid" style="margin-top: 20px;">
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="batch-preserve-original">
+                            <div class="setting-info">
+                                <h3>Include Original Name</h3>
+                                <p>Append the source filename to the generated name</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="batch-preserve-original" data-setting="batch.preserveOriginal">
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="batch-session-folders">
+                            <div class="setting-info">
+                                <h3>Session Folders</h3>
+                                <p>Create a subfolder per batch for easier export</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="batch-session-folders" data-setting="batch.sessionFolders">
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+
+                        <div class="form-field" style="margin-top: 12px;">
+                            <label for="batch-folder-scheme">Folder Scheme</label>
+                            <select id="batch-folder-scheme" data-setting="batch.folderScheme">
+                                <option value="date">Date (YYYY-MM-DD)</option>
+                                <option value="lunar">Lunar phase</option>
+                                <option value="counter">Counter</option>
+                                <option value="none">Single folder</option>
+                            </select>
                         </div>
                     </div>
                 </div>

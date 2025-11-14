@@ -177,6 +177,10 @@ class PreferencesController {
                     // Reset border color
                     element.style.borderColor = '';
                 });
+            } else if (element.tagName === 'SELECT') {
+                element.addEventListener('change', (e) => {
+                    this.updateSetting(settingPath, e.target.value);
+                });
             }
         });
         
@@ -228,6 +232,10 @@ class PreferencesController {
                 if (displayElement) {
                     displayElement.textContent = (value || 50) + '%';
                 }
+            } else if (element.tagName === 'SELECT') {
+                if (value !== undefined && value !== null) {
+                    element.value = value;
+                }
             } else if (element.type === 'text' || element.type === 'number') {
                 element.value = value || '';
             }
@@ -235,6 +243,7 @@ class PreferencesController {
         
         // Update custom metadata section visibility
         this.updateCustomMetadataVisibility();
+        this.updateBatchOptionsUI();
         
         console.log('🎨 UI updated with current settings');
     }
@@ -376,7 +385,11 @@ class PreferencesController {
                 if (settingPath === 'ui.ambientAudio' && window.preferencesAPI.setAmbientAudio) {
                     window.preferencesAPI.setAmbientAudio(Boolean(sanitizedValue));
                 }
-                
+
+                if (settingPath.startsWith('batch.')) {
+                    this.updateBatchOptionsUI();
+                }
+
                 if (DEBUG) console.log(`Setting ${settingPath} updated successfully`);
             } else {
                 console.error(`Failed to update ${settingPath}:`, result.error);
@@ -412,6 +425,25 @@ class PreferencesController {
             this.elements.customMetadataSection.classList.remove('disabled');
         } else {
             this.elements.customMetadataSection.classList.add('disabled');
+        }
+    }
+
+    updateBatchOptionsUI() {
+        const numberingStyle = this.getSettingValue('batch.numberingStyle');
+        const numberingPaddingField = this.settingElements.get('batch.numberingPadding');
+        if (numberingPaddingField) {
+            const disablePadding = numberingStyle === 'none';
+            numberingPaddingField.disabled = disablePadding;
+            const paddingContainer = numberingPaddingField.closest('.form-field');
+            if (paddingContainer) {
+                paddingContainer.classList.toggle('disabled', disablePadding);
+            }
+        }
+
+        const sessionFoldersEnabled = Boolean(this.getSettingValue('batch.sessionFolders'));
+        const folderSchemeSelect = this.settingElements.get('batch.folderScheme');
+        if (folderSchemeSelect) {
+            folderSchemeSelect.disabled = !sessionFoldersEnabled;
         }
     }
     

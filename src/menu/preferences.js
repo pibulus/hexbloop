@@ -194,10 +194,7 @@ class PreferencesManager {
                 album: settings.metadata.album || 'Unknown Album',
                 year: settings.metadata.year || new Date().getFullYear(),
                 genre: settings.metadata.genre || 'Mystical Audio'
-            } : null,
-            options: {
-                lunarInfluence: settings.advanced.lunarInfluence !== false
-            }
+            } : null
         };
     }
     
