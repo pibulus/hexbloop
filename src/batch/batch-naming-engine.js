@@ -5,6 +5,8 @@
  */
 
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const NameGenerator = require('../name-generator');
 const LunarProcessor = require('../lunar-processor');
 
@@ -229,41 +231,102 @@ class BatchNamingEngine {
         if (!this.settings.sessionFolders) {
             return null;
         }
-        
+
         const date = this.sessionTimestamp;
-        
+
         switch (this.settings.folderScheme) {
             case 'date':
-                // YYYY-MM-DD_session_01
+                // YYYY-MM-DD_session_01, YYYY-MM-DD_session_02, etc.
                 const dateStr = [
                     date.getFullYear(),
                     String(date.getMonth() + 1).padStart(2, '0'),
                     String(date.getDate()).padStart(2, '0')
                 ].join('-');
-                return `${dateStr}_session_01`; // TODO: Increment session counter
-                
+                const dailyCounter = this.getAndIncrementDailyCounter(dateStr);
+                return `${dateStr}_session_${String(dailyCounter).padStart(2, '0')}`;
+
             case 'lunar':
-                // lunar_waxing_crescent_2024_12_26
-                const phaseName = this.moonPhase ? 
-                    this.moonPhase.name.toLowerCase().replace(/ /g, '_') : 
+                // lunar_waxing_crescent_2024_12_26_01
+                const phaseName = this.moonPhase ?
+                    this.moonPhase.name.toLowerCase().replace(/ /g, '_') :
                     'unknown_phase';
-                return `lunar_${phaseName}_${date.getFullYear()}_${date.getMonth() + 1}_${date.getDate()}`;
-                
+                const lunarDateStr = `${date.getFullYear()}_${String(date.getMonth() + 1).padStart(2, '0')}_${String(date.getDate()).padStart(2, '0')}`;
+                const lunarKey = `lunar_${phaseName}_${lunarDateStr}`;
+                const lunarCounter = this.getAndIncrementDailyCounter(lunarKey);
+                return `${lunarKey}_${String(lunarCounter).padStart(2, '0')}`;
+
             case 'counter':
                 // session_042
-                return `session_${String(this.getSessionCounter()).padStart(3, '0')}`;
-                
+                const globalCounter = this.getAndIncrementGlobalCounter();
+                return `session_${String(globalCounter).padStart(3, '0')}`;
+
             default:
                 return null;
         }
     }
-    
+
     /**
-     * Get or increment session counter (persisted)
+     * Get storage path for session counters
      */
-    getSessionCounter() {
-        // TODO: Implement persistent counter
-        return 1;
+    getCounterStoragePath() {
+        const app = require('electron').app;
+        const userDataPath = app.getPath('userData');
+        return path.join(userDataPath, 'session-counters.json');
+    }
+
+    /**
+     * Load session counters from persistent storage
+     */
+    loadCounters() {
+        try {
+            const storagePath = this.getCounterStoragePath();
+            if (fs.existsSync(storagePath)) {
+                const data = fs.readFileSync(storagePath, 'utf8');
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.log('⚠️  Could not load session counters, starting fresh:', error.message);
+        }
+        return { daily: {}, global: 0 };
+    }
+
+    /**
+     * Save session counters to persistent storage
+     */
+    saveCounters(counters) {
+        try {
+            const storagePath = this.getCounterStoragePath();
+            const dir = path.dirname(storagePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            fs.writeFileSync(storagePath, JSON.stringify(counters, null, 2), 'utf8');
+        } catch (error) {
+            console.log('⚠️  Could not save session counters:', error.message);
+        }
+    }
+
+    /**
+     * Get and increment counter for a specific date/key
+     */
+    getAndIncrementDailyCounter(key) {
+        const counters = this.loadCounters();
+        const currentCount = counters.daily[key] || 0;
+        const newCount = currentCount + 1;
+        counters.daily[key] = newCount;
+        this.saveCounters(counters);
+        return newCount;
+    }
+
+    /**
+     * Get and increment global session counter
+     */
+    getAndIncrementGlobalCounter() {
+        const counters = this.loadCounters();
+        const newCount = (counters.global || 0) + 1;
+        counters.global = newCount;
+        this.saveCounters(counters);
+        return newCount;
     }
     
     /**

@@ -202,17 +202,38 @@ class HexbloopMystic {
             `translate(-50%, -50%) translate3d(${pentagramX}px, ${pentagramY}px, 0)`;
     }
     
-    initAmbientAudio() {
+    async initAmbientAudio() {
         // Set initial volume
         this.ambientAudio.volume = 0.3;
-        
+
         // Add toggle click handler
         this.ambientToggle.addEventListener('click', () => {
             this.toggleAmbientAudio();
         });
-        
-        // Auto-start ambient audio (with user interaction fallback)
-        this.startAmbientAudio();
+
+        // Listen for ambient audio toggle from menu
+        window.electronAPI.onAmbientToggle((event, enabled) => {
+            console.log(`🎵 Ambient audio toggled from menu: ${enabled}`);
+            this.toggleAmbientAudio(enabled);
+        });
+
+        // Load settings and only auto-start if enabled
+        try {
+            const settings = await window.electronAPI.getSettings();
+            const ambientEnabled = settings?.ui?.ambientAudio !== false; // Default to true
+
+            if (ambientEnabled) {
+                // Auto-start ambient audio (with user interaction fallback)
+                this.startAmbientAudio();
+            } else {
+                console.log('🎵 Ambient audio disabled in settings, not auto-starting');
+                this.isAudioPlaying = false;
+                this.updateToggleState();
+            }
+        } catch (error) {
+            console.error('⚠️ Could not load settings, defaulting to enabled:', error);
+            this.startAmbientAudio();
+        }
     }
     
     async startAmbientAudio() {
