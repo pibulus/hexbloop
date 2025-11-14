@@ -25,21 +25,29 @@ const INPUT_VALIDATION = {
 const DEBUG = false; // Set to true for debug logging
 
 /**
- * Simple debounce utility
+ * Simple debounce utility with cancellation support
  * @param {Function} func - Function to debounce
  * @param {number} wait - Delay in milliseconds
- * @returns {Function} Debounced function
+ * @returns {Function} Debounced function with cancel() method
  */
 function debounce(func, wait) {
     let timeout;
-    return function executedFunction(...args) {
+    const debouncedFunction = function executedFunction(...args) {
         const later = () => {
-            clearTimeout(timeout);
+            timeout = null;
             func(...args);
         };
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
+
+    // Add cancel method to the debounced function
+    debouncedFunction.cancel = function() {
+        clearTimeout(timeout);
+        timeout = null;
+    };
+
+    return debouncedFunction;
 }
 
 class PreferencesController {
@@ -141,15 +149,16 @@ class PreferencesController {
                 // Update immediately on blur (when user leaves field)
                 element.addEventListener('blur', (e) => {
                     const value = element.type === 'number' ? parseInt(e.target.value) : e.target.value;
-                    
+
                     // Cancel any pending debounced update
                     if (this.debouncedUpdates.has(settingPath)) {
-                        clearTimeout(this.debouncedUpdates.get(settingPath).timeout);
+                        const debouncedFn = this.debouncedUpdates.get(settingPath);
+                        debouncedFn.cancel();
                     }
-                    
+
                     // Update immediately
                     this.updateSetting(settingPath, value);
-                    
+
                     // Reset border color
                     element.style.borderColor = '';
                 });

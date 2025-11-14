@@ -9,6 +9,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const { spawn, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const LunarProcessor = require('./lunar-processor');
 const NameGenerator = require('./name-generator');
 const ArtworkGenerator = require('./artwork-generator');
@@ -55,14 +56,18 @@ class AudioProcessor {
             influences = LunarProcessor.getInfluencedParameters();
             console.log(`🌙 ${influences.description}`);
         }
-        
-        // Temp files for processing stages
-        const tempFile = path.join(path.dirname(outputPath), 'temp_audio.aif');
-        const processedFile = path.join(path.dirname(outputPath), 'temp_processed.mp3');
-        
+
+        // Create unique temp directory for this processing job
+        const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), `hexbloop-${uniqueId}-`));
+
+        // Temp files for processing stages (now unique per job)
+        const tempFile = path.join(tempDir, 'temp_audio.aif');
+        const processedFile = path.join(tempDir, 'temp_processed.mp3');
+
         const artworkGenerator = new ArtworkGenerator();
         const metadataEmbedder = new MetadataEmbedder();
-        
+
         try {
             let currentFile = inputPath;
             let artworkResult = null;
@@ -137,21 +142,13 @@ class AudioProcessor {
             }
             
             await metadataEmbedder.embedMetadata(
-                currentFile, 
-                outputPath, 
+                currentFile,
+                outputPath,
                 metadataForEmbedding,
                 artworkResult?.pngPath
             );
-            
-            // Clean up temp files
-            if (fs.existsSync(tempFile)) {
-                fs.unlinkSync(tempFile);
-            }
-            if (fs.existsSync(processedFile)) {
-                fs.unlinkSync(processedFile);
-            }
-            
-            // Clean up artwork files if they exist
+
+            // Clean up artwork files if they exist (outside temp dir)
             try {
                 if (artworkResult && artworkResult.svgPath && fs.existsSync(artworkResult.svgPath)) {
                     fs.unlinkSync(artworkResult.svgPath);
@@ -164,25 +161,28 @@ class AudioProcessor {
             } catch (cleanupError) {
                 console.log('⚠️  Could not clean up artwork files:', cleanupError.message);
             }
-            
+
             console.log(`✅ Successfully processed: ${path.basename(outputPath)}`);
-            return { 
-                success: true, 
-                finalName, 
+            return {
+                success: true,
+                finalName,
                 artwork: artworkResult,
                 processingConfig,
                 metadata: metadataForEmbedding
             };
-            
+
         } catch (error) {
-            // Clean up temp files on error
-            if (fs.existsSync(tempFile)) {
-                fs.unlinkSync(tempFile);
-            }
-            if (fs.existsSync(processedFile)) {
-                fs.unlinkSync(processedFile);
-            }
             throw error;
+        } finally {
+            // Clean up temp directory and all its contents
+            try {
+                if (fs.existsSync(tempDir)) {
+                    await fs.promises.rm(tempDir, { recursive: true, force: true });
+                    console.log('🧹 Cleaned up temp directory');
+                }
+            } catch (cleanupError) {
+                console.log('⚠️  Could not clean up temp directory:', cleanupError.message);
+            }
         }
     }
     
