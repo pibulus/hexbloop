@@ -96,7 +96,13 @@ HexbloopOutput/
 
 # Node/Electron
 node_modules/
-dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Electron distribution (keep docs/scripts, ignore built files)
+dist/*.zip
+dist/*.dmg
+dist/*.blockmap
+dist/*.yml
+dist/mac-arm64/
