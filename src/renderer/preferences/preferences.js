@@ -371,6 +371,11 @@ class PreferencesController {
                 
                 // Add visual feedback
                 this.showSettingUpdated(settingPath);
+
+                // Notify main window immediately for real-time features
+                if (settingPath === 'ui.ambientAudio' && window.preferencesAPI.setAmbientAudio) {
+                    window.preferencesAPI.setAmbientAudio(Boolean(sanitizedValue));
+                }
                 
                 if (DEBUG) console.log(`Setting ${settingPath} updated successfully`);
             } else {

@@ -103,6 +103,24 @@
                             </div>
                         </label>
                     </div>
+
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="lunarInfluence">
+                            <div class="setting-info">
+                                <h3 id="lunar-influence-label">Lunar Influence</h3>
+                                <p id="lunar-influence-desc">Let moon phases shape the compression flavor</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox"
+                                       id="lunarInfluence"
+                                       data-setting="advanced.lunarInfluence"
+                                       aria-labelledby="lunar-influence-label"
+                                       aria-describedby="lunar-influence-desc"
+                                       role="switch">
+                                <span class="slider" aria-hidden="true"></span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </section>
             </div>
@@ -233,6 +251,33 @@
                             <input type="text" id="output-folder" data-setting="ui.outputFolder" readonly placeholder="~/Documents/HexbloopOutput">
                             <button type="button" id="choose-folder-btn" class="btn btn-secondary">Choose Folder</button>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="preference-section">
+                <div class="section-header">
+                    <h2 class="section-title">Ambient Soundtrack</h2>
+                    <div class="section-description">Turn the looping Hexbloop soundscape on or off</div>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="ambientAudio">
+                            <div class="setting-info">
+                                <h3 id="ambient-audio-label">Play Ambient Audio</h3>
+                                <p id="ambient-audio-desc">Enable background audio inside the main window</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox"
+                                       id="ambientAudio"
+                                       data-setting="ui.ambientAudio"
+                                       aria-labelledby="ambient-audio-label"
+                                       aria-describedby="ambient-audio-desc"
+                                       role="switch">
+                                <span class="slider" aria-hidden="true"></span>
+                            </div>
+                        </label>
                     </div>
                 </div>
             </section>

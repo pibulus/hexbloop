@@ -53,7 +53,8 @@ const DEFAULT_SETTINGS = {
         resolution: 1000              // Artwork size in pixels
     },
     ui: {
-        outputFolder: path.join(os.homedir(), 'Documents', 'HexbloopOutput')
+        outputFolder: path.join(os.homedir(), 'Documents', 'HexbloopOutput'),
+        ambientAudio: true        // Ambient soundscape in the main window
     },
     advanced: {
         lunarInfluence: true   // Enable moon phase processing variations
@@ -106,7 +107,8 @@ const SETTINGS_SCHEMA = {
         resolution: 'number'
     },
     ui: {
-        outputFolder: 'string'
+        outputFolder: 'string',
+        ambientAudio: 'boolean'
     },
     advanced: {
         lunarInfluence: 'boolean'

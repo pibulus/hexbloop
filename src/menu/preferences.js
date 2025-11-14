@@ -196,10 +196,7 @@ class PreferencesManager {
                 genre: settings.metadata.genre || 'Mystical Audio'
             } : null,
             options: {
-                lunarInfluence: settings.advanced.lunarInfluence,
-                debugMode: settings.advanced.debugMode,
-                preserveTempFiles: settings.advanced.preserveTempFiles,
-                outputFolder: settings.ui.outputFolder
+                lunarInfluence: settings.advanced.lunarInfluence !== false
             }
         };
     }

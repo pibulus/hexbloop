@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('preferencesAPI', {
     // UI interactions
     chooseOutputFolder: () => ipcRenderer.invoke('preferences-choose-output-folder'),
     closeWindow: () => ipcRenderer.invoke('preferences-close'),
+    setAmbientAudio: (enabled) => ipcRenderer.send('toggle-ambient-audio', enabled),
     
     // Window events
     onWindowBlur: (callback) => ipcRenderer.on('window-blur', callback),
