@@ -106,6 +106,11 @@
 
                 </div>
             </section>
+
+            <section class="info-panel compact">
+                <h4>Processing Order</h4>
+                <p>Run any combination you like—Hexbloop chains compression → mastering → artwork → naming in that order.</p>
+            </section>
             </div>
 
             <!-- Naming Tab -->
@@ -222,7 +227,7 @@
             <section class="preference-section" id="batch-naming-section">
                 <div class="section-header">
                     <h2 class="section-title">Batch Naming Options</h2>
-                    <div class="section-description">Control how filenames are generated for each batch</div>
+                    <div class="section-description">Blend mystical names with prefixes, numbering, and optional session folders</div>
                 </div>
 
                 <div class="form-row">
@@ -267,7 +272,7 @@
                         </select>
                     </div>
 
-                    <div class="form-field form-field-small">
+                    <div class="form-field form-field-small" id="batch-numbering-padding-wrapper">
                         <label for="batch-numbering-padding">Digits</label>
                         <input type="number" id="batch-numbering-padding" data-setting="batch.numberingPadding" min="1" max="6">
                     </div>
@@ -299,7 +304,7 @@
                             </div>
                         </label>
 
-                        <div class="form-field" style="margin-top: 12px;">
+                        <div class="form-field" id="batch-folder-scheme-wrapper" style="margin-top: 12px;">
                             <label for="batch-folder-scheme">Folder Scheme</label>
                             <select id="batch-folder-scheme" data-setting="batch.folderScheme">
                                 <option value="date">Date (YYYY-MM-DD)</option>
@@ -310,6 +315,11 @@
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <section class="info-panel compact">
+                <h4>Naming Tips</h4>
+                <p>"Generated" pulls from moon phases + audio, "Custom" uses your artist metadata, and "Original" keeps the file name exactly.</p>
             </section>
             </div>
 

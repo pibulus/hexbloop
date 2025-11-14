@@ -438,12 +438,20 @@ class PreferencesController {
             if (paddingContainer) {
                 paddingContainer.classList.toggle('disabled', disablePadding);
             }
+            const paddingWrapper = document.getElementById('batch-numbering-padding-wrapper');
+            if (paddingWrapper) {
+                paddingWrapper.classList.toggle('disabled', disablePadding);
+            }
         }
 
         const sessionFoldersEnabled = Boolean(this.getSettingValue('batch.sessionFolders'));
         const folderSchemeSelect = this.settingElements.get('batch.folderScheme');
         if (folderSchemeSelect) {
             folderSchemeSelect.disabled = !sessionFoldersEnabled;
+        }
+        const folderSchemeWrapper = document.getElementById('batch-folder-scheme-wrapper');
+        if (folderSchemeWrapper) {
+            folderSchemeWrapper.classList.toggle('disabled', !sessionFoldersEnabled);
         }
     }
     
