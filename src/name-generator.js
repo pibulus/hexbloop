@@ -89,18 +89,6 @@ class NameGenerator {
         return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
 
-    // Get lunar phase name from numeric phase (0-1)
-    static getLunarPhaseName(phase) {
-        if (phase < 0.03 || phase > 0.97) return 'New Moon';
-        if (phase < 0.22) return 'Waxing Crescent';
-        if (phase < 0.28) return 'First Quarter';
-        if (phase < 0.47) return 'Waxing Gibbous';
-        if (phase < 0.53) return 'Full Moon';
-        if (phase < 0.72) return 'Waning Gibbous';
-        if (phase < 0.78) return 'Last Quarter';
-        return 'Waning Crescent';
-    }
-    
     // Generate clean, musical names (supports seeding)
     static generateCleanName(randomFunc = Math.random) {
         const patterns = [
@@ -230,15 +218,12 @@ class NameGenerator {
                 const LunarProcessor = require('./lunar-processor');
                 moonPhase = LunarProcessor.getMoonPhase();
             } catch (e) {
-                // BEST PRACTICE: Correct lunar fallback calculation
-                // Julian day approximation for lunar cycle
-                const daysSinceNewMoon = Math.floor((now.getTime() / 86400000 + 0.5) % 29.53);
-                const phase = daysSinceNewMoon / 29.53;
-
+                // Simple fallback if LunarProcessor fails
+                console.log('⚠️ LunarProcessor unavailable, using default moon phase');
                 moonPhase = {
-                    phase,
-                    illumination: (1 - Math.cos(phase * Math.PI * 2)) / 2,
-                    name: this.getLunarPhaseName(phase)
+                    phase: 0.5,
+                    illumination: 1.0,
+                    name: 'Full Moon'
                 };
             }
         }

@@ -131,7 +131,6 @@ module.exports.showPreferencesWindow = showPreferencesWindow;
 // === App Lifecycle ===
 app.setName('Hexbloop');
 app.whenReady().then(() => {
-    app.setName('Hexbloop');
     createWindow();
 });
 
@@ -552,15 +551,12 @@ ipcMain.handle('preferences-choose-output-folder', async () => {
  */
 ipcMain.handle('preferences-close', () => {
     try {
-        const { PreferencesWindow } = require('./src/menu/preferences-window');
-        const prefWindow = new PreferencesWindow(mainWindow);
-        
-        if (prefWindow.isOpen()) {
-            prefWindow.close();
+        if (preferencesWindow && preferencesWindow.isOpen()) {
+            preferencesWindow.close();
             console.log('Preferences window closed');
             return { success: true };
         }
-        
+
         console.log('No preferences window found to close');
         return { success: false, error: 'No preferences window found' };
     } catch (error) {

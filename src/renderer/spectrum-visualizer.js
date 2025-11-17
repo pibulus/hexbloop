@@ -9,6 +9,7 @@ class SpectrumVisualizer {
         this.ctx = null;
         this.analyser = null;
         this.animationId = null;
+        this.throttleTimeout = null;
         this.isActive = false;
         this.resizeHandler = null;
         this.fadeTimeout = null;
@@ -86,17 +87,23 @@ class SpectrumVisualizer {
     stopVisualization() {
         this.isActive = false;
         this.canvas.style.opacity = '0';
-        
+
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
-        
+
+        // Clear throttle timeout to prevent orphaned animate() calls
+        if (this.throttleTimeout) {
+            clearTimeout(this.throttleTimeout);
+            this.throttleTimeout = null;
+        }
+
         // Clear any existing fade timeout
         if (this.fadeTimeout) {
             clearTimeout(this.fadeTimeout);
         }
-        
+
         // Clear canvas after fade
         this.fadeTimeout = setTimeout(() => {
             if (this.ctx) {
@@ -108,26 +115,28 @@ class SpectrumVisualizer {
     
     animate() {
         if (!this.isActive) return;
-        
-        // Throttle to 30fps for better performance
-        this.animationId = requestAnimationFrame(() => {
-            setTimeout(() => this.animate(), 33); // ~30fps instead of 60fps
-        });
-        
+
         // Generate dynamic mock data (simulating audio processing)
         this.generateMockFrequencies();
-        
+
         // Clear canvas with fade effect
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         // Draw frequency bars
         this.drawBars();
-        
+
         // Draw circular visualization (only when processing)
         if (this.isActive) {
             this.drawCircularSpectrum();
         }
+
+        // Throttle to 30fps for better performance
+        this.throttleTimeout = setTimeout(() => {
+            if (this.isActive) {
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+        }, 33); // ~30fps instead of 60fps
     }
     
     generateMockFrequencies() {
@@ -233,7 +242,12 @@ class SpectrumVisualizer {
             clearTimeout(this.fadeTimeout);
             this.fadeTimeout = null;
         }
-        
+
+        if (this.throttleTimeout) {
+            clearTimeout(this.throttleTimeout);
+            this.throttleTimeout = null;
+        }
+
         if (this.frameThrottle) {
             clearTimeout(this.frameThrottle);
             this.frameThrottle = null;

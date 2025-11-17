@@ -1,6 +1,9 @@
 const fs = require('fs');
-const { execSync } = require('child_process');
+const { exec } = require('child_process');
+const { promisify } = require('util');
 const path = require('path');
+
+const execAsync = promisify(exec);
 
 // ===================================================================
 // 🎵 AUDIO ANALYZER - Extract features for visual generation
@@ -23,18 +26,27 @@ class AudioAnalyzer {
         };
 
         try {
-            // Get duration using ffprobe
+            // Get duration using ffprobe (async)
             const durationCmd = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${inputPath}"`;
-            features.duration = parseFloat(execSync(durationCmd, { encoding: 'utf8' }).trim());
-            
+            try {
+                const { stdout } = await execAsync(durationCmd);
+                features.duration = parseFloat(stdout.trim());
+            } catch (durationError) {
+                console.log('⚠️ Could not get duration, using default');
+                features.duration = 180; // Default 3 minutes
+            }
+
             // Extract waveform samples (downsample for visualization)
             // We want ~360 samples for circular visualization
             const samples = 360;
             const waveformCmd = `ffmpeg -i "${inputPath}" -af "aresample=8000,highpass=f=200,lowpass=f=3000" -f f32le -acodec pcm_f32le - 2>/dev/null`;
-            
+
             try {
-                const waveformBuffer = execSync(waveformCmd, { maxBuffer: 10 * 1024 * 1024 });
-                features.waveform = this.extractWaveformPeaks(waveformBuffer, samples);
+                const { stdout } = await execAsync(waveformCmd, {
+                    encoding: 'buffer',
+                    maxBuffer: 10 * 1024 * 1024
+                });
+                features.waveform = this.extractWaveformPeaks(stdout, samples);
                 features.energy = this.calculateEnergy(features.waveform);
                 features.peaks = this.findPeaks(features.waveform);
             } catch (waveformError) {

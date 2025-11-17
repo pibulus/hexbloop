@@ -11,9 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const LunarProcessor = require('./lunar-processor');
-const NameGenerator = require('./name-generator');
 const VibrantRefinedArtworkGenerator = require('./artwork-generator-vibrant-refined');
-// Legacy generators moved to old-generators/
 const MetadataEmbedder = require('./metadata-embedder');
 const AudioAnalyzer = require('./audio-analyzer');
 const { getPreferencesManager } = require('./menu/preferences');
@@ -125,40 +123,41 @@ class AudioProcessor {
                 
                 // Auto-select style based on processing characteristics
                 // Enhanced generator has 8 styles: neon-plasma, cosmic-flow, vapor-dream, cyber-matrix, sunset-liquid, electric-storm, crystal-prism, ocean-aurora
+                // Map keywords to artwork styles for cleaner selection
+                const styleKeywords = {
+                    'cosmic-flow': ['cosmic', 'astral', 'star', 'space'],
+                    'electric-storm': ['electric', 'power', 'volt', 'surge'],
+                    'neon-plasma': ['neon', 'plasma', 'glow', 'light'],
+                    'sunset-liquid': ['wave', 'flow', 'liquid', 'dream'],
+                    'crystal-prism': ['crystal', 'gem', 'diamond', 'hex'],
+                    'vapor-dream': ['vapor', 'retro', 'synth', '80s'],
+                    'ocean-aurora': ['ocean', 'water', 'sea', 'aurora'],
+                    'cyber-matrix': ['cyber', 'matrix', 'digital', 'tech']
+                };
+
                 let artStyle = null;
-                if (finalName.toLowerCase().includes('cosmic') || finalName.toLowerCase().includes('astral') || 
-                    finalName.toLowerCase().includes('star') || finalName.toLowerCase().includes('space')) {
-                    artStyle = 'cosmic-flow';
-                } else if (finalName.toLowerCase().includes('electric') || finalName.toLowerCase().includes('power') ||
-                           finalName.toLowerCase().includes('volt') || finalName.toLowerCase().includes('surge')) {
-                    artStyle = 'electric-storm';
-                } else if (finalName.toLowerCase().includes('neon') || finalName.toLowerCase().includes('plasma') ||
-                           finalName.toLowerCase().includes('glow') || finalName.toLowerCase().includes('light')) {
-                    artStyle = 'neon-plasma';
-                } else if (finalName.toLowerCase().includes('wave') || finalName.toLowerCase().includes('flow') ||
-                           finalName.toLowerCase().includes('liquid') || finalName.toLowerCase().includes('dream')) {
-                    artStyle = 'sunset-liquid';
-                } else if (finalName.toLowerCase().includes('crystal') || finalName.toLowerCase().includes('gem') ||
-                           finalName.toLowerCase().includes('diamond') || finalName.toLowerCase().includes('hex')) {
-                    artStyle = 'crystal-prism';
-                } else if (finalName.toLowerCase().includes('vapor') || finalName.toLowerCase().includes('retro') ||
-                           finalName.toLowerCase().includes('synth') || finalName.toLowerCase().includes('80s')) {
-                    artStyle = 'vapor-dream';
-                } else if (finalName.toLowerCase().includes('ocean') || finalName.toLowerCase().includes('water') ||
-                           finalName.toLowerCase().includes('sea') || finalName.toLowerCase().includes('aurora')) {
-                    artStyle = 'ocean-aurora';
-                } else if (finalName.toLowerCase().includes('cyber') || finalName.toLowerCase().includes('matrix') ||
-                           finalName.toLowerCase().includes('digital') || finalName.toLowerCase().includes('tech')) {
-                    artStyle = 'cyber-matrix';
-                } else if (audioFeatures && audioFeatures.energy > 0.7) {
-                    artStyle = 'neon-plasma'; // High energy audio
-                } else if (audioFeatures && audioFeatures.energy < 0.3) {
-                    artStyle = 'ocean-aurora'; // Low energy = calm auroras
-                } else {
-                    // Default to style based on moon phase for variety
-                    const styles = ['neon-plasma', 'cosmic-flow', 'vapor-dream', 'cyber-matrix', 'sunset-liquid', 'electric-storm', 'crystal-prism', 'ocean-aurora'];
-                    const moonIndex = Math.floor((moonPhase || Math.random()) * styles.length);
-                    artStyle = styles[moonIndex];
+                const nameLower = finalName.toLowerCase();
+
+                // Check if name contains any style keywords
+                for (const [style, keywords] of Object.entries(styleKeywords)) {
+                    if (keywords.some(keyword => nameLower.includes(keyword))) {
+                        artStyle = style;
+                        break;
+                    }
+                }
+
+                // Fallback to audio energy-based selection
+                if (!artStyle) {
+                    if (audioFeatures && audioFeatures.energy > 0.7) {
+                        artStyle = 'neon-plasma'; // High energy audio
+                    } else if (audioFeatures && audioFeatures.energy < 0.3) {
+                        artStyle = 'ocean-aurora'; // Low energy = calm auroras
+                    } else {
+                        // Default to style based on moon phase for variety
+                        const styles = Object.keys(styleKeywords);
+                        const moonIndex = Math.floor((moonPhase || Math.random()) * styles.length);
+                        artStyle = styles[moonIndex];
+                    }
                 }
                 
                 // Generate canvas-based artwork with moon phase, style, and audio features

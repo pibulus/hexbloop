@@ -73,17 +73,24 @@ class HexbloopMystic {
         console.log('🔥 Mystical hexagon awakened - ready for sacrifices 🤘');
     }
     
+    addTrackedListener(element, event, handler) {
+        element.addEventListener(event, handler);
+        this.eventListeners.push({ element, event, handler });
+    }
+
     initEvents() {
         // Set up drag/drop and click handlers
-        this.hexStack.addEventListener('dragenter', this.onDragEnter.bind(this));
-        this.hexStack.addEventListener('dragover', this.onDragOver.bind(this));
-        this.hexStack.addEventListener('dragleave', this.onDragLeave.bind(this));
-        this.hexStack.addEventListener('drop', this.onDrop.bind(this));
-        this.hexStack.addEventListener('click', this.onClick.bind(this));
-        
+        this.addTrackedListener(this.hexStack, 'dragenter', this.onDragEnter.bind(this));
+        this.addTrackedListener(this.hexStack, 'dragover', this.onDragOver.bind(this));
+        this.addTrackedListener(this.hexStack, 'dragleave', this.onDragLeave.bind(this));
+        this.addTrackedListener(this.hexStack, 'drop', this.onDrop.bind(this));
+        this.addTrackedListener(this.hexStack, 'click', this.onClick.bind(this));
+
         // Prevent browser default file handling
-        document.addEventListener('dragover', e => e.preventDefault());
-        document.addEventListener('drop', e => e.preventDefault());
+        const preventDragover = e => e.preventDefault();
+        const preventDrop = e => e.preventDefault();
+        this.addTrackedListener(document, 'dragover', preventDragover);
+        this.addTrackedListener(document, 'drop', preventDrop);
     }
     
     initProgressListeners() {
@@ -109,18 +116,20 @@ class HexbloopMystic {
     initParallax() {
         // Calculate center position
         this.updateCenter();
-        
+
         // Mouse move tracking for parallax effect
-        document.addEventListener('mousemove', (e) => {
+        const mouseMoveHandler = (e) => {
             this.mouseX = e.clientX;
             this.mouseY = e.clientY;
             this.updateParallax();
-        });
-        
+        };
+        this.addTrackedListener(document, 'mousemove', mouseMoveHandler);
+
         // Recalculate center on window resize
-        window.addEventListener('resize', () => {
+        const resizeHandler = () => {
             this.updateCenter();
-        });
+        };
+        this.addTrackedListener(window, 'resize', resizeHandler);
     }
     
     updateCenter() {
@@ -207,9 +216,10 @@ class HexbloopMystic {
         this.ambientAudio.volume = 0.3;
 
         // Add toggle click handler
-        this.ambientToggle.addEventListener('click', () => {
+        const toggleClickHandler = () => {
             this.toggleAmbientAudio();
-        });
+        };
+        this.addTrackedListener(this.ambientToggle, 'click', toggleClickHandler);
 
         // Listen for ambient audio toggle from menu
         window.electronAPI.onAmbientToggle((event, enabled) => {
@@ -284,7 +294,7 @@ class HexbloopMystic {
     initSettingsButton() {
         // Add settings button handler to open preferences window
         if (this.settingsButton) {
-            this.settingsButton.addEventListener('click', () => {
+            const clickHandler = () => {
                 console.log('⚙️ Opening preferences window...');
                 // Send IPC message to open preferences window
                 if (window.electronAPI && window.electronAPI.openPreferences) {
@@ -292,16 +302,19 @@ class HexbloopMystic {
                 } else {
                     console.log('⚠️ Preferences API not available');
                 }
-            });
-            
+            };
+            this.addTrackedListener(this.settingsButton, 'click', clickHandler);
+
             // Add hover effect
-            this.settingsButton.addEventListener('mouseenter', () => {
+            const mouseEnterHandler = () => {
                 this.settingsButton.classList.add('hover');
-            });
-            
-            this.settingsButton.addEventListener('mouseleave', () => {
+            };
+            this.addTrackedListener(this.settingsButton, 'mouseenter', mouseEnterHandler);
+
+            const mouseLeaveHandler = () => {
                 this.settingsButton.classList.remove('hover');
-            });
+            };
+            this.addTrackedListener(this.settingsButton, 'mouseleave', mouseLeaveHandler);
         }
     }
     
@@ -605,52 +618,7 @@ class HexbloopMystic {
             this.hexStack.style.filter = '';
         }, 1500);
     }
-    
-    initAmbientAudio() {
-        // Ambient audio toggle handler
-        if (this.ambientToggle) {
-            this.ambientToggle.addEventListener('click', () => {
-                this.toggleAmbientAudio();
-            });
-        }
-        
-        // Initialize audio element with low volume
-        if (this.ambientAudio) {
-            this.ambientAudio.volume = 0.3;
-        }
-    }
-    
-    toggleAmbientAudio(forceState = null) {
-        if (!this.ambientAudio) return;
-        
-        const shouldPlay = forceState !== null ? forceState : !this.isAudioPlaying;
-        
-        if (shouldPlay) {
-            this.ambientAudio.play().then(() => {
-                this.isAudioPlaying = true;
-                this.ambientToggle.classList.add('active');
-                console.log('🎵 Ambient audio started');
-            }).catch(err => {
-                console.log('🔇 Ambient audio playback failed:', err);
-            });
-        } else {
-            this.ambientAudio.pause();
-            this.isAudioPlaying = false;
-            this.ambientToggle.classList.remove('active');
-            console.log('🔇 Ambient audio paused');
-        }
-    }
-    
-    initSettingsButton() {
-        // Settings button click handler
-        if (this.settingsButton) {
-            this.settingsButton.addEventListener('click', () => {
-                console.log('⚙️ Opening preferences window...');
-                window.electronAPI.openPreferences();
-            });
-        }
-    }
-    
+
     // Add custom setTimeout that tracks timeouts
     setTrackedTimeout(callback, delay) {
         const timeoutId = setTimeout(() => {
