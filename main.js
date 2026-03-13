@@ -68,7 +68,7 @@ function createWindow() {
             const filePath = decodeURIComponent(parsedUrl.pathname);
             console.log('🔍 Detected file drag:', filePath);
             
-            if (/\.(mp3|wav|m4a|aiff|aif|flac|ogg)$/i.test(filePath)) {
+            if (/\.(mp3|wav|m4a|aiff|aif|flac|ogg|aac|opus|wma|mka|ape|alac|wv|au|snd|voc|8svx|amb|caf)$/i.test(filePath)) {
                 mainWindow.webContents.send('file-dropped', [filePath]);
             }
         }
@@ -164,7 +164,8 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     const namingEngine = new BatchNamingEngine(settings.batch);
     
     // Determine output directory (with optional session folder)
-    let outputDirectory = settings.ui.outputFolder || path.join(app.getPath('documents'), 'HexbloopOutput');
+    // Use the user's configured output folder; fallback matches settings-schema default
+    let outputDirectory = settings.ui.outputFolder || path.join(os.homedir(), 'Documents', 'HexbloopOutput');
     
     // Create session folder if enabled
     const sessionFolder = namingEngine.generateSessionFolder();
@@ -195,6 +196,13 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     for (let i = 0; i < filePaths.length; i++) {
         const filePath = filePaths[i];
         try {
+            // Memory management: hint GC between files in large batches
+            // Canvas buffers and audio data can accumulate significantly
+            if (i > 0 && i % 5 === 0 && global.gc) {
+                global.gc();
+                console.log(`🧹 GC hint after ${i} files`);
+            }
+
             // Send progress update
             event.sender.send('processing-progress', {
                 current: i + 1,
@@ -294,13 +302,21 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
         }
     }
     
+    // Log batch memory usage
+    try {
+        const memInfo = process.memoryUsage();
+        const heapMB = Math.round(memInfo.heapUsed / 1024 / 1024);
+        const rssMB = Math.round(memInfo.rss / 1024 / 1024);
+        console.log(`📊 Batch complete - Memory: ${heapMB}MB heap, ${rssMB}MB RSS (${filePaths.length} files)`);
+    } catch (e) { /* non-critical */ }
+
     // Show processed files in Finder/Explorer
     if (firstSuccessfulOutput) {
         const successCount = results.filter(r => r.success).length;
         console.log(`📁 Opening output folder for ${successCount} processed file${successCount !== 1 ? 's' : ''}`);
         shell.showItemInFolder(firstSuccessfulOutput);
     }
-    
+
     return results;
 });
 

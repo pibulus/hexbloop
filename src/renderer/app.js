@@ -488,7 +488,8 @@ class HexbloopMystic {
     }
     
     isAudio(file) {
-        return /\.(mp3|wav|m4a|aiff|aif|flac|ogg)$/i.test(file.name);
+        // Match all formats supported by the backend (main.js validExtensions)
+        return /\.(mp3|wav|m4a|aiff|aif|flac|ogg|aac|opus|wma|mka|ape|alac|wv|au|snd|voc|8svx|amb|caf)$/i.test(file.name);
     }
     
     // === Audio Processing ===

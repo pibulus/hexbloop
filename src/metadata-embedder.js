@@ -49,12 +49,13 @@ class MetadataEmbedder {
             }
         };
 
-        // Add artwork if provided
-        if (artworkPath && artworkPath.endsWith('.png')) {
+        // Add artwork if provided (supports PNG and JPG)
+        if (artworkPath && /\.(png|jpe?g)$/i.test(artworkPath)) {
             try {
                 const imageBuffer = await fs.readFile(artworkPath);
+                const isJpg = /\.jpe?g$/i.test(artworkPath);
                 tags.image = {
-                    mime: 'image/png',
+                    mime: isJpg ? 'image/jpeg' : 'image/png',
                     type: {
                         id: 3, // Front cover
                         name: 'front cover'
@@ -62,7 +63,7 @@ class MetadataEmbedder {
                     description: 'Hexbloop Artwork',
                     imageBuffer: imageBuffer
                 };
-                console.log(`🎨 Embedding PNG artwork (MP3): ${artworkPath}`);
+                console.log(`🎨 Embedding ${isJpg ? 'JPG' : 'PNG'} artwork (MP3): ${artworkPath}`);
             } catch (error) {
                 console.log(`⚠️  Could not read artwork file: ${error.message}`);
             }
@@ -106,7 +107,7 @@ class MetadataEmbedder {
                 ]);
 
             // Add artwork if provided (works for FLAC, AAC/M4A, OGG)
-            if (artworkPath && artworkPath.endsWith('.png')) {
+            if (artworkPath && /\.(png|jpe?g)$/i.test(artworkPath)) {
                 const ext = path.extname(outputPath).toLowerCase();
 
                 // Different formats need different artwork embedding approaches
