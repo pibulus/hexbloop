@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { execSync, spawn } = require('child_process');
 const path = require('path');
+const binaries = require('./binary-resolver');
 
 // ===================================================================
 // 🎵 AUDIO ANALYZER - Extract features for visual generation
@@ -23,8 +24,9 @@ class AudioAnalyzer {
         };
 
         try {
-            // Get duration using ffprobe
-            const durationCmd = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${inputPath}"`;
+            // Get duration using ffprobe (bundled or system)
+            const ffprobeBin = binaries.ffprobe.path || 'ffprobe';
+            const durationCmd = `"${ffprobeBin}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${inputPath}"`;
             features.duration = parseFloat(execSync(durationCmd, { encoding: 'utf8' }).trim());
             
             // Extract waveform samples (downsample for visualization)
@@ -84,7 +86,8 @@ class AudioAnalyzer {
             const chunks = [];
             let totalBytes = 0;
 
-            const proc = spawn('ffmpeg', [
+            const ffmpegBin = binaries.ffmpeg.path || 'ffmpeg';
+            const proc = spawn(ffmpegBin, [
                 '-i', inputPath,
                 '-af', 'aresample=2000,highpass=f=200,lowpass=f=3000',
                 '-ac', '1',           // Mono - halves memory

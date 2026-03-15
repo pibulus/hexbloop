@@ -8,6 +8,11 @@ const NodeID3 = require('node-id3');
 const fs = require('fs').promises;
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
+const binaries = require('./binary-resolver');
+
+// Use resolved binary paths so metadata embedding works in packaged builds
+if (binaries.ffmpeg.path) ffmpeg.setFfmpegPath(binaries.ffmpeg.path);
+if (binaries.ffprobe.path) ffmpeg.setFfprobePath(binaries.ffprobe.path);
 
 class MetadataEmbedder {
     constructor() {

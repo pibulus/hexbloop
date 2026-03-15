@@ -585,78 +585,32 @@ ipcMain.handle('preferences-close', () => {
 });
 
 // === Startup & Dependencies ===
+const binaries = require('./src/binary-resolver');
+
 async function checkDependencies() {
-    const dependencies = ['ffmpeg', 'sox'];
-    const results = {};
-    
-    for (const dep of dependencies) {
-        results[dep] = await checkDependency(dep);
-    }
-    
+    // Use the binary resolver which checks bundled first, then system PATH
+    binaries.logStatus();
+
+    const results = {
+        ffmpeg: !!binaries.ffmpeg.path,
+        sox: !!binaries.sox.path
+    };
+
     // Store results globally for the audio processor to check
     global.availableDependencies = results;
-    
+
     // Log summary
     if (!results.sox && !results.ffmpeg) {
         console.log('⚠️ WARNING: Neither sox nor ffmpeg found. Audio processing will fail.');
-        console.log('Install with: brew install sox ffmpeg');
+        console.log('Run "npm run vendor:setup" to download bundled binaries,');
+        console.log('or install with: brew install sox ffmpeg');
     } else if (!results.ffmpeg) {
         console.log('⚠️ FFmpeg not found. Using sox fallback (lower quality mastering)');
-        console.log('For best results, install with: brew install ffmpeg');
+    } else if (!results.sox) {
+        console.log('ℹ️ Sox not found - FFmpeg will handle all processing (this is fine!)');
     }
-    
-    return results;
-}
 
-function checkDependency(command) {
-    return new Promise((resolve) => {
-        // FFmpeg uses -version, sox uses --version
-        const versionFlag = command === 'sox' ? '--version' : '-version';
-        const process = spawn(command, [versionFlag], { 
-            stdio: ['ignore', 'pipe', 'pipe'],
-            shell: false 
-        });
-        
-        let resolved = false;
-        let stdout = '';
-        let stderr = '';
-        
-        process.stdout.on('data', (data) => {
-            stdout += data.toString();
-        });
-        
-        process.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-        
-        process.on('close', (code) => {
-            if (!resolved) {
-                resolved = true;
-                // FFmpeg returns 0 and outputs to stderr, sox returns 0 and outputs to stdout
-                const available = code === 0 || (command === 'ffmpeg' && stderr.includes('version'));
-                console.log(available ? `✅ ${command} is available` : `⚠️ ${command} not found (code: ${code})`);
-                resolve(available);
-            }
-        });
-        
-        process.on('error', (err) => {
-            if (!resolved) {
-                resolved = true;
-                console.log(`⚠️ ${command} not found in PATH`);
-                resolve(false);
-            }
-        });
-        
-        // Timeout after 2 seconds
-        setTimeout(() => {
-            if (!resolved) {
-                resolved = true;
-                process.kill();
-                console.log(`⚠️ ${command} check timed out`);
-                resolve(false);
-            }
-        }, 2000);
-    });
+    return results;
 }
 
 // === Error Handling ===

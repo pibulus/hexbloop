@@ -17,6 +17,7 @@ const VibrantRefinedArtworkGenerator = require('./artwork-generator-vibrant-refi
 const MetadataEmbedder = require('./metadata-embedder');
 const AudioAnalyzer = require('./audio-analyzer');
 const { getPreferencesManager } = require('./menu/preferences');
+const binaries = require('./binary-resolver');
 
 const DEFAULT_COMPRESSION_PROFILE = {
     overdrive: 4.0,
@@ -26,18 +27,13 @@ const DEFAULT_COMPRESSION_PROFILE = {
     compand: { attack: 0.2, ratio: 5 }
 };
 
-// Try to auto-detect ffmpeg path for macOS (homebrew installations)
-try {
-    const ffmpegPath = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
-    const ffprobePath = execSync('which ffprobe', { encoding: 'utf8' }).trim();
-    
-    if (ffmpegPath && ffprobePath) {
-        ffmpeg.setFfmpegPath(ffmpegPath);
-        ffmpeg.setFfprobePath(ffprobePath);
-        console.log(`🎬 FFmpeg configured: ${ffmpegPath}`);
-    }
-} catch (error) {
-    console.log('⚠️ Could not auto-detect ffmpeg path, using system default');
+// Configure fluent-ffmpeg with resolved binary paths (bundled or system)
+if (binaries.ffmpeg.path) {
+    ffmpeg.setFfmpegPath(binaries.ffmpeg.path);
+    console.log(`🎬 FFmpeg: ${binaries.ffmpeg.bundled ? '(bundled)' : '(system)'} ${binaries.ffmpeg.path}`);
+}
+if (binaries.ffprobe.path) {
+    ffmpeg.setFfprobePath(binaries.ffprobe.path);
 }
 
 class AudioProcessor {
@@ -258,7 +254,8 @@ class AudioProcessor {
             // Sox effects chain with lunar-influenced parameters
             // BEST PRACTICE: gain -h provides headroom BEFORE effects, gain -r reclaims AFTER
             // This prevents clipping from cascading effects
-            const soxProcess = spawn('sox', [
+            const soxBin = binaries.sox.path || 'sox';
+            const soxProcess = spawn(soxBin, [
                 inputPath,
                 outputPath,
                 'gain', '-h',                             // Add headroom BEFORE effects (prevents clipping)
