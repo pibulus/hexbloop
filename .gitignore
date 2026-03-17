@@ -100,6 +100,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Vendor binaries (downloaded via npm run vendor:setup, not committed)
+vendor/mac/
+vendor/win/
+vendor/linux/
+
 # Electron distribution (keep docs/scripts, ignore built files)
 dist/*.zip
 dist/*.dmg

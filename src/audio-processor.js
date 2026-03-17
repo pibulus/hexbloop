@@ -17,6 +17,7 @@ const VibrantRefinedArtworkGenerator = require('./artwork-generator-vibrant-refi
 const MetadataEmbedder = require('./metadata-embedder');
 const AudioAnalyzer = require('./audio-analyzer');
 const { getPreferencesManager } = require('./menu/preferences');
+const binaries = require('./binary-resolver');
 
 const DEFAULT_COMPRESSION_PROFILE = {
     overdrive: 4.0,
@@ -26,18 +27,13 @@ const DEFAULT_COMPRESSION_PROFILE = {
     compand: { attack: 0.2, ratio: 5 }
 };
 
-// Try to auto-detect ffmpeg path for macOS (homebrew installations)
-try {
-    const ffmpegPath = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
-    const ffprobePath = execSync('which ffprobe', { encoding: 'utf8' }).trim();
-    
-    if (ffmpegPath && ffprobePath) {
-        ffmpeg.setFfmpegPath(ffmpegPath);
-        ffmpeg.setFfprobePath(ffprobePath);
-        console.log(`🎬 FFmpeg configured: ${ffmpegPath}`);
-    }
-} catch (error) {
-    console.log('⚠️ Could not auto-detect ffmpeg path, using system default');
+// Configure fluent-ffmpeg with resolved binary paths (bundled or system)
+if (binaries.ffmpeg.path) {
+    ffmpeg.setFfmpegPath(binaries.ffmpeg.path);
+    console.log(`🎬 FFmpeg: ${binaries.ffmpeg.bundled ? '(bundled)' : '(system)'} ${binaries.ffmpeg.path}`);
+}
+if (binaries.ffprobe.path) {
+    ffmpeg.setFfprobePath(binaries.ffprobe.path);
 }
 
 class AudioProcessor {
@@ -107,8 +103,11 @@ class AudioProcessor {
             // Step 3: Generate artwork (conditional)
             if (processingConfig.stages.coverArt) {
                 console.log('🎨 Generating mystical artwork...');
-                const artworkPath = path.join(path.dirname(outputPath), `${finalName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.png`);
-                
+                // Respect artwork format setting (png or jpg)
+                const artworkFormat = settings?.artwork?.imageFormat || 'png';
+                const artworkExt = artworkFormat === 'jpg' ? 'jpg' : 'png';
+                const artworkPath = path.join(tempDir, `${finalName.replace(/[^a-zA-Z0-9]/g, '_')}_artwork.${artworkExt}`);
+
                 // Get moon phase for artwork generation
                 const moonData = LunarProcessor.getMoonPhase();
                 const moonPhase = typeof moonData === 'object' ? moonData.phase : moonData;
@@ -171,8 +170,8 @@ class AudioProcessor {
                     tempo: audioFeatures ? audioFeatures.tempo : 120
                 });
                 
-                // Save the artwork as PNG
-                await artworkGenerator.saveToFile(artworkPath, 'png');
+                // Save the artwork in the user's chosen format
+                await artworkGenerator.saveToFile(artworkPath, artworkExt);
                 
                 artworkResult = {
                     pngPath: artworkPath,
@@ -213,15 +212,7 @@ class AudioProcessor {
                 artworkResult?.pngPath
             );
 
-            // Clean up artwork files if they exist (outside temp dir)
-            try {
-                if (artworkResult && artworkResult.pngPath && fs.existsSync(artworkResult.pngPath)) {
-                    fs.unlinkSync(artworkResult.pngPath);
-                    console.log('🧹 Cleaned up PNG artwork file');
-                }
-            } catch (cleanupError) {
-                console.log('⚠️  Could not clean up artwork files:', cleanupError.message);
-            }
+            // Artwork files are now in tempDir and cleaned up automatically by the finally block
 
             console.log(`✅ Successfully processed: ${path.basename(outputPath)}`);
             return {
@@ -263,7 +254,8 @@ class AudioProcessor {
             // Sox effects chain with lunar-influenced parameters
             // BEST PRACTICE: gain -h provides headroom BEFORE effects, gain -r reclaims AFTER
             // This prevents clipping from cascading effects
-            const soxProcess = spawn('sox', [
+            const soxBin = binaries.sox.path || 'sox';
+            const soxProcess = spawn(soxBin, [
                 inputPath,
                 outputPath,
                 'gain', '-h',                             // Add headroom BEFORE effects (prevents clipping)
@@ -455,11 +447,12 @@ class AudioProcessor {
                     break;
                     
                 default:
-                    // Default to MP3
+                    // Default to MP3 with user's configured bitrate
+                    const defaultBitrate = settings?.output?.mp3Bitrate || 192;
                     command = command
                         .format('mp3')
                         .audioCodec('libmp3lame')
-                        .audioBitrate('320k');
+                        .audioBitrate(`${defaultBitrate}k`);
             }
             
             command

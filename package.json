@@ -12,7 +12,8 @@
     "dist:all": "electron-builder --mac --win --linux",
     "clean": "rm -rf node_modules package-lock.json",
     "clean:install": "npm run clean && npm install",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "vendor:setup": "node scripts/download-vendor-binaries.js"
   },
   "keywords": [
     "audio",
@@ -57,7 +58,10 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extraResources": [
+        { "from": "vendor/mac/", "to": "vendor/mac/" }
+      ]
     },
     "dmg": {
       "contents": [
@@ -75,11 +79,17 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "extraResources": [
+        { "from": "vendor/win/", "to": "vendor/win/" }
+      ]
     },
     "linux": {
       "target": "AppImage",
-      "icon": "assets"
+      "icon": "assets",
+      "extraResources": [
+        { "from": "vendor/linux/", "to": "vendor/linux/" }
+      ]
     }
   },
   "dependencies": {

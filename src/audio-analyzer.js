@@ -1,6 +1,7 @@
 const fs = require('fs');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 const path = require('path');
+const binaries = require('./binary-resolver');
 
 // ===================================================================
 // 🎵 AUDIO ANALYZER - Extract features for visual generation
@@ -23,17 +24,19 @@ class AudioAnalyzer {
         };
 
         try {
-            // Get duration using ffprobe
-            const durationCmd = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${inputPath}"`;
+            // Get duration using ffprobe (bundled or system)
+            const ffprobeBin = binaries.ffprobe.path || 'ffprobe';
+            const durationCmd = `"${ffprobeBin}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${inputPath}"`;
             features.duration = parseFloat(execSync(durationCmd, { encoding: 'utf8' }).trim());
             
             // Extract waveform samples (downsample for visualization)
             // We want ~360 samples for circular visualization
             const samples = 360;
-            const waveformCmd = `ffmpeg -i "${inputPath}" -af "aresample=8000,highpass=f=200,lowpass=f=3000" -f f32le -acodec pcm_f32le - 2>/dev/null`;
-            
+
             try {
-                const waveformBuffer = execSync(waveformCmd, { maxBuffer: 10 * 1024 * 1024 });
+                // Stream audio data with a memory cap instead of buffering entire file
+                // Downsample to 2kHz mono - keeps memory under ~1MB even for long files
+                const waveformBuffer = await this.extractWaveformStream(inputPath);
                 features.waveform = this.extractWaveformPeaks(waveformBuffer, samples);
                 features.energy = this.calculateEnergy(features.waveform);
                 features.peaks = this.findPeaks(features.waveform);
@@ -71,6 +74,60 @@ class AudioAnalyzer {
         }
 
         return features;
+    }
+
+    /**
+     * Stream-based waveform extraction with memory cap
+     * Downsamples to 2kHz mono to keep memory under ~1MB for any file length
+     */
+    static extractWaveformStream(inputPath) {
+        return new Promise((resolve, reject) => {
+            const MAX_BYTES = 1024 * 1024; // 1MB cap
+            const chunks = [];
+            let totalBytes = 0;
+
+            const ffmpegBin = binaries.ffmpeg.path || 'ffmpeg';
+            const proc = spawn(ffmpegBin, [
+                '-i', inputPath,
+                '-af', 'aresample=2000,highpass=f=200,lowpass=f=3000',
+                '-ac', '1',           // Mono - halves memory
+                '-f', 'f32le',
+                '-acodec', 'pcm_f32le',
+                '-v', 'error',
+                '-'                    // Output to stdout
+            ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+            proc.stdout.on('data', (chunk) => {
+                if (totalBytes < MAX_BYTES) {
+                    const remaining = MAX_BYTES - totalBytes;
+                    chunks.push(remaining >= chunk.length ? chunk : chunk.subarray(0, remaining));
+                    totalBytes += chunk.length;
+                }
+                // Data beyond the cap is discarded - we have enough for analysis
+            });
+
+            proc.on('close', (code) => {
+                if (chunks.length > 0) {
+                    resolve(Buffer.concat(chunks));
+                } else {
+                    reject(new Error(`FFmpeg waveform extraction failed (code ${code})`));
+                }
+            });
+
+            proc.on('error', reject);
+
+            // Kill if it takes too long (30s timeout)
+            const timeout = setTimeout(() => {
+                proc.kill('SIGTERM');
+                if (chunks.length > 0) {
+                    resolve(Buffer.concat(chunks));
+                } else {
+                    reject(new Error('Waveform extraction timed out'));
+                }
+            }, 30000);
+
+            proc.on('close', () => clearTimeout(timeout));
+        });
     }
 
     /**

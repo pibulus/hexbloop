@@ -68,7 +68,7 @@ function createWindow() {
             const filePath = decodeURIComponent(parsedUrl.pathname);
             console.log('🔍 Detected file drag:', filePath);
             
-            if (/\.(mp3|wav|m4a|aiff|aif|flac|ogg)$/i.test(filePath)) {
+            if (/\.(mp3|wav|m4a|aiff|aif|flac|ogg|aac|opus|wma|mka|ape|alac|wv|au|snd|voc|8svx|amb|caf)$/i.test(filePath)) {
                 mainWindow.webContents.send('file-dropped', [filePath]);
             }
         }
@@ -164,7 +164,8 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     const namingEngine = new BatchNamingEngine(settings.batch);
     
     // Determine output directory (with optional session folder)
-    let outputDirectory = settings.ui.outputFolder || path.join(app.getPath('documents'), 'HexbloopOutput');
+    // Use the user's configured output folder; fallback matches settings-schema default
+    let outputDirectory = settings.ui.outputFolder || path.join(os.homedir(), 'Documents', 'HexbloopOutput');
     
     // Create session folder if enabled
     const sessionFolder = namingEngine.generateSessionFolder();
@@ -195,6 +196,13 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     for (let i = 0; i < filePaths.length; i++) {
         const filePath = filePaths[i];
         try {
+            // Memory management: hint GC between files in large batches
+            // Canvas buffers and audio data can accumulate significantly
+            if (i > 0 && i % 5 === 0 && global.gc) {
+                global.gc();
+                console.log(`🧹 GC hint after ${i} files`);
+            }
+
             // Send progress update
             event.sender.send('processing-progress', {
                 current: i + 1,
@@ -294,13 +302,21 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
         }
     }
     
+    // Log batch memory usage
+    try {
+        const memInfo = process.memoryUsage();
+        const heapMB = Math.round(memInfo.heapUsed / 1024 / 1024);
+        const rssMB = Math.round(memInfo.rss / 1024 / 1024);
+        console.log(`📊 Batch complete - Memory: ${heapMB}MB heap, ${rssMB}MB RSS (${filePaths.length} files)`);
+    } catch (e) { /* non-critical */ }
+
     // Show processed files in Finder/Explorer
     if (firstSuccessfulOutput) {
         const successCount = results.filter(r => r.success).length;
         console.log(`📁 Opening output folder for ${successCount} processed file${successCount !== 1 ? 's' : ''}`);
         shell.showItemInFolder(firstSuccessfulOutput);
     }
-    
+
     return results;
 });
 
@@ -569,78 +585,32 @@ ipcMain.handle('preferences-close', () => {
 });
 
 // === Startup & Dependencies ===
+const binaries = require('./src/binary-resolver');
+
 async function checkDependencies() {
-    const dependencies = ['ffmpeg', 'sox'];
-    const results = {};
-    
-    for (const dep of dependencies) {
-        results[dep] = await checkDependency(dep);
-    }
-    
+    // Use the binary resolver which checks bundled first, then system PATH
+    binaries.logStatus();
+
+    const results = {
+        ffmpeg: !!binaries.ffmpeg.path,
+        sox: !!binaries.sox.path
+    };
+
     // Store results globally for the audio processor to check
     global.availableDependencies = results;
-    
+
     // Log summary
     if (!results.sox && !results.ffmpeg) {
         console.log('⚠️ WARNING: Neither sox nor ffmpeg found. Audio processing will fail.');
-        console.log('Install with: brew install sox ffmpeg');
+        console.log('Run "npm run vendor:setup" to download bundled binaries,');
+        console.log('or install with: brew install sox ffmpeg');
     } else if (!results.ffmpeg) {
         console.log('⚠️ FFmpeg not found. Using sox fallback (lower quality mastering)');
-        console.log('For best results, install with: brew install ffmpeg');
+    } else if (!results.sox) {
+        console.log('ℹ️ Sox not found - FFmpeg will handle all processing (this is fine!)');
     }
-    
-    return results;
-}
 
-function checkDependency(command) {
-    return new Promise((resolve) => {
-        // FFmpeg uses -version, sox uses --version
-        const versionFlag = command === 'sox' ? '--version' : '-version';
-        const process = spawn(command, [versionFlag], { 
-            stdio: ['ignore', 'pipe', 'pipe'],
-            shell: false 
-        });
-        
-        let resolved = false;
-        let stdout = '';
-        let stderr = '';
-        
-        process.stdout.on('data', (data) => {
-            stdout += data.toString();
-        });
-        
-        process.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-        
-        process.on('close', (code) => {
-            if (!resolved) {
-                resolved = true;
-                // FFmpeg returns 0 and outputs to stderr, sox returns 0 and outputs to stdout
-                const available = code === 0 || (command === 'ffmpeg' && stderr.includes('version'));
-                console.log(available ? `✅ ${command} is available` : `⚠️ ${command} not found (code: ${code})`);
-                resolve(available);
-            }
-        });
-        
-        process.on('error', (err) => {
-            if (!resolved) {
-                resolved = true;
-                console.log(`⚠️ ${command} not found in PATH`);
-                resolve(false);
-            }
-        });
-        
-        // Timeout after 2 seconds
-        setTimeout(() => {
-            if (!resolved) {
-                resolved = true;
-                process.kill();
-                console.log(`⚠️ ${command} check timed out`);
-                resolve(false);
-            }
-        }, 2000);
-    });
+    return results;
 }
 
 // === Error Handling ===
