@@ -6,7 +6,6 @@
 
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const NameGenerator = require('../name-generator');
 const LunarProcessor = require('../lunar-processor');
 
@@ -82,6 +81,11 @@ class BatchNamingEngine {
         
         // Add base name
         parts.push(baseName);
+
+        // Optionally append the original source filename for context
+        if (this.settings.preserveOriginal && this.settings.namingScheme !== 'preserve') {
+            parts.push(originalName);
+        }
         
         // Add numbering if enabled and not already in name
         if (this.settings.numberingStyle !== 'none' && 
@@ -120,7 +124,9 @@ class BatchNamingEngine {
      * Generate sequential name (track_001, track_002, etc.)
      */
     generateSequentialName(index) {
-        const number = this.generateNumber(index);
+        const number = this.settings.numberingStyle === 'none'
+            ? String(index + 1).padStart(this.settings.numberingPadding, '0')
+            : this.generateNumber(index);
         return `track${this.settings.separator}${number}`;
     }
     
@@ -149,12 +155,6 @@ class BatchNamingEngine {
      */
     generateHybridName(index) {
         const mystical = NameGenerator.generateCleanName();
-        const number = this.generateNumber(index);
-        
-        if (number && this.settings.numberingStyle !== 'none') {
-            return `${mystical}${this.settings.separator}${number}`;
-        }
-        
         return mystical;
     }
     
@@ -162,9 +162,6 @@ class BatchNamingEngine {
      * Preserve original filename with optional hexbloop marker
      */
     preserveOriginalName(originalName) {
-        if (this.settings.preserveOriginal) {
-            return `${originalName}${this.settings.separator}hexblooped`;
-        }
         return originalName;
     }
     
@@ -227,11 +224,12 @@ class BatchNamingEngine {
     /**
      * Generate session folder name based on scheme
      */
-    generateSessionFolder() {
+    generateSessionFolder(options = {}) {
         if (!this.settings.sessionFolders) {
             return null;
         }
 
+        const { increment = true } = options;
         const date = this.sessionTimestamp;
 
         switch (this.settings.folderScheme) {
@@ -242,7 +240,7 @@ class BatchNamingEngine {
                     String(date.getMonth() + 1).padStart(2, '0'),
                     String(date.getDate()).padStart(2, '0')
                 ].join('-');
-                const dailyCounter = this.getAndIncrementDailyCounter(dateStr);
+                const dailyCounter = this.getDailyCounter(dateStr, increment);
                 return `${dateStr}_session_${String(dailyCounter).padStart(2, '0')}`;
 
             case 'lunar':
@@ -252,12 +250,12 @@ class BatchNamingEngine {
                     'unknown_phase';
                 const lunarDateStr = `${date.getFullYear()}_${String(date.getMonth() + 1).padStart(2, '0')}_${String(date.getDate()).padStart(2, '0')}`;
                 const lunarKey = `lunar_${phaseName}_${lunarDateStr}`;
-                const lunarCounter = this.getAndIncrementDailyCounter(lunarKey);
+                const lunarCounter = this.getDailyCounter(lunarKey, increment);
                 return `${lunarKey}_${String(lunarCounter).padStart(2, '0')}`;
 
             case 'counter':
                 // session_042
-                const globalCounter = this.getAndIncrementGlobalCounter();
+                const globalCounter = this.getGlobalCounter(increment);
                 return `session_${String(globalCounter).padStart(3, '0')}`;
 
             default:
@@ -309,24 +307,32 @@ class BatchNamingEngine {
     /**
      * Get and increment counter for a specific date/key
      */
-    getAndIncrementDailyCounter(key) {
+    getDailyCounter(key, increment = true) {
         const counters = this.loadCounters();
         const currentCount = counters.daily[key] || 0;
-        const newCount = currentCount + 1;
-        counters.daily[key] = newCount;
-        this.saveCounters(counters);
-        return newCount;
+        const nextCount = currentCount + 1;
+
+        if (increment) {
+            counters.daily[key] = nextCount;
+            this.saveCounters(counters);
+        }
+
+        return nextCount;
     }
 
     /**
      * Get and increment global session counter
      */
-    getAndIncrementGlobalCounter() {
+    getGlobalCounter(increment = true) {
         const counters = this.loadCounters();
-        const newCount = (counters.global || 0) + 1;
-        counters.global = newCount;
-        this.saveCounters(counters);
-        return newCount;
+        const nextCount = (counters.global || 0) + 1;
+
+        if (increment) {
+            counters.global = nextCount;
+            this.saveCounters(counters);
+        }
+
+        return nextCount;
     }
     
     /**
@@ -369,12 +375,14 @@ class BatchNamingEngine {
      * @param {string} outputFormat - Desired output format (mp3, wav, flac, etc.)
      */
     previewBatch(filePaths, outputFormat = 'mp3') {
+        const sessionFolder = this.generateSessionFolder({ increment: false });
+
         return filePaths.map((filePath, index) => {
             const name = this.generateName(filePath, index, filePaths.length);
             return {
                 original: path.basename(filePath),
                 generated: `${name}.${outputFormat}`,
-                folder: this.generateSessionFolder()
+                folder: sessionFolder
             };
         });
     }

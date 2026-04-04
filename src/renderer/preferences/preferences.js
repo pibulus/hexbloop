@@ -315,6 +315,36 @@ class PreferencesController {
             if (isNaN(num)) return 50; // Default to 50
             return Math.min(100, Math.max(0, num)); // Clamp to 0-100
         }
+
+        if (settingPath === 'artwork.compressionLevel') {
+            const num = parseInt(value);
+            if (isNaN(num)) return 6;
+            return Math.min(9, Math.max(0, num));
+        }
+
+        if (settingPath === 'artwork.resolution') {
+            const num = parseInt(value);
+            if (isNaN(num)) return 1000;
+            return Math.min(4096, Math.max(256, num));
+        }
+
+        if (settingPath === 'batch.numberingPadding') {
+            const num = parseInt(value);
+            if (isNaN(num)) return 3;
+            return Math.min(6, Math.max(1, num));
+        }
+
+        if (settingPath === 'output.mp3Bitrate') {
+            const num = parseInt(value);
+            if (isNaN(num)) return 192;
+            return Math.min(320, Math.max(96, num));
+        }
+
+        if (settingPath === 'output.sampleRate') {
+            const num = parseInt(value);
+            if (isNaN(num)) return 0;
+            return Math.min(192000, Math.max(0, num));
+        }
         
         // Handle metadata fields
         if (settingPath.startsWith('metadata.')) {
@@ -429,6 +459,23 @@ class PreferencesController {
     }
 
     updateBatchOptionsUI() {
+        const namingMode = this.getSettingValue('processing.naming');
+        const batchSection = document.getElementById('batch-naming-section');
+        const batchSectionDisabled = namingMode === 'original';
+        const batchControls = batchSection ? batchSection.querySelectorAll('input, select') : [];
+
+        if (batchSection) {
+            batchSection.classList.toggle('disabled', batchSectionDisabled);
+        }
+
+        batchControls.forEach(control => {
+            control.disabled = batchSectionDisabled;
+        });
+
+        if (batchSectionDisabled) {
+            return;
+        }
+
         const numberingStyle = this.getSettingValue('batch.numberingStyle');
         const numberingPaddingField = this.settingElements.get('batch.numberingPadding');
         if (numberingPaddingField) {
@@ -452,6 +499,16 @@ class PreferencesController {
         const folderSchemeWrapper = document.getElementById('batch-folder-scheme-wrapper');
         if (folderSchemeWrapper) {
             folderSchemeWrapper.classList.toggle('disabled', !sessionFoldersEnabled);
+        }
+
+        const preserveOriginalToggle = this.settingElements.get('batch.preserveOriginal');
+        const preserveOriginalCard = document.getElementById('batch-preserve-original-card');
+        const usingPreserveScheme = this.getSettingValue('batch.namingScheme') === 'preserve';
+        if (preserveOriginalToggle) {
+            preserveOriginalToggle.disabled = usingPreserveScheme;
+        }
+        if (preserveOriginalCard) {
+            preserveOriginalCard.classList.toggle('disabled', usingPreserveScheme);
         }
     }
     
@@ -586,6 +643,9 @@ class PreferencesController {
      */
     sanitizeImportData(data) {
         const sanitized = {};
+        const sourceSettings = data?.settings && typeof data.settings === 'object'
+            ? data.settings
+            : data;
         
         // Define allowed settings structure
         const allowedPaths = [
@@ -597,13 +657,37 @@ class PreferencesController {
             'metadata.album',
             'metadata.year',
             'metadata.genre',
-            'ui.outputFolder'
+            'batch.namingScheme',
+            'batch.prefix',
+            'batch.suffix',
+            'batch.numberingStyle',
+            'batch.numberingPadding',
+            'batch.separator',
+            'batch.preserveOriginal',
+            'batch.sessionFolders',
+            'batch.folderScheme',
+            'output.format',
+            'output.quality',
+            'output.mp3Bitrate',
+            'output.sampleRate',
+            'artwork.defaultStyle',
+            'artwork.energySensitivity',
+            'artwork.tempoInfluence',
+            'artwork.colorVariation',
+            'artwork.useAudioFeatures',
+            'artwork.useMoonPhase',
+            'artwork.useFileNames',
+            'artwork.compressionLevel',
+            'artwork.imageFormat',
+            'artwork.resolution',
+            'ui.outputFolder',
+            'ui.ambientAudio'
         ];
         
         // Process each allowed path
         for (const path of allowedPaths) {
             const pathParts = path.split('.');
-            let sourceValue = data;
+            let sourceValue = sourceSettings;
             let targetObj = sanitized;
             
             // Navigate to the value in source data
@@ -631,7 +715,7 @@ class PreferencesController {
             }
         }
         
-        return sanitized;
+        return { settings: sanitized };
     }
     
     async chooseOutputFolder() {

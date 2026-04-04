@@ -117,8 +117,8 @@
             <div class="tab-panel" id="naming-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title" id="file-naming-title">File Naming</h2>
-                    <div class="section-description">Choose how to name your processed audio files</div>
+                    <h2 class="section-title" id="file-naming-title">Naming & Metadata</h2>
+                    <div class="section-description">Choose how Hexbloop names files and whether it embeds your custom tags</div>
                 </div>
                 
                 <div class="radio-cards" role="radiogroup" aria-labelledby="file-naming-title">
@@ -130,8 +130,8 @@
                                data-setting="processing.naming"
                                aria-describedby="naming-mystical-desc">
                         <div class="radio-content">
-                            <h3>Generated Names</h3>
-                            <p id="naming-mystical-desc">Unique names inspired by the audio and lunar phase (e.g. CRYSTALWAVE4400)</p>
+                            <h3>Generated Output Names</h3>
+                            <p id="naming-mystical-desc">Use Hexbloop's generated naming patterns for saved files</p>
                         </div>
                         <div class="radio-indicator" aria-hidden="true"></div>
                     </label>
@@ -144,8 +144,8 @@
                                data-setting="processing.naming"
                                aria-describedby="naming-custom-desc">
                         <div class="radio-content">
-                            <h3>Custom Metadata</h3>
-                            <p id="naming-custom-desc">Use your specified artist and album information below</p>
+                            <h3>Custom Metadata Tags</h3>
+                            <p id="naming-custom-desc">Keep your current filename pattern, but embed the artist and album details below</p>
                         </div>
                         <div class="radio-indicator" aria-hidden="true"></div>
                     </label>
@@ -158,8 +158,8 @@
                                data-setting="processing.naming"
                                aria-describedby="naming-original-desc">
                         <div class="radio-content">
-                            <h3>Original Filenames</h3>
-                            <p id="naming-original-desc">Keep the original filename unchanged</p>
+                            <h3>Keep Original Filenames</h3>
+                            <p id="naming-original-desc">Save output files with the source filename instead of generated names</p>
                         </div>
                         <div class="radio-indicator" aria-hidden="true"></div>
                     </label>
@@ -226,8 +226,8 @@
             <!-- Batch Naming Options -->
             <section class="preference-section" id="batch-naming-section">
                 <div class="section-header">
-                    <h2 class="section-title">Batch Naming Options</h2>
-                    <div class="section-description">Blend mystical names with prefixes, numbering, and optional session folders</div>
+                    <h2 class="section-title">Batch Filename Pattern</h2>
+                    <div class="section-description">Applies when Hexbloop is generating output names instead of keeping the originals</div>
                 </div>
 
                 <div class="form-row">
@@ -279,11 +279,11 @@
                 </div>
 
                 <div class="settings-grid" style="margin-top: 20px;">
-                    <div class="setting-card">
+                    <div class="setting-card" id="batch-preserve-original-card">
                         <label class="setting-toggle" for="batch-preserve-original">
                             <div class="setting-info">
-                                <h3>Include Original Name</h3>
-                                <p>Append the source filename to the generated name</p>
+                                <h3>Append Source Filename</h3>
+                                <p>Add the original filename after the generated name for extra context</p>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" id="batch-preserve-original" data-setting="batch.preserveOriginal">
@@ -319,7 +319,7 @@
 
             <section class="info-panel compact">
                 <h4>Naming Tips</h4>
-                <p>"Generated" pulls from moon phases + audio, "Custom" uses your artist metadata, and "Original" keeps the file name exactly.</p>
+                <p>"Generated" uses the batch filename pattern below, "Custom Metadata Tags" affects embedded tags, and "Keep Original Filenames" bypasses generated naming.</p>
             </section>
             </div>
 

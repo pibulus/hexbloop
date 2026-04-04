@@ -38,7 +38,7 @@ class VibrantRefinedArtworkGenerator {
     // ENHANCED COLOR PALETTES WITH VARIATIONS
     // ===================================================================
     
-    getPalette(style, audioEnergy = 0.5, tempo = 120) {
+    getPalette(style, audioEnergy = 0.5, tempo = 120, colorVariation = 0.5) {
         const palettes = {
             'neon-plasma': [
                 // Variation 1: Electric neon
@@ -119,21 +119,24 @@ class VibrantRefinedArtworkGenerator {
             variationIndex = 1; // Medium = balanced
         }
         
-        // Add 30% chance to randomly pick any variation
-        if (Math.random() < 0.3) {
+        // Higher color variation means less deterministic palette choice
+        const variationChance = 0.1 + (Math.max(0, Math.min(1, colorVariation)) * 0.6);
+        if (Math.random() < variationChance) {
             variationIndex = Math.floor(Math.random() * stylePalettes.length);
         }
         
         let selectedPalette = [...stylePalettes[variationIndex]];
         
-        // Shuffle colors for variety
-        for (let i = selectedPalette.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+        // Shuffle colors for variety, scaled by the requested variation amount
+        const shufflePasses = Math.max(1, Math.round(colorVariation * selectedPalette.length));
+        for (let pass = 0; pass < shufflePasses; pass++) {
+            const i = Math.floor(Math.random() * selectedPalette.length);
+            const j = Math.floor(Math.random() * selectedPalette.length);
             [selectedPalette[i], selectedPalette[j]] = [selectedPalette[j], selectedPalette[i]];
         }
         
         // Add accent colors (10% chance)
-        if (Math.random() < 0.1) {
+        if (Math.random() < (0.05 + (colorVariation * 0.2))) {
             const accentColors = ['#FFD700', '#FF1493', '#00FF00', '#FF00FF', '#00FFFF'];
             selectedPalette.push(accentColors[Math.floor(Math.random() * accentColors.length)]);
         }
@@ -913,6 +916,7 @@ class VibrantRefinedArtworkGenerator {
             audioEnergy = 0.5,
             tempo = 120,
             moonPhase = 0.5,
+            colorVariation = 0.5,
             title = ''
         } = options;
 
@@ -939,7 +943,7 @@ class VibrantRefinedArtworkGenerator {
         };
         
         // Get palette with variations (use validated parameters)
-        const colors = this.getPalette(style, validatedEnergy, validatedTempo);
+        const colors = this.getPalette(style, validatedEnergy, validatedTempo, colorVariation);
         
         // Clear canvas with subtle gradient
         const bgGradient = this.ctx.createRadialGradient(

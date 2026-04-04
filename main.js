@@ -162,6 +162,7 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     
     // Initialize batch naming engine with user preferences
     const namingEngine = new BatchNamingEngine(settings.batch);
+    const keepOriginalFilenames = settings.processing.naming === 'original';
     
     // Determine output directory (with optional session folder)
     // Use the user's configured output folder; fallback matches settings-schema default
@@ -245,8 +246,10 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
                 throw new Error(`Unsupported audio format: ${ext}. Supported: ${validExtensions.slice(0, 8).join(', ')} and more.`);
             }
             
-            // Generate name using batch naming engine
-            const generatedName = namingEngine.generateName(resolvedPath, i, filePaths.length);
+            // Generate output filename according to the current naming mode
+            const generatedName = keepOriginalFilenames
+                ? path.parse(resolvedPath).name
+                : namingEngine.generateName(resolvedPath, i, filePaths.length);
             const outputFormat = settings.output.format || 'mp3';
             const outputPath = path.join(outputDirectory, `${generatedName}.${outputFormat}`);
             
@@ -326,6 +329,17 @@ ipcMain.handle('preview-batch-naming', async (event, filePaths) => {
     const settings = preferencesManager.getSettings();
     const namingEngine = new BatchNamingEngine(settings.batch);
     const outputFormat = settings.output.format || 'mp3';
+    const keepOriginalFilenames = settings.processing.naming === 'original';
+
+    if (keepOriginalFilenames) {
+        const sessionFolder = namingEngine.generateSessionFolder({ increment: false });
+
+        return filePaths.map(filePath => ({
+            original: path.basename(filePath),
+            generated: `${path.parse(filePath).name}.${outputFormat}`,
+            folder: sessionFolder
+        }));
+    }
 
     return namingEngine.previewBatch(filePaths, outputFormat);
 });

@@ -41,12 +41,14 @@ class MetadataEmbedder {
         // First copy the file to output location
         await fs.copyFile(inputPath, outputPath);
 
+        const resolvedYear = metadata.year || metadata.date || new Date().getFullYear().toString();
+
         // Build ID3 tags
         const tags = {
             title: metadata.title || 'Unknown Title',
             artist: metadata.artist || 'Unknown Artist',
             album: metadata.album || 'Unknown Album',
-            year: metadata.date || new Date().getFullYear().toString(),
+            year: resolvedYear.toString(),
             genre: metadata.genre || 'Electronic',
             comment: {
                 language: 'eng',
@@ -98,6 +100,8 @@ class MetadataEmbedder {
         return new Promise((resolve, reject) => {
             console.log(`🎵 Embedding metadata via FFmpeg: ${metadata.artist} - ${metadata.title}`);
 
+            const resolvedYear = metadata.year || metadata.date || new Date().getFullYear();
+
             let command = ffmpeg(inputPath);
 
             // Add metadata tags
@@ -106,7 +110,7 @@ class MetadataEmbedder {
                     `-metadata title="${this.escapeMetadata(metadata.title || 'Unknown Title')}"`,
                     `-metadata artist="${this.escapeMetadata(metadata.artist || 'Unknown Artist')}"`,
                     `-metadata album="${this.escapeMetadata(metadata.album || 'Unknown Album')}"`,
-                    `-metadata date="${metadata.date || new Date().getFullYear()}"`,
+                    `-metadata date="${resolvedYear}"`,
                     `-metadata genre="${this.escapeMetadata(metadata.genre || 'Electronic')}"`,
                     `-metadata comment="${this.escapeMetadata(metadata.comment || 'Processed with Hexbloop')}"`
                 ]);

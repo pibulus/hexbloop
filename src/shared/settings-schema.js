@@ -41,7 +41,7 @@ const DEFAULT_SETTINGS = {
         sampleRate: 0                 // 0 = preserve original, or 44100, 48000, etc.
     },
     artwork: {
-        defaultStyle: 'auto',         // 'auto' | 'neon-grid' | 'sunset-liquid' | 'cosmic-void' | etc.
+        defaultStyle: 'auto',         // 'auto' | one of the generator's concrete styles
         energySensitivity: 50,        // 0-100: How much audio energy affects visuals
         tempoInfluence: 50,           // 0-100: How much tempo affects animation
         colorVariation: 50,           // 0-100: Color palette variation range
@@ -92,7 +92,7 @@ const SETTINGS_SCHEMA = {
         sampleRate: 'number'
     },
     artwork: {
-        defaultStyle: ['auto', 'neon-grid', 'sunset-liquid', 'cosmic-void', 'crystal-prism', 'glitch-storm', 'vapor-dream', 'data-flow', 'organic-chaos'],
+        defaultStyle: ['auto', 'neon-plasma', 'cosmic-flow', 'vapor-dream', 'cyber-matrix', 'sunset-liquid', 'electric-storm', 'crystal-prism', 'ocean-aurora'],
         energySensitivity: 'number',
         tempoInfluence: 'number',
         colorVariation: 'number',

@@ -107,19 +107,19 @@ class MenuBuilder {
                                 type: 'separator'
                             },
                             {
-                                label: 'Auto-Generated Names',
+                                label: 'Generated Output Names',
                                 type: 'radio',
                                 checked: this.preferencesManager.getSetting('processing.naming') === 'mystical',
                                 click: () => this.setNamingMode('mystical')
                             },
                             {
-                                label: 'Custom Metadata',
+                                label: 'Custom Metadata Tags',
                                 type: 'radio',
                                 checked: this.preferencesManager.getSetting('processing.naming') === 'custom',
                                 click: () => this.setNamingMode('custom')
                             },
                             {
-                                label: 'Original Filenames',
+                                label: 'Keep Original Filenames',
                                 type: 'radio',
                                 checked: this.preferencesManager.getSetting('processing.naming') === 'original',
                                 click: () => this.setNamingMode('original')

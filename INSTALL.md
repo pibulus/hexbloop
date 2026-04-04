@@ -2,12 +2,14 @@
 
 ## Quick Install
 
-1. **Download** `Hexbloop-1.0.0-macOS.zip`
+1. **Download** `Hexbloop-1.0.0-arm64-mac.zip`
 2. **Extract** the ZIP file (double-click it)
 3. **Drag** `Hexbloop.app` to your Applications folder
 4. **Important:** On first launch, **right-click** the app and select **Open**
 
-That's it! After the first launch, you can open Hexbloop normally by double-clicking.
+Current release note: the macOS build still expects `ffmpeg` and `sox` to be installed on the machine unless bundled vendor binaries are added before packaging.
+
+After the first launch, you can open Hexbloop normally by double-clicking.
 
 ---
 
@@ -23,7 +25,7 @@ This is normal for indie software - it's not broken, corrupted, or dangerous. It
 
 ### Method 1: Right-Click (Recommended)
 
-1. Extract `Hexbloop-1.0.0-macOS.zip`
+1. Extract `Hexbloop-1.0.0-arm64-mac.zip`
 2. Move `Hexbloop.app` to Applications folder
 3. **Right-click** (or Control-click) on `Hexbloop.app`
 4. Select **Open** from the menu
@@ -55,8 +57,8 @@ open /Applications/Hexbloop.app
 - **macOS:** 12.0 (Monterey) or later
 - **Architecture:** Apple Silicon (M1/M2/M3) native
 - **Dependencies:**
-  - `sox` (for audio processing)
-  - `ffmpeg` (for audio mastering)
+  - `sox` (currently required for the full audio chain)
+  - `ffmpeg` (currently required for mastering and metadata work)
 
 ### Installing Dependencies
 
@@ -85,6 +87,10 @@ Install via Homebrew:
 ```bash
 brew install sox ffmpeg
 ```
+
+### Windows release status
+
+The Windows packaging path exists, but it is still being hardened. Treat the current Windows output as experimental until a validated NSIS installer and bundled vendor binaries are in place.
 
 ### Still Having Issues?
 

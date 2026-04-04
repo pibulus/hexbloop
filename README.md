@@ -62,7 +62,12 @@ npm install
 ```
 
 ### Dependencies Check
-The app will automatically check for sox and ffmpeg on startup and provide fallback processing if needed.
+The app checks for `sox`, `ffmpeg`, and `ffprobe` on startup.
+
+Current release note:
+
+- Local development on macOS works well with Homebrew-installed dependencies.
+- Packaged releases are not fully self-contained yet unless vendor binaries are added before packaging.
 
 ## 🎮 Usage
 
@@ -102,7 +107,7 @@ npm start
 5. **Output Generation**: MP3 file creation with mystical naming and embedded artwork
 
 ### Security Configuration
-- **webSecurity: false**: Required for file access (documented limitation)
+- **webSecurity: true**: Renderer stays on standard file loading rules
 - **contextIsolation: true**: Maintains process separation
 - **nodeIntegration: false**: Prevents direct Node.js access in renderer
 
