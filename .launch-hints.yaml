@@ -1,0 +1,42 @@
+# Launch hints for Launch Arsenal.
+# Edit aggressively. These fields should pin the app's real audience, problem, and promise.
+name: Hexbloop
+slug: hexbloop-electron
+app_type: web-app
+audience: 'people shaping audio who want the process to feel like magic, not admin'
+problem: >-
+  most audio tools make the process feel technical and dead when it should feel
+  alive
+promise: "\U0001F52E Hexbloop - Chaos Magic Audio Engine. Transform your audio with mystical digital processing influenced by natural forces."
+cta: Reply if you want the link.
+differentiators:
+  - >-
+    Hexagonal Interface : Beautiful breathing hexagons with soft, mystical
+    colors
+proof_points:
+  - >-
+    Moon Phase Influences : Audio processing parameters change based on the
+    current lunar cycle
+  - >-
+    Time-Based Variations : Different processing styles for night, morning, and
+    evening
+  - >-
+    Mystical Name Generation : Each processed file gets a unique name with style
+    variations
+  - >-
+    Hexagonal Interface : Beautiful breathing hexagons with soft, mystical
+    colors
+objections:
+  - 'Still wants a human pass on audience, proof, and the sharpest angle.'
+keywords:
+  seed:
+    - audio
+    - music
+    - processing
+    - hexagon
+  audience: 'people shaping audio who want the process to feel like magic, not admin'
+  intent:
+    - launch faster
+    - clearer first draft
+manual_notes:
+  - Edit this aggressively. Keep only the lines that feel native to the app.
