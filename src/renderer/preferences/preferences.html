@@ -223,21 +223,20 @@
                 </div>
             </section>
 
-            <!-- Batch Naming Options -->
+            <!-- Batch Naming Options (compact) -->
             <section class="preference-section" id="batch-naming-section">
                 <div class="section-header">
-                    <h2 class="section-title">Batch Filename Pattern</h2>
-                    <div class="section-description">Applies when Hexbloop is generating output names instead of keeping the originals</div>
+                    <h2 class="section-title">Batch Naming</h2>
+                    <div class="section-description">How filenames are structured when generating names</div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-field">
-                        <label for="batch-naming-scheme">Naming Scheme</label>
+                        <label for="batch-naming-scheme">Scheme</label>
                         <select id="batch-naming-scheme" data-setting="batch.namingScheme">
                             <option value="mystical">Mystical (procedural)</option>
                             <option value="sequential">Sequential (track_001)</option>
                             <option value="timestamp">Timestamp</option>
-                            <option value="hybrid">Hybrid (mystical + number)</option>
                             <option value="preserve">Preserve original</option>
                         </select>
                     </div>
@@ -245,81 +244,59 @@
                     <div class="form-field">
                         <label for="batch-separator">Separator</label>
                         <input type="text" id="batch-separator" data-setting="batch.separator" maxlength="3" placeholder="_">
-                        <p class="field-description">Character between name parts</p>
+                        <p class="field-description">Joins name parts</p>
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-field">
-                        <label for="batch-prefix">Prefix</label>
-                        <input type="text" id="batch-prefix" data-setting="batch.prefix" placeholder="e.g. HEX">
-                    </div>
-
-                    <div class="form-field">
-                        <label for="batch-suffix">Suffix</label>
-                        <input type="text" id="batch-suffix" data-setting="batch.suffix" placeholder="e.g. MIX">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label for="batch-numbering-style">Numbering</label>
-                        <select id="batch-numbering-style" data-setting="batch.numberingStyle">
-                            <option value="none">None</option>
-                            <option value="numeric">Numeric (001)</option>
-                            <option value="alpha">Alphabetic (A, B, ...)</option>
-                            <option value="roman">Roman (i, ii, ...)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-field form-field-small" id="batch-numbering-padding-wrapper">
-                        <label for="batch-numbering-padding">Digits</label>
-                        <input type="number" id="batch-numbering-padding" data-setting="batch.numberingPadding" min="1" max="6">
-                    </div>
-                </div>
-
-                <div class="settings-grid" style="margin-top: 20px;">
-                    <div class="setting-card" id="batch-preserve-original-card">
-                        <label class="setting-toggle" for="batch-preserve-original">
-                            <div class="setting-info">
-                                <h3>Append Source Filename</h3>
-                                <p>Add the original filename after the generated name for extra context</p>
+                <details class="advanced-toggle" style="margin-top: 12px;">
+                    <summary>Advanced naming options</summary>
+                    <div style="padding-top: 12px;">
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="batch-prefix">Prefix</label>
+                                <input type="text" id="batch-prefix" data-setting="batch.prefix" placeholder="e.g. HEX">
                             </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="batch-preserve-original" data-setting="batch.preserveOriginal">
-                                <span class="slider"></span>
+                            <div class="form-field">
+                                <label for="batch-suffix">Suffix</label>
+                                <input type="text" id="batch-suffix" data-setting="batch.suffix" placeholder="e.g. MIX">
                             </div>
-                        </label>
-                    </div>
+                        </div>
 
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="batch-session-folders">
-                            <div class="setting-info">
-                                <h3>Session Folders</h3>
-                                <p>Create a subfolder per batch for easier export</p>
+                        <div class="form-row" style="margin-top: 12px;">
+                            <div class="form-field">
+                                <label for="batch-numbering-style">Numbering</label>
+                                <select id="batch-numbering-style" data-setting="batch.numberingStyle">
+                                    <option value="none">None</option>
+                                    <option value="numeric">Numeric (001)</option>
+                                    <option value="alpha">Alphabetic (A, B, ...)</option>
+                                    <option value="roman">Roman (i, ii, ...)</option>
+                                </select>
                             </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="batch-session-folders" data-setting="batch.sessionFolders">
-                                <span class="slider"></span>
+                            <div class="form-field form-field-small" id="batch-numbering-padding-wrapper">
+                                <label for="batch-numbering-padding">Digits</label>
+                                <input type="number" id="batch-numbering-padding" data-setting="batch.numberingPadding" min="1" max="6">
                             </div>
-                        </label>
+                        </div>
 
-                        <div class="form-field" id="batch-folder-scheme-wrapper" style="margin-top: 12px;">
-                            <label for="batch-folder-scheme">Folder Scheme</label>
-                            <select id="batch-folder-scheme" data-setting="batch.folderScheme">
-                                <option value="date">Date (YYYY-MM-DD)</option>
-                                <option value="lunar">Lunar phase</option>
-                                <option value="counter">Counter</option>
-                                <option value="none">Single folder</option>
-                            </select>
+                        <div class="setting-card" id="batch-preserve-original-card" style="margin-top: 12px;">
+                            <label class="setting-toggle" for="batch-preserve-original">
+                                <div class="setting-info">
+                                    <h3>Append Source Filename</h3>
+                                    <p>Add the original filename after the generated name</p>
+                                </div>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="batch-preserve-original" data-setting="batch.preserveOriginal">
+                                    <span class="slider"></span>
+                                </div>
+                            </label>
                         </div>
                     </div>
-                </div>
+                </details>
             </section>
 
             <section class="info-panel compact">
-                <h4>Naming Tips</h4>
-                <p>"Generated" uses the batch filename pattern below, "Custom Metadata Tags" affects embedded tags, and "Keep Original Filenames" bypasses generated naming.</p>
+                <h4>How Naming Works</h4>
+                <p>"Generated" applies Hexbloop's mysterious output naming. "Custom Metadata Tags" preserves your source filename and embeds artist/album tags inside the audio file instead. "Keep Original" leaves the filename untouched.</p>
             </section>
             </div>
 
@@ -330,9 +307,9 @@
                     <h2 class="section-title">Output Location</h2>
                     <div class="section-description">Choose where to save your processed files</div>
                 </div>
-                
+
                 <div class="form-row">
-                    <div class="form-field">
+                    <div class="form-field" style="flex:1">
                         <label for="output-folder">Output Folder</label>
                         <div class="folder-input-group">
                             <input type="text" id="output-folder" data-setting="ui.outputFolder" readonly placeholder="~/Documents/HexbloopOutput">
@@ -340,20 +317,66 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="settings-grid" style="margin-top: 16px;">
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="batch-session-folders">
+                            <div class="setting-info">
+                                <h3>Session Folders</h3>
+                                <p>Group each batch in a timestamped or lunar-phase subfolder</p>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="batch-session-folders" data-setting="batch.sessionFolders">
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                        <div class="form-field" id="batch-folder-scheme-wrapper" style="margin-top: 12px; display:none">
+                            <label for="batch-folder-scheme">Folder Scheme</label>
+                            <select id="batch-folder-scheme" data-setting="batch.folderScheme">
+                                <option value="date">Date (YYYY-MM-DD)</option>
+                                <option value="lunar">Lunar phase</option>
+                                <option value="counter">Session counter</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title">Ambient Soundtrack</h2>
-                    <div class="section-description">Turn the looping Hexbloop soundscape on or off</div>
+                    <h2 class="section-title">Encoding</h2>
+                    <div class="section-description">Format and quality for output files</div>
                 </div>
 
-                <div class="settings-grid">
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="output-format">Format</label>
+                        <select id="output-format" data-setting="output.format">
+                            <option value="mp3">MP3 (best compatibility)</option>
+                            <option value="wav">WAV (lossless)</option>
+                            <option value="flac">FLAC (lossless, smaller)</option>
+                            <option value="aac">AAC / M4A</option>
+                            <option value="ogg">OGG Vorbis</option>
+                        </select>
+                    </div>
+
+                    <div class="form-field" id="output-bitrate-wrapper">
+                        <label for="output-bitrate">MP3 Bitrate</label>
+                        <select id="output-bitrate" data-setting="output.mp3Bitrate">
+                            <option value="128">128 kbps (small)</option>
+                            <option value="192">192 kbps (good)</option>
+                            <option value="256">256 kbps (great)</option>
+                            <option value="320">320 kbps (max)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-grid" style="margin-top: 16px;">
                     <div class="setting-card">
                         <label class="setting-toggle" for="ambientAudio">
                             <div class="setting-info">
                                 <h3 id="ambient-audio-label">Play Ambient Audio</h3>
-                                <p id="ambient-audio-desc">Enable background audio inside the main window</p>
+                                <p id="ambient-audio-desc">Background soundscape in the main window</p>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox"
@@ -437,12 +460,11 @@
                     </div>
                 </div>
                 
-                <div class="settings-grid" style="margin-top: 30px;">
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="artwork-useAudioFeatures">
+                <div class="settings-grid" style="margin-top: 16px; grid-template-columns: 1fr 1fr 1fr;">
+                    <div class="setting-card" style="padding: 12px;">
+                        <label class="setting-toggle" for="artwork-useAudioFeatures" style="flex-direction: column; gap: 6px;">
                             <div class="setting-info">
-                                <h3>Audio Analysis</h3>
-                                <p>Use audio features (energy, tempo) to shape the artwork</p>
+                                <h3 style="font-size: 12px;">Audio Analysis</h3>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" id="artwork-useAudioFeatures"
@@ -452,11 +474,10 @@
                         </label>
                     </div>
 
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="artwork-useMoonPhase">
+                    <div class="setting-card" style="padding: 12px;">
+                        <label class="setting-toggle" for="artwork-useMoonPhase" style="flex-direction: column; gap: 6px;">
                             <div class="setting-info">
-                                <h3>Lunar Influence</h3>
-                                <p>Current moon phase affects colors and patterns</p>
+                                <h3 style="font-size: 12px;">Lunar Phase</h3>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" id="artwork-useMoonPhase"
@@ -466,11 +487,10 @@
                         </label>
                     </div>
 
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="artwork-useFileNames">
+                    <div class="setting-card" style="padding: 12px;">
+                        <label class="setting-toggle" for="artwork-useFileNames" style="flex-direction: column; gap: 6px;">
                             <div class="setting-info">
-                                <h3>Filename Seeds</h3>
-                                <p>Filename influences the artwork patterns</p>
+                                <h3 style="font-size: 12px;">Filename Seed</h3>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" id="artwork-useFileNames"
@@ -480,12 +500,35 @@
                         </label>
                     </div>
                 </div>
+
+                <details class="advanced-toggle" style="margin-top: 12px;">
+                    <summary>Image output options</summary>
+                    <div style="padding-top: 12px;">
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="artwork-imageFormat">Format</label>
+                                <select id="artwork-imageFormat" data-setting="artwork.imageFormat">
+                                    <option value="png">PNG (lossless)</option>
+                                    <option value="jpg">JPEG (smaller files)</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label for="artwork-resolution">Resolution</label>
+                                <input type="number" id="artwork-resolution" data-setting="artwork.resolution"
+                                       min="256" max="4096" step="128" placeholder="1000">
+                            </div>
+                            <div class="form-field">
+                                <label for="artwork-compressionLevel">PNG Compression</label>
+                                <input type="number" id="artwork-compressionLevel" data-setting="artwork.compressionLevel"
+                                       min="0" max="9" placeholder="6">
+                            </div>
+                        </div>
+                    </div>
+                </details>
                 
-                <div class="info-panel" style="margin-top: 30px;">
-                    <h4>About Artwork Generation</h4>
-                    <p><strong>8 visual styles</strong> that respond to your audio's energy and tempo</p>
-                    <p><strong>1024×1024 resolution</strong> with procedural effects and color palettes</p>
-                    <p><strong>Auto mode</strong> selects styles based on audio characteristics and filename hints</p>
+                <div class="info-panel" style="margin-top: 16px;">
+                    <h4>About Artwork</h4>
+                    <p><strong>8 visual styles</strong> respond to your audio — energy, tempo, and lunar phase shape each cover. Auto mode picks the best style for the mood.</p>
                 </div>
             </section>
             </div>

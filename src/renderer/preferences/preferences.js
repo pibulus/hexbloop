@@ -196,6 +196,18 @@ class PreferencesController {
         namingRadios.forEach(radio => {
             radio.addEventListener('change', () => this.updateCustomMetadataVisibility());
         });
+
+        // Output format → show/hide MP3 bitrate
+        const formatSelect = document.getElementById('output-format');
+        if (formatSelect) {
+            formatSelect.addEventListener('change', () => this.updateOutputBitrateVisibility());
+        }
+
+        // Session folders → show/hide folder scheme
+        const sessionFoldersToggle = document.getElementById('batch-session-folders');
+        if (sessionFoldersToggle) {
+            sessionFoldersToggle.addEventListener('change', () => this.updateSessionFolderScheme());
+        }
     }
     
     setupWindowEffects() {
@@ -241,9 +253,11 @@ class PreferencesController {
             }
         });
         
-        // Update custom metadata section visibility
+        // Update conditional visibility
         this.updateCustomMetadataVisibility();
         this.updateBatchOptionsUI();
+        this.updateOutputBitrateVisibility();
+        this.updateSessionFolderScheme();
         
         console.log('🎨 UI updated with current settings');
     }
@@ -418,6 +432,11 @@ class PreferencesController {
 
                 if (settingPath.startsWith('batch.')) {
                     this.updateBatchOptionsUI();
+                    this.updateSessionFolderScheme();
+                }
+
+                if (settingPath === 'output.format') {
+                    this.updateOutputBitrateVisibility();
                 }
 
                 if (DEBUG) console.log(`Setting ${settingPath} updated successfully`);
@@ -458,6 +477,26 @@ class PreferencesController {
         }
     }
 
+    updateOutputBitrateVisibility() {
+        const format = this.getSettingValue('output.format');
+        const bitrateWrapper = document.getElementById('output-bitrate-wrapper');
+        if (bitrateWrapper) {
+            bitrateWrapper.style.display = (format === 'mp3') ? '' : 'none';
+        }
+    }
+
+    updateSessionFolderScheme() {
+        const enabled = Boolean(this.getSettingValue('batch.sessionFolders'));
+        const wrapper = document.getElementById('batch-folder-scheme-wrapper');
+        if (wrapper) {
+            wrapper.style.display = enabled ? '' : 'none';
+        }
+        const folderSelect = document.getElementById('batch-folder-scheme');
+        if (folderSelect) {
+            folderSelect.disabled = !enabled;
+        }
+    }
+
     updateBatchOptionsUI() {
         const namingMode = this.getSettingValue('processing.naming');
         const batchSection = document.getElementById('batch-naming-section');
@@ -491,15 +530,7 @@ class PreferencesController {
             }
         }
 
-        const sessionFoldersEnabled = Boolean(this.getSettingValue('batch.sessionFolders'));
-        const folderSchemeSelect = this.settingElements.get('batch.folderScheme');
-        if (folderSchemeSelect) {
-            folderSchemeSelect.disabled = !sessionFoldersEnabled;
-        }
-        const folderSchemeWrapper = document.getElementById('batch-folder-scheme-wrapper');
-        if (folderSchemeWrapper) {
-            folderSchemeWrapper.classList.toggle('disabled', !sessionFoldersEnabled);
-        }
+        // Session folders handled by updateSessionFolderScheme()
 
         const preserveOriginalToggle = this.settingElements.get('batch.preserveOriginal');
         const preserveOriginalCard = document.getElementById('batch-preserve-original-card');

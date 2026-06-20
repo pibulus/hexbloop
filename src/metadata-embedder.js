@@ -182,37 +182,6 @@ class MetadataEmbedder {
     }
     
     /**
-     * Generate metadata from band name and processing info
-     */
-    generateMetadata(bandName, originalFileName = null) {
-        const now = new Date();
-        const timestamp = now.toISOString().slice(0, 19).replace('T', ' ');
-        
-        // Extract genre hints from band name style
-        let genre = 'Electronic';
-        const bandNameLower = bandName.toLowerCase();
-        
-        if (bandNameLower.includes('black') || bandNameLower.includes('death') || bandNameLower.includes('necro')) {
-            genre = 'Black Metal';
-        } else if (bandNameLower.includes('sparkle') || bandNameLower.includes('rainbow') || bandNameLower.includes('fairy')) {
-            genre = 'Sparklepop';
-        } else if (bandNameLower.includes('witch') || bandNameLower.includes('occult') || bandNameLower.includes('ritual')) {
-            genre = 'Witch House';
-        } else if (bandNameLower.includes('cyber') || bandNameLower.includes('digital') || bandNameLower.includes('neural')) {
-            genre = 'Cyberpunk';
-        }
-        
-        return {
-            artist: bandName,
-            album: `${bandName} - Chaos Magic Audio`,
-            title: originalFileName ? path.parse(originalFileName).name : 'Hexbloop Transform',
-            date: now.getFullYear().toString(),
-            genre: genre,
-            comment: `Processed with Hexbloop Chaos Magic Audio Engine on ${timestamp}. 🌙✨`
-        };
-    }
-    
-    /**
      * Convert SVG artwork to PNG for embedding
      */
     async convertArtworkForEmbedding(svgPath, outputPath) {
