@@ -197,12 +197,6 @@ class PreferencesController {
             radio.addEventListener('change', () => this.updateCustomMetadataVisibility());
         });
 
-        // Output format → show/hide MP3 bitrate
-        const formatSelect = document.getElementById('output-format');
-        if (formatSelect) {
-            formatSelect.addEventListener('change', () => this.updateOutputBitrateVisibility());
-        }
-
         // Session folders → show/hide folder scheme
         const sessionFoldersToggle = document.getElementById('batch-session-folders');
         if (sessionFoldersToggle) {
@@ -255,8 +249,6 @@ class PreferencesController {
         
         // Update conditional visibility
         this.updateCustomMetadataVisibility();
-        this.updateBatchOptionsUI();
-        this.updateOutputBitrateVisibility();
         this.updateSessionFolderScheme();
         
         console.log('🎨 UI updated with current settings');
@@ -430,13 +422,8 @@ class PreferencesController {
                     window.preferencesAPI.setAmbientAudio(Boolean(sanitizedValue));
                 }
 
-                if (settingPath.startsWith('batch.')) {
-                    this.updateBatchOptionsUI();
+                if (settingPath === 'batch.sessionFolders' || settingPath === 'batch.folderScheme') {
                     this.updateSessionFolderScheme();
-                }
-
-                if (settingPath === 'output.format') {
-                    this.updateOutputBitrateVisibility();
                 }
 
                 if (DEBUG) console.log(`Setting ${settingPath} updated successfully`);
@@ -477,14 +464,6 @@ class PreferencesController {
         }
     }
 
-    updateOutputBitrateVisibility() {
-        const format = this.getSettingValue('output.format');
-        const bitrateWrapper = document.getElementById('output-bitrate-wrapper');
-        if (bitrateWrapper) {
-            bitrateWrapper.style.display = (format === 'mp3') ? '' : 'none';
-        }
-    }
-
     updateSessionFolderScheme() {
         const enabled = Boolean(this.getSettingValue('batch.sessionFolders'));
         const wrapper = document.getElementById('batch-folder-scheme-wrapper');
@@ -497,52 +476,6 @@ class PreferencesController {
         }
     }
 
-    updateBatchOptionsUI() {
-        const namingMode = this.getSettingValue('processing.naming');
-        const batchSection = document.getElementById('batch-naming-section');
-        const batchSectionDisabled = namingMode === 'original';
-        const batchControls = batchSection ? batchSection.querySelectorAll('input, select') : [];
-
-        if (batchSection) {
-            batchSection.classList.toggle('disabled', batchSectionDisabled);
-        }
-
-        batchControls.forEach(control => {
-            control.disabled = batchSectionDisabled;
-        });
-
-        if (batchSectionDisabled) {
-            return;
-        }
-
-        const numberingStyle = this.getSettingValue('batch.numberingStyle');
-        const numberingPaddingField = this.settingElements.get('batch.numberingPadding');
-        if (numberingPaddingField) {
-            const disablePadding = numberingStyle === 'none';
-            numberingPaddingField.disabled = disablePadding;
-            const paddingContainer = numberingPaddingField.closest('.form-field');
-            if (paddingContainer) {
-                paddingContainer.classList.toggle('disabled', disablePadding);
-            }
-            const paddingWrapper = document.getElementById('batch-numbering-padding-wrapper');
-            if (paddingWrapper) {
-                paddingWrapper.classList.toggle('disabled', disablePadding);
-            }
-        }
-
-        // Session folders handled by updateSessionFolderScheme()
-
-        const preserveOriginalToggle = this.settingElements.get('batch.preserveOriginal');
-        const preserveOriginalCard = document.getElementById('batch-preserve-original-card');
-        const usingPreserveScheme = this.getSettingValue('batch.namingScheme') === 'preserve';
-        if (preserveOriginalToggle) {
-            preserveOriginalToggle.disabled = usingPreserveScheme;
-        }
-        if (preserveOriginalCard) {
-            preserveOriginalCard.classList.toggle('disabled', usingPreserveScheme);
-        }
-    }
-    
     async resetToDefaults() {
         const confirmed = confirm('Reset all preferences to defaults?\n\nThis action cannot be undone.');
         
