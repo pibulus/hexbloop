@@ -134,7 +134,7 @@ class NameGenerator {
     // Vaporwave fragments (ASCII-only aesthetic)
     static vaporwaveFrags = [
         'VAPOR', 'WAVE', 'CYBER', 'DREAM', 'VOID',
-        'NIGHT', 'SYSTEM', 'MEMORY', 'ERROR', 'DATA',
+        'NIGHT', 'SYSTEM', 'MEMORY', 'FLUX', 'DATA',
         'SUNSET', 'PLAZA', 'NEON', 'AESTHETIC', 'AMBIENT',
     ];
 

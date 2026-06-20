@@ -222,14 +222,43 @@ class AudioProcessor {
                 artist: customMetadata.artist,
                 album: customMetadata.album,
                 year: customMetadata.year,
-                genre: customMetadata.genre
-            } : {
-                title: path.parse(path.basename(inputPath)).name,
-                artist: finalName,
-                album: 'Mystical Transmutations',
-                year: new Date().getFullYear(),
-                genre: 'Mystical Audio'
-            };
+                genre: customMetadata.genre,
+                comment: customMetadata.comment || '',
+            } : (() => {
+                const now = new Date();
+                const moonData = LunarProcessor.getMoonPhase();
+                const timeWord = now.getHours() < 6 ? 'Nocturnal'
+                    : now.getHours() < 12 ? 'Morning'
+                    : now.getHours() < 18 ? 'Afternoon'
+                    : 'Evening';
+
+                // Dynamic album from a pool — rotates by moon phase
+                const albums = [
+                    'Lunar Transmutations', 'Tape Degradation Studies',
+                    'Cassette Grimoire', 'Magnetic Rituals',
+                    'Spectral Dubs & Glitches', 'Crushed Frequencies',
+                    'Hexbloop Sessions', 'Chaos Magic Dubs',
+                ];
+                const albumIdx = Math.floor(moonData.phase * albums.length) % albums.length;
+
+                // Genre from processing characteristics
+                const genres = [
+                    'Electronic', 'Experimental', 'Ambient',
+                    'Lo-Fi', 'Noise', 'Drone',
+                    'Industrial', 'Dark Ambient',
+                ];
+                const genreIdx = Math.floor((moonData.illumination || 0.5) * genres.length) % genres.length;
+
+                return {
+                    title: finalName,
+                    artist: 'Hexbloop',
+                    album: albums[albumIdx],
+                    year: now.getFullYear(),
+                    date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+                    genre: genres[genreIdx],
+                    comment: `${moonData.name} | ${timeWord} session | tape-cassette processed`,
+                };
+            })();
             
             // If no processing was done, convert the original file
             if (currentFile === inputPath) {

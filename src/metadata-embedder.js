@@ -41,20 +41,28 @@ class MetadataEmbedder {
         // First copy the file to output location
         await fs.copyFile(inputPath, outputPath);
 
-        const resolvedYear = metadata.year || metadata.date || new Date().getFullYear().toString();
-
         // Build ID3 tags
         const tags = {
             title: metadata.title || 'Unknown Title',
             artist: metadata.artist || 'Unknown Artist',
             album: metadata.album || 'Unknown Album',
-            year: resolvedYear.toString(),
+            year: (metadata.year || new Date().getFullYear()).toString(),
             genre: metadata.genre || 'Electronic',
             comment: {
                 language: 'eng',
-                text: metadata.comment || 'Processed with Hexbloop'
-            }
+                text: metadata.comment || 'Processed with Hexbloop',
+            },
         };
+
+        // Add date if provided (TDAT frame)
+        if (metadata.date) {
+            tags.date = metadata.date;
+        }
+
+        // Add track number if provided
+        if (metadata.trackNumber) {
+            tags.trackNumber = String(metadata.trackNumber);
+        }
 
         // Add artwork if provided (supports PNG and JPG)
         if (artworkPath && /\.(png|jpe?g)$/i.test(artworkPath)) {
@@ -76,7 +84,7 @@ class MetadataEmbedder {
             }
         }
 
-        console.log(`🎵 Embedding MP3 metadata: ${metadata.artist} - ${metadata.title}`);
+        console.log(`🎵 Embedding MP3 metadata: ${tags.artist} - ${tags.title}`);
 
         try {
             // Write tags to MP3 file
