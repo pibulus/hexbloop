@@ -154,8 +154,7 @@ class BatchNamingEngine {
      * Generate hybrid name (mystical + numbering)
      */
     generateHybridName(index) {
-        const mystical = NameGenerator.generateCleanName();
-        return mystical;
+        return NameGenerator.generateMystical({ moonPhase: this.moonPhase, batchIndex: index });
     }
     
     /**

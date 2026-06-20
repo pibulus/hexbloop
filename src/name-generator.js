@@ -1,58 +1,176 @@
 /**
- * @fileoverview Mystical name generator with lunar and temporal influences
+ * @fileoverview Mystical name generator with lunar, temporal, and chaos influences
  * @author Hexbloop Audio Labs
- * @description Creates musical track names based on moon phases, time, and mystical concepts
+ * @description Generates unpredictable musical track names with tape-cassette energy
  */
 
 class NameGenerator {
-    // === Curated word banks for better musical names ===
-    
-    // Atmospheric/ambient concepts
-    static atmosphericWords = [
-        "echo", "drift", "wave", "pulse", "flow", "haze", "mist", "fog", "vapor", "cloud",
-        "aurora", "nebula", "cosmos", "void", "abyss", "stellar", "astral", "lunar", "solar", "eclipse",
-        "twilight", "dusk", "dawn", "midnight", "eventide", "gloaming", "shadow", "shade", "umbra", "penumbra"
+    // ============================================================
+    // WORD BANKS — massive, diverse, unpredictable
+    // ============================================================
+
+    // Opening power words (capitalized, sets the tone)
+    static starters = [
+        // Temporal/Cosmic
+        "Ancient", "Eternal", "Infinite", "Cosmic", "Stellar", "Astral", "Galactic", "Solar",
+        "Lunar", "Celestial", "Primordial", "Timeless", "Universal", "Dimensional", "Void",
+        "Ethereal", "Quantum", "Temporal", "Perpetual", "Parallel",
+        // Tech/Digital
+        "Cyber", "Digital", "Virtual", "Neural", "Binary", "Atomic", "Vector",
+        "Matrix", "Circuit", "Synthetic", "Electronic", "Bionic", "Nano", "Hyper", "Ultra",
+        "Neo", "Post", "Trans", "Proto", "Mega",
+        // Dark/Occult
+        "Dark", "Black", "Shadow", "Occult", "Arcane", "Esoteric", "Hermetic",
+        "Infernal", "Abyssal", "Nether", "Forbidden", "Hidden", "Veiled", "Cryptic", "Obscure",
+        // Elements
+        "Storm", "Thunder", "Lightning", "Fire", "Ice", "Frost", "Wind",
+        "Crystal", "Plasma", "Nuclear", "Electric", "Toxic",
+        // Attitude
+        "Absolute", "Omega", "Alpha", "Prime", "Supreme", "Maximum", "Ultimate",
+        "Psycho", "Manic", "Deranged", "Twisted", "Warped", "Mad",
+        // Abstract
+        "Abstract", "Surreal", "Bizarre", "Strange", "Alien", "Unknown",
+        "Broken", "Glitched", "Fractured", "Shattered", "Divided",
+        // Cozy/DIY
+        "Backyard", "Garage", "Basement", "Attic", "Porch",
+        "Snuggled", "Nestled", "Tucked", "Wrapped", "Bundled",
+        "Lazy", "Chill", "Mellow", "Soft", "Gentle", "Warm", "Calm",
+        // Skate/Punk
+        "Thrashed", "Shredded", "Grinded", "Wrecked", "Crushed", "Stoked",
+        // Weather/Time
+        "Morning", "Dawn", "Dusk", "Noon", "Midnight", "Sunny", "Foggy", "Misty",
     ];
-    
-    // Electronic/digital concepts (lowercase for better readability)
-    static electronicWords = [
-        "signal", "circuit", "binary", "quantum", "neural", "digital", "analog", "synth", "modular", "matrix",
-        "frequency", "resonance", "oscillation", "waveform", "amplitude", "phase", "filter", "voltage", "current", "flux",
-        "algorithm", "protocol", "interface", "terminal", "console", "kernel", "daemon", "process", "thread", "stack"
+
+    // Core middle concepts
+    static middles = [
+        // Power concepts
+        "Death", "Blood", "Void", "Ghost", "Witch", "Storm", "Doom", "Demon", "Dragon",
+        "Shadow", "Moon", "Star", "Sun", "Wolf", "Snake", "Crow", "Raven",
+        // Tech
+        "Circuit", "System", "Matrix", "Code", "Data", "Signal", "Virus", "Network",
+        "Machine", "Cyber", "Digital", "Virtual", "Neural", "Quantum",
+        // Occult
+        "Ritual", "Magic", "Curse", "Spell", "Rune", "Sigil", "Oracle", "Spirit",
+        "Soul", "Alchemy", "Mystic", "Phantom",
+        // Dark
+        "Terror", "Horror", "Nightmare", "Dread", "Grave", "Tomb", "Crypt",
+        "Zombie", "Vampire", "Specter", "Wraith",
+        // Weapons
+        "Blade", "Sword", "Axe", "Knife", "Gun", "Weapon", "Armor", "Shield",
+        "Warrior", "Assassin", "Slayer",
+        // Industrial
+        "Engine", "Motor", "Gear", "Steel", "Iron", "Chrome", "Metal",
+        "Furnace", "Forge", "Reactor",
+        // Sound
+        "Noise", "Static", "Feedback", "Echo", "Reverb", "Drone", "Bass",
+        "Beat", "Rhythm", "Pulse", "Frequency", "Resonance",
+        // Body
+        "Brain", "Heart", "Bone", "Flesh", "Spine", "Skull", "Teeth",
+        "Claw", "Fang", "Eye", "Mind",
+        // Abstract
+        "Chaos", "Order", "Truth", "Dream", "Infinity", "Destiny", "Fate",
+        "Glitch", "Error", "Null", "Zero", "Random", "Spiral", "Vortex", "Nexus", "Portal",
+        // Cozy
+        "Blanket", "Pillow", "Sweater", "Tea", "Coffee", "Toast", "Soup",
+        "Garden", "Cottage", "Nook", "Corner", "Window",
+        // Creatures
+        "Raccoon", "Possum", "Rat", "Frog", "Toad", "Spider", "Cricket",
+        "Moth", "Snail", "Slug", "Squirrel", "Cat", "Dog", "Bird", "Bug",
+        // Food
+        "Pizza", "Burger", "Fries", "Snack", "Candy", "Cookie", "Cake",
+        "Cheese", "Pickle", "Onion",
     ];
-    
-    // Mystical/occult concepts (more subtle)
-    static mysticalWords = [
-        "ritual", "sigil", "oracle", "vision", "dream", "trance", "portal", "gateway", "threshold", "liminal",
-        "crystal", "prism", "mirror", "reflection", "phantom", "specter", "spirit", "essence", "aura", "emanation",
-        "incantation", "invocation", "divination", "transmutation", "transcendence", "manifestation", "revelation"
+
+    // Ending words (mostly lowercase, the "payload")
+    static enders = [
+        // Tech
+        "entropy", "matrix", "cortex", "cipher", "nexus", "paradox", "void", "crisis",
+        "omega", "virus", "machine", "reactor", "system", "plasma", "circuit",
+        // Dark
+        "specter", "wraith", "demon", "oracle", "prophet", "witch", "serpent", "dragon",
+        "leviathan", "cult", "ritual", "omen", "raven", "sphinx", "beast",
+        // Elements
+        "thunder", "venom", "steel", "crystal", "storm", "fire", "frost", "lightning",
+        "stone", "chrome", "iron", "hammer", "blade", "fang", "claw",
+        // Cosmic
+        "monolith", "eclipse", "star", "cosmos", "abyss", "vortex", "nebula", "nova",
+        "titan", "comet", "planet", "moon", "sun", "galaxy",
+        // Cozy
+        "nap", "snack", "vibe", "zone", "mood", "dream", "rest", "glow", "hush", "cozy",
+        "soft", "warm", "sweet", "gentle", "calm",
+        // Skate
+        "ollie", "slide", "grind", "drop", "bail", "slash", "stall",
+        "deck", "trucks", "wheels", "curb", "ramp", "rail",
+        // Food
+        "sauce", "crust", "cheese", "crumbs", "sugar", "salt", "pepper", "butter", "jam",
     ];
-    
-    // Action/movement verbs (present participle for flow)
-    static movementWords = [
-        "cascading", "flowing", "drifting", "shifting", "morphing", "ascending", "descending", "spiraling", "weaving", "threading",
-        "pulsing", "breathing", "expanding", "contracting", "oscillating", "vibrating", "resonating", "echoing", "reverberating",
-        "emerging", "dissolving", "crystallizing", "fragmenting", "coalescing", "transmuting", "evolving", "unfolding"
+
+    // Connectors (word_of_word patterns)
+    static connectors = [
+        // Prepositions
+        "of", "from", "in", "beyond", "beneath", "above", "through", "without",
+        "versus", "against", "inside", "outside", "between", "within", "despite",
+        "under", "over", "behind", "before", "and",
+        // Mystical
+        "betwixt", "amidst", "throughout", "beyond-the", "beneath-the",
+        "within-the", "through-the", "outside-the", "inside-the",
+        // Tech
+        "via", "using", "while", "during", "after", "before", "error", "exception",
+        "interrupt", "buffer", "cache", "stack", "null", "void", "undefined",
+        // Action-based
+        "corrupted-by", "glitched-through", "destroyed-by", "consumed-by",
+        "processed-by", "filtered-through", "converted-to", "transformed-into",
+        "summoning", "conjuring", "invoking", "channeling", "manifesting",
+        "crushing", "destroying", "consuming", "devouring", "executing",
+        "processing", "compiling", "rendering", "parsing", "encoding",
+        // Abstract
+        "like", "unlike", "becoming", "approaching", "exceeding", "transcending",
+        "morphing-into", "evolving-to", "mutating-to", "shifting-into", "warping-into",
     ];
-    
-    // Time-specific descriptors
-    static temporalWords = [
-        "eternal", "infinite", "ephemeral", "transient", "liminal", "perpetual", "cyclic", "recursive", "parallel", "quantum",
-        "ancient", "primordial", "nascent", "emergent", "future", "temporal", "chronologic", "synchronous", "asynchronous"
+
+    // Witch house symbols (filename-safe subset)
+    static witchSymbols = ['▲', '△', '◇', '◆', '▽', '◯', '□', '▪', '▫', '•', '°'];
+
+    // Vaporwave fragments (ASCII-only aesthetic)
+    static vaporwaveFrags = [
+        'VAPOR', 'WAVE', 'CYBER', 'DREAM', 'VOID',
+        'NIGHT', 'SYSTEM', 'MEMORY', 'ERROR', 'DATA',
+        'SUNSET', 'PLAZA', 'NEON', 'AESTHETIC', 'AMBIENT',
     ];
-    
-    // Subtle ASCII symbols (no emojis!)
-    static subtleSymbols = [
-        "//", "--", "__", "++", "::", "..", "~", "^", "|", "/", "\\",
-        "[", "]", "{", "}", "<", ">", "(", ")"
+
+    // Numerology power numbers
+    static powerNumbers = [
+        "666", "777", "888", "333", "444", "555", "111", "222", "999",
+        "101", "010", "404", "303", "808", "909",
+        "13", "23", "93", "616", "418",
+        "1999", "2000", "Y2K", "808s",
     ];
-    
-    // Geometric/mathematical symbols (sparingly used)
+
+    // Zalgo marks for glitch text
+    static zalgo = [
+        '\u0315', '\u0316', '\u0317', '\u0318', '\u0319', '\u031A', '\u031B',
+        '\u031C', '\u031D', '\u031E', '\u031F', '\u0320', '\u0321', '\u0322',
+        '\u0323', '\u0324', '\u0325', '\u0326', '\u0327', '\u0328', '\u0329',
+        '\u032A', '\u032B', '\u032C', '\u032D', '\u032E', '\u032F', '\u0330',
+        '\u0300', '\u0301', '\u0302', '\u0303', '\u0304', '\u0305', '\u0306',
+    ];
+
+    // Geometric symbols
     static geometricSymbols = [
-        "△", "▽", "◇", "◯", "□", "▪", "▫", "•", "°", "∞", "∴", "∵", "≈", "≡", "∂", "∇"
+        '△', '▽', '◇', '◯', '□', '▪', '▫', '•', '°', '∞',
+        '∴', '∵', '≈', '≡', '∂', '∇',
     ];
-    
-    // Lunar phase name mappings
+
+    // Version markers
+    static versionMarkers = [
+        'v1', 'v2', 'v3', 'v4', 'v5',
+        'mk1', 'mk2', 'mk3',
+        'alpha', 'beta', 'gamma', 'delta', 'epsilon',
+        'a', 'b', 'c', 'x', 'y', 'z',
+        'i', 'ii', 'iii', 'iv', 'v',
+    ];
+
+    // Lunar phase word mappings
     static lunarNames = {
         'New Moon': ['void', 'null', 'shadow', 'umbra', 'dark', 'hidden', 'nascent', 'embryonic'],
         'Waxing Crescent': ['ascending', 'emerging', 'growing', 'nascent', 'dawning', 'birthing'],
@@ -61,35 +179,41 @@ class NameGenerator {
         'Full Moon': ['apex', 'zenith', 'illuminated', 'radiant', 'complete', 'whole', 'manifest'],
         'Waning Gibbous': ['releasing', 'dissipating', 'unwinding', 'softening', 'dimming', 'receding'],
         'Last Quarter': ['transition', 'turning', 'pivot', 'reflection', 'review', 'return'],
-        'Waning Crescent': ['fading', 'dissolving', 'vanishing', 'ephemeral', 'ghosting', 'waning']
+        'Waning Crescent': ['fading', 'dissolving', 'vanishing', 'ephemeral', 'ghosting', 'waning'],
     };
-    
-    // Version/iteration markers (subtle)
-    static versionMarkers = [
-        'v1', 'v2', 'v3', 'mk1', 'mk2', 'mk3', 'alpha', 'beta', 'gamma', 'delta',
-        'a', 'b', 'c', 'x', 'y', 'z', 'i', 'ii', 'iii', 'iv', 'v'
-    ];
-    
-    // Helper function to pick random from array (supports seeding)
+
+    // ============================================================
+    // UTILITY
+    // ============================================================
+
     static pick(array, randomFunc = Math.random) {
         return array[Math.floor(randomFunc() * array.length)];
     }
 
-    // Seeded random number generator (Linear Congruential Generator)
+    static pickWeighted(array, randomFunc = Math.random, weightFn = null) {
+        if (!weightFn) return this.pick(array, randomFunc);
+        const weights = array.map(w => Math.max(1, weightFn(w)));
+        const total = weights.reduce((a, b) => a + b, 0);
+        let r = randomFunc() * total;
+        for (let i = 0; i < array.length; i++) {
+            r -= weights[i];
+            if (r <= 0) return array[i];
+        }
+        return array[array.length - 1];
+    }
+
     static seededRandom(seed) {
-        let currentSeed = seed;
-        return function() {
-            currentSeed = (currentSeed * 1664525 + 1013904223) % 2147483647;
-            return currentSeed / 2147483647;
+        let s = seed;
+        return () => {
+            s = (s * 1664525 + 1013904223) % 2147483647;
+            return s / 2147483647;
         };
     }
-    
-    // Helper to capitalize first letter only
+
     static capitalize(str) {
         return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
 
-    // Get lunar phase name from numeric phase (0-1)
     static getLunarPhaseName(phase) {
         if (phase < 0.03 || phase > 0.97) return 'New Moon';
         if (phase < 0.22) return 'Waxing Crescent';
@@ -100,226 +224,324 @@ class NameGenerator {
         if (phase < 0.78) return 'Last Quarter';
         return 'Waning Crescent';
     }
-    
-    // Generate clean, musical names (supports seeding)
-    static generateCleanName(randomFunc = Math.random) {
-        const patterns = [
-            // Single evocative word
-            () => this.capitalize(this.pick([
-                ...this.atmosphericWords,
-                ...this.mysticalWords
-            ], randomFunc)),
 
-            // Movement + concept
-            () => `${this.capitalize(this.pick(this.movementWords, randomFunc))}_${this.capitalize(this.pick(this.atmosphericWords, randomFunc))}`,
+    // ============================================================
+    // NAME ASSEMBLY
+    // ============================================================
 
-            // Temporal + electronic
-            () => `${this.capitalize(this.pick(this.temporalWords, randomFunc))}_${this.capitalize(this.pick(this.electronicWords, randomFunc))}`,
+    /**
+     * Build a compound name from word banks
+     * Patterns: Single, Double, Triple (with connector), Quad (rare)
+     */
+    static buildCompoundName(randomFunc = Math.random) {
+        const roll = randomFunc() * 100;
 
-            // Mystical phrase
-            () => `${this.capitalize(this.pick(this.mysticalWords, randomFunc))}_${this.capitalize(this.pick(["transmission", "sequence", "protocol", "signal", "pattern"], randomFunc))}`,
-
-            // Electronic + number (occasionally)
-            () => `${this.capitalize(this.pick(this.electronicWords, randomFunc))}_${Math.floor(randomFunc() * 999) + 1}`,
-
-            // Atmospheric combination
-            () => `${this.capitalize(this.pick(this.atmosphericWords, randomFunc))}.${this.pick(this.atmosphericWords, randomFunc)}`,
-
-            // Time-based
-            () => {
-                const hour = new Date().getHours();
-                const timeWord = hour < 6 ? "nocturnal" : hour < 12 ? "dawn" : hour < 18 ? "meridian" : "dusk";
-                return `${this.capitalize(timeWord)}_${this.capitalize(this.pick(this.mysticalWords, randomFunc))}`;
-            }
-        ];
-
-        return this.pick(patterns, randomFunc)();
-    }
-    
-    // Generate name with subtle stylistic elements (supports seeding)
-    static generateStyledName(style = 'neutral', randomFunc = Math.random) {
-        let name = this.generateCleanName(randomFunc);
-        
-        // Add subtle style markers based on preference
-        switch(style) {
-            case 'minimal':
-                // Just clean names, maybe lowercase
-                name = name.toLowerCase();
-                break;
-                
-            case 'technical':
-                // Add underscores or dots
-                if (randomFunc() < 0.3) {
-                    name = name.replace(/ /g, '_');
-                }
-                if (randomFunc() < 0.2) {
-                    name += `_${this.pick(this.versionMarkers, randomFunc)}`;
-                }
-                break;
-
-            case 'atmospheric':
-                // Add subtle brackets or slashes
-                if (randomFunc() < 0.2) {
-                    name = `[${name}]`;
-                } else if (randomFunc() < 0.2) {
-                    name = `//${name}`;
-                }
-                break;
-
-            case 'mystical':
-                // Very subtle geometric symbols
-                if (randomFunc() < 0.15) {
-                    const symbol = this.pick(this.geometricSymbols, randomFunc);
-                    name = `${symbol} ${name}`;
-                }
-                break;
-                
-            default:
-                // Neutral - just clean names
-                break;
+        if (roll < 12) {
+            // Single power word
+            return this.capitalize(this.pick(this.enders, randomFunc));
+        } else if (roll < 38) {
+            // Starter_Middle
+            const s = this.pick(this.starters, randomFunc);
+            const m = this.pick(this.middles, randomFunc);
+            return `${s}_${m}`;
+        } else if (roll < 68) {
+            // Starter + Connector + Middle/Ender
+            const s = this.pick(this.starters, randomFunc);
+            const c = this.pick(this.connectors, randomFunc);
+            const t = randomFunc() < 0.5
+                ? this.pick(this.middles, randomFunc)
+                : this.pick(this.enders, randomFunc);
+            return `${s}_${c}_${t}`;
+        } else if (roll < 85) {
+            // Middle_of_Ender (classic band name style)
+            const m = this.pick(this.middles, randomFunc);
+            const e = this.pick(this.enders, randomFunc);
+            return `${m}_of_the_${e}`;
+        } else if (roll < 95) {
+            // Triple: Starter_Middle_Ender
+            const s = this.pick(this.starters, randomFunc);
+            const m = this.pick(this.middles, randomFunc);
+            const e = this.pick(this.enders, randomFunc);
+            return `${s}_${m}_${e}`;
+        } else {
+            // Quad: rare epic names
+            const s = this.pick(this.starters, randomFunc);
+            const m = this.pick(this.middles, randomFunc);
+            const c = this.pick(this.connectors, randomFunc);
+            const e = this.pick(this.enders, randomFunc);
+            return `${s}_${m}_${c}_${e}`;
         }
-        
-        return name;
     }
-    
-    // Generate name based on lunar phase (supports seeding)
-    static generateLunarName(moonPhase, randomFunc = Math.random) {
-        const phaseName = moonPhase.name || 'Unknown';
-        const phaseWords = this.lunarNames[phaseName] || this.lunarNames['New Moon'];
 
-        const patterns = [
-            // Lunar word + atmospheric
-            () => `${this.capitalize(this.pick(phaseWords, randomFunc))}_${this.capitalize(this.pick(this.atmosphericWords, randomFunc))}`,
+    // ============================================================
+    // MUTATIONS — chaos sprinkles
+    // ============================================================
 
-            // Phase-influenced electronic
-            () => {
-                const intensity = moonPhase.illumination || 0.5;
-                const word = intensity > 0.7 ? 'bright' : intensity < 0.3 ? 'dark' : 'grey';
-                return `${this.capitalize(word)}_${this.capitalize(this.pick(this.electronicWords, randomFunc))}`;
-            },
+    /**
+     * Post-processing mutations for unpredictability.
+     * Each mutation has an independent chance to fire.
+     */
+    static mutate(name, randomFunc = Math.random) {
+        let result = name;
+        const r = randomFunc;
 
-            // Direct lunar reference
-            () => `${phaseName.toLowerCase().replace(/ /g, '_')}_${this.pick(['transmission', 'signal', 'phase', 'cycle'], randomFunc)}`,
+        // 15%: Add numerology suffix
+        if (r() < 0.15) {
+            result += `_${this.pick(this.powerNumbers, r)}`;
+        }
 
-            // Mystical lunar
-            () => `${this.capitalize(this.pick(phaseWords, randomFunc))}.${this.pick(this.mysticalWords, randomFunc)}`,
+        // 30%: Add version marker
+        if (r() < 0.30) {
+            result += `_${this.pick(this.versionMarkers, r)}`;
+        }
 
-            // Numeric lunar (day of lunar month)
-            () => {
-                const lunarDay = Math.floor(moonPhase.phase * 29.53);
-                return `lunar_day_${lunarDay}`;
+        // 8%: Witch house cross framing
+        if (r() < 0.08) {
+            const sym = this.pick(this.witchSymbols, r);
+            result = `${sym}_${result}_${sym}`;
+        }
+
+        //
+        // 10%: Vaporwave fragment insertion
+        if (r() < 0.10) {
+            const frag = this.pick(this.vaporwaveFrags, r);
+            const parts = result.split('_');
+            const pos = Math.floor(r() * (parts.length + 1));
+            parts.splice(pos, 0, frag);
+            result = parts.join('_');
+        }
+
+        // 5%: Glitch/zalgo a random word in the name
+        if (r() < 0.05) {
+            const parts = result.split('_');
+            const idx = Math.floor(r() * parts.length);
+            parts[idx] = this.applyZalgo(parts[idx], r);
+            result = parts.join('_');
+        }
+
+        // 12%: Geometric symbol prefix
+        if (r() < 0.12) {
+            result = `${this.pick(this.geometricSymbols, r)}_${result}`;
+        }
+
+        // 20%: Force-lowercase the whole thing
+        if (r() < 0.20) {
+            result = result.toLowerCase();
+        }
+
+        // 10%: ALL CAPS mode
+        if (r() < 0.10) {
+            result = result.toUpperCase();
+        }
+
+        // 5%: Corrupt with hex insertion
+        if (r() < 0.05) {
+            const hex = Math.floor(r() * 255).toString(16).padStart(2, '0');
+            result += `_0x${hex}`;
+        }
+
+        // 5%: Reverse one word
+        if (r() < 0.05) {
+            const parts = result.split('_');
+            const idx = Math.floor(r() * parts.length);
+            parts[idx] = parts[idx].split('').reverse().join('');
+            result = parts.join('_');
+        }
+
+        return result;
+    }
+
+    static applyZalgo(word, randomFunc = Math.random) {
+        let result = '';
+        for (const char of word) {
+            result += char;
+            if (randomFunc() < 0.3) {
+                const count = Math.floor(randomFunc() * 3) + 1;
+                for (let i = 0; i < count; i++) {
+                    result += this.pick(this.zalgo, randomFunc);
+                }
             }
-        ];
-
-        return this.pick(patterns, randomFunc)();
+        }
+        return result;
     }
-    
-    // Main generation function - intelligent name creation
+
+    // ============================================================
+    // MAIN GENERATION
+    // ============================================================
+
+    /**
+     * Main entry point: generate a mystical name.
+     * Uses moon phase, time of day, batch index, and seeded randomness.
+     */
     static generateMystical(metadata = {}) {
         const now = new Date();
         const hour = now.getHours();
 
-        // BEST PRACTICE: Support seeding for reproducible names
-        const seed = metadata.seed || Date.now();
-        const randomFunc = metadata.seed ? this.seededRandom(seed) : Math.random;
+        // Seeded RNG for reproducibility — when no seed, add entropy
+        const seed = metadata.seed ?? (Date.now() + (metadata.batchIndex || 0) * 7919 + Math.floor(Math.random() * 999999));
+        const rng = this.seededRandom(seed);
 
-        // Try to get real lunar data if available
+        // Resolve moon phase
         let moonPhase = metadata.moonPhase;
         if (!moonPhase) {
             try {
                 const LunarProcessor = require('./lunar-processor');
                 moonPhase = LunarProcessor.getMoonPhase();
             } catch (e) {
-                // BEST PRACTICE: Correct lunar fallback calculation
-                // Julian day approximation for lunar cycle
                 const daysSinceNewMoon = Math.floor((now.getTime() / 86400000 + 0.5) % 29.53);
                 const phase = daysSinceNewMoon / 29.53;
-
                 moonPhase = {
                     phase,
                     illumination: (1 - Math.cos(phase * Math.PI * 2)) / 2,
-                    name: this.getLunarPhaseName(phase)
+                    name: this.getLunarPhaseName(phase),
                 };
             }
         }
-        
-        // Weighted selection based on time and moon
-        const weights = {
-            clean: 40,      // Always good chance of clean names
-            lunar: 20,      // Lunar-influenced
-            temporal: 15,   // Time-based
-            technical: 15,  // Technical style
-            atmospheric: 10 // Atmospheric style
-        };
-        
-        // Adjust weights based on conditions
-        if (hour >= 22 || hour <= 6) {
-            weights.atmospheric += 10;
-            weights.lunar += 5;
-        }
-        
-        if (moonPhase.illumination < 0.2 || moonPhase.illumination > 0.8) {
-            weights.lunar += 15; // Strong lunar influence at extremes
-        }
-        
-        // Pick generation method based on weights
-        const total = Object.values(weights).reduce((a, b) => a + b, 0);
-        let random = randomFunc() * total;
-        let method = 'clean';
 
-        for (const [key, weight] of Object.entries(weights)) {
-            random -= weight;
-            if (random <= 0) {
-                method = key;
-                break;
-            }
-        }
+        // ---- Select generation strategy ----
+        const roll = rng() * 100;
 
-        // Generate based on selected method
         let name;
-        switch(method) {
-            case 'lunar':
-                name = this.generateLunarName(moonPhase, randomFunc);
-                break;
-            case 'temporal':
-                const timeWord = hour < 6 ? 'nocturnal' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
-                name = `${timeWord}_${this.pick(this.mysticalWords, randomFunc)}`;
-                break;
-            case 'technical':
-                name = this.generateStyledName('technical', randomFunc);
-                break;
-            case 'atmospheric':
-                name = this.generateStyledName('atmospheric', randomFunc);
-                break;
-            default:
-                name = this.generateCleanName(randomFunc);
+        if (roll < 35) {
+            // Compound name from word banks (most common)
+            name = this.buildCompoundName(rng);
+        } else if (roll < 55) {
+            // Lunar-influenced name
+            name = this.generateLunarName(moonPhase, rng);
+        } else if (roll < 70) {
+            // Time-based name
+            name = this.generateTimeName(hour, rng);
+        } else if (roll < 80) {
+            // Style-flavored (witch house / vaporwave)
+            name = this.generateStyledName(rng);
+        } else if (roll < 90) {
+            // Action verb starter
+            name = this.generateActionName(rng);
+        } else {
+            // Wildcard: pure compound with extra mutations
+            name = this.buildCompoundName(rng);
+            name = this.mutate(name, rng); // double mutate for chaos
         }
 
-        // BEST PRACTICE: Post-processing with better symbol handling
+        // Apply mutations
+        name = this.mutate(name, rng);
+
+        // Sanitize
+        name = this.sanitize(name);
+
+        // Fallback if sanitization destroyed everything
+        if (!name || name.length < 3 || !/[a-zA-Z]/.test(name)) {
+            name = `hexbloop_${Date.now()}`;
+        }
+
+        return name;
+    }
+
+    // ---- Sub-generators ----
+
+    static generateLunarName(moonPhase, rng) {
+        const phaseName = moonPhase.name || 'New Moon';
+        const phaseWords = this.lunarNames[phaseName] || this.lunarNames['New Moon'];
+        const lunarWord = this.pick(phaseWords, rng);
+
+        const patterns = [
+            () => `${this.capitalize(lunarWord)}_${this.pick(this.enders, rng)}`,
+            () => `${this.capitalize(this.pick(this.starters, rng))}_${lunarWord}`,
+            () => `${lunarWord}_of_the_${this.pick(this.middles, rng).toLowerCase()}`,
+            () => `${phaseName.toLowerCase().replace(/ /g, '_')}_${this.pick(this.enders, rng)}`,
+            () => {
+                const lunarDay = Math.floor(moonPhase.phase * 29.53);
+                return `lunar_day_${lunarDay}_${this.pick(this.enders, rng)}`;
+            },
+        ];
+
+        return this.pick(patterns, rng)();
+    }
+
+    static generateTimeName(hour, rng) {
+        let timeWord;
+        if (hour < 4) timeWord = 'Nocturnal';
+        else if (hour < 6) timeWord = 'PreDawn';
+        else if (hour < 8) timeWord = 'Dawn';
+        else if (hour < 12) timeWord = 'Morning';
+        else if (hour < 14) timeWord = 'Noon';
+        else if (hour < 17) timeWord = 'Afternoon';
+        else if (hour < 20) timeWord = 'Dusk';
+        else if (hour < 23) timeWord = 'Twilight';
+        else timeWord = 'Midnight';
+
+        return `${timeWord}_${this.pick(this.enders, rng)}`;
+    }
+
+    static generateStyledName(rng) {
+        // Witch house or vaporwave flavored
+        if (rng() < 0.5) {
+            // Witch house: cross-framed dark word
+            const word = this.pick(this.middles, rng);
+            const sym = this.pick(this.witchSymbols, rng);
+            return `${sym}_${word}_${sym}`.toUpperCase();
+        } else {
+            // Vaporwave: fullwidth aesthetic
+            const frag = this.pick(this.vaporwaveFrags, rng);
+            const word = this.pick(this.enders, rng);
+            return `${frag}_${word}`;
+        }
+    }
+
+    static generateActionName(rng) {
+        const actions = [
+            "Crushing", "Burning", "Destroying", "Smashing", "Breaking", "Shattering",
+            "Ripping", "Tearing", "Blasting", "Exploding", "Decimating", "Slaying",
+            "Falling", "Rising", "Drifting", "Floating", "Sliding", "Gliding",
+            "Spinning", "Warping", "Phasing", "Diving", "Soaring",
+            "Glitching", "Corrupting", "Processing", "Computing", "Hacking",
+            "Scanning", "Loading", "Compiling", "Encrypting", "Decoding",
+            "Snuggling", "Napping", "Brewing", "Baking", "Sipping", "Lounging",
+            "Wandering", "Exploring", "Roaming", "Lurking", "Chilling",
+            "Wiggling", "Wobbling", "Bouncing", "Hopping", "Dancing",
+            "Sleeping", "Dreaming", "Dozing", "Yawning", "Mellowing",
+        ];
+
+        const action = this.pick(actions, rng);
+        const target = this.pick(this.middles, rng);
+        return `${action}_${target}`;
+    }
+
+    // ---- Backward-compatible wrappers (used by tests/batch engine) ----
+
+    static generateCleanName(randomFunc = Math.random) {
+        return this.buildCompoundName(randomFunc);
+    }
+
+    static generateStyledName(style = 'neutral', randomFunc = Math.random) {
+        return this.buildCompoundName(randomFunc);
+    }
+
+    // ---- Sanitization ----
+
+    static sanitize(name) {
         // Remove emojis
         name = name.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '');
 
-        // Replace spaces with underscores (but preserve intentional underscores/dots/dashes)
+        // Replace spaces with underscores
         name = name.replace(/\s+/g, '_');
 
-        // Keep safe filename chars INCLUDING geometric symbols that were intentionally added
-        name = name.replace(/[^a-zA-Z0-9_\-\.\[\]\(\)△▽◇◯□▪▫•°∞∴∵≈≡∂∇]/g, '');
-        
-        // BEST PRACTICE: Validation and safety checks
-        // Ensure name isn't too long (max 50 chars for reasonable filenames)
-        if (name.length > 50) {
-            name = name.substring(0, 50);
+        // Keep safe filename chars (ASCII + geometric symbols from test spec)
+        name = name.replace(/[^a-zA-Z0-9_\-\.\[\]()△▽◇◯□▪▫•°∞∴∵≈≡∂∇]/g, '');
+
+        // Trim to max 60 chars
+        if (name.length > 60) {
+            name = name.substring(0, 60);
         }
 
         // Remove trailing separators
         name = name.replace(/[_\-\.]+$/, '');
 
-        // Validate: minimum length, not just numbers/symbols
-        const hasLetters = /[a-zA-Z]/.test(name);
-        if (!name || name.length < 3 || !hasLetters) {
-            // Fallback to timestamp-based name
-            name = `hexbloop_${Date.now()}`;
-        }
+        // Remove leading separators
+        name = name.replace(/^[_\-\.]+/, '');
+
+        // Collapse multiple underscores
+        name = name.replace(/_{2,}/g, '_');
 
         return name;
     }
