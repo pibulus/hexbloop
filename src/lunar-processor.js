@@ -38,87 +38,90 @@ class LunarProcessor {
         return 'Waning Crescent';
     }
     
-    // === Moon Phase → Audio Parameter Mapping ===
+    // === Moon Phase → Audio Parameter Mapping (tape-cassette calibrated) ===
+    // Overdrive: 1.0=clean warmth, 2.0=gentle saturation, 3.0=full tape crunch
+    // Bass/Treble: subtle EQ shaping (not radical)
+    // Compand ratio: 2=glue, 3=moderate, 4=heavy tape squash
     static getPhaseInfluence(phase) {
         if (phase < 0.03 || phase > 0.97) {
-            // New Moon → Dark, heavy, mysterious
+            // New Moon → Dark, warm, thick tape saturation
             return {
                 type: 'dark',
-                overdrive: 6.0,
-                bass: 4.0,
-                treble: -0.5,
-                echo: { delay: 0.5, decay: 0.1 },
-                compand: { attack: 0.3, ratio: 8 }
+                overdrive: 2.8,
+                bass: 2.2,
+                treble: -0.8,
+                echo: { delay: 0.45, decay: 0.08 },
+                compand: { attack: 0.08, ratio: 3.5 }
             };
         } else if (phase < 0.22) {
-            // Waxing Crescent → Building energy
+            // Waxing Crescent → Building warmth
             return {
                 type: 'building',
-                overdrive: 3.5,
-                bass: 2.0,
-                treble: 0.5,
-                echo: { delay: 0.4, decay: 0.06 },
-                compand: { attack: 0.25, ratio: 6 }
+                overdrive: 2.0,
+                bass: 1.5,
+                treble: 0.0,
+                echo: { delay: 0.35, decay: 0.05 },
+                compand: { attack: 0.06, ratio: 3.0 }
             };
         } else if (phase < 0.28) {
-            // First Quarter → Balanced but intense
+            // First Quarter → Punchy tape compression
             return {
                 type: 'balanced',
-                overdrive: 4.0,
-                bass: 2.5,
-                treble: 1.0,
-                echo: { delay: 0.35, decay: 0.07 },
-                compand: { attack: 0.2, ratio: 6 }
+                overdrive: 2.3,
+                bass: 1.5,
+                treble: 0.5,
+                echo: { delay: 0.30, decay: 0.06 },
+                compand: { attack: 0.06, ratio: 3.0 }
             };
         } else if (phase < 0.47) {
-            // Waxing Gibbous → Growing power
+            // Waxing Gibbous → Open, dynamic
             return {
                 type: 'growing',
-                overdrive: 3.0,
-                bass: 1.5,
-                treble: 1.5,
-                echo: { delay: 0.3, decay: 0.05 },
-                compand: { attack: 0.15, ratio: 4 }
+                overdrive: 1.7,
+                bass: 1.0,
+                treble: 0.8,
+                echo: { delay: 0.25, decay: 0.04 },
+                compand: { attack: 0.05, ratio: 2.5 }
             };
         } else if (phase < 0.53) {
-            // Full Moon → Bright, ethereal
+            // Full Moon → Bright, airy, light touch
             return {
                 type: 'ethereal',
-                overdrive: 2.0,
-                bass: 1.0,
-                treble: 2.5,
-                echo: { delay: 0.25, decay: 0.04 },
-                compand: { attack: 0.1, ratio: 3 }
+                overdrive: 1.2,
+                bass: 0.5,
+                treble: 1.5,
+                echo: { delay: 0.20, decay: 0.03 },
+                compand: { attack: 0.04, ratio: 2.0 }
             };
         } else if (phase < 0.72) {
-            // Waning Gibbous → Reflective
+            // Waning Gibbous → Warm, reflective
             return {
                 type: 'reflective',
-                overdrive: 3.5,
-                bass: 2.0,
-                treble: 1.0,
-                echo: { delay: 0.4, decay: 0.06 },
-                compand: { attack: 0.2, ratio: 5 }
+                overdrive: 2.0,
+                bass: 1.3,
+                treble: 0.3,
+                echo: { delay: 0.35, decay: 0.05 },
+                compand: { attack: 0.07, ratio: 3.0 }
             };
         } else if (phase < 0.78) {
-            // Last Quarter → Releasing
+            // Last Quarter → Driven, lo-fi
             return {
                 type: 'releasing',
-                overdrive: 4.5,
-                bass: 3.0,
-                treble: 0.0,
-                echo: { delay: 0.45, decay: 0.08 },
-                compand: { attack: 0.25, ratio: 7 }
+                overdrive: 2.5,
+                bass: 1.8,
+                treble: -0.3,
+                echo: { delay: 0.40, decay: 0.07 },
+                compand: { attack: 0.07, ratio: 3.5 }
             };
         } else {
-            // Waning Crescent → Fading
+            // Waning Crescent → Muffled warmth, tape degradation
             return {
                 type: 'fading',
-                overdrive: 5.0,
-                bass: 3.5,
-                treble: -1.0,
-                echo: { delay: 0.5, decay: 0.09 },
-                compand: { attack: 0.3, ratio: 7 }
+                overdrive: 2.8,
+                bass: 2.0,
+                treble: -0.8,
+                echo: { delay: 0.45, decay: 0.09 },
+                compand: { attack: 0.08, ratio: 3.5 }
             };
         }
     }

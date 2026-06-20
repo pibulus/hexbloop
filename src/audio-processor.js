@@ -270,35 +270,46 @@ class AudioProcessor {
         }
     }
     
+    static buildCompandCurve(ratio) {
+        // Build a tape-style compand transfer curve from the ratio
+        // Gentle knee: input above 0dB gets squashed, quiet passages lifted slightly
+        // ratio 2 → light glue, ratio 3.5 → heavy tape squash
+        const clamp = Math.max(2, Math.min(4, ratio));
+        const knee = -6 * clamp;           // -12 to -24 dB knee point
+        const quiet = -4 * clamp;          // -8 to -16 dB for quiet lift
+        return `6:${knee},-20,${quiet}`;
+    }
+
     static async processSox(inputPath, outputPath, influences) {
         return new Promise((resolve, reject) => {
             // Ensure influences object exists with defaults
             if (!influences) {
                 influences = {
-                    overdrive: 4.0,
-                    bass: 2.0,
-                    treble: 1.0,
+                    overdrive: 2.0,
+                    bass: 1.5,
+                    treble: 0.5,
                     echo: { delay: 0.3, decay: 0.05 },
-                    compand: { attack: 0.2, ratio: 5 }
+                    compand: { attack: 0.06, ratio: 3 }
                 };
             }
 
-            // Sox effects chain with lunar-influenced parameters
-            // BEST PRACTICE: gain -h provides headroom BEFORE effects, gain -r reclaims AFTER
-            // This prevents clipping from cascading effects
+            // Tape-cassette style Sox chain:
+            // headroom → saturation → EQ → gentle compand → reclaim → dither
+            const ratio = influences.compand.ratio || 3;
+            const compandCurve = this.buildCompandCurve(ratio);
             const soxBin = binaries.sox.path || 'sox';
             const soxProcess = spawn(soxBin, [
                 inputPath,
                 outputPath,
-                'gain', '-h',                             // Add headroom BEFORE effects (prevents clipping)
-                'overdrive', influences.overdrive.toString(), '2.5',  // Distortion
-                'bass', `+${influences.bass}`,            // Low freq boost
-                'treble', influences.treble >= 0 ? `+${influences.treble}` : influences.treble.toString(),  // High freq adjust
-                'echo', influences.echo.delay.toString(), influences.echo.decay.toString(), '6.5', '0.045',  // Echo effect
-                'compand', `${influences.compand.attack},0.6`, '6:-70,-60,-20', '-2', '-90', '0.25',  // Compression
-                'gain', '-r',                             // Reclaim headroom AFTER effects (maximize volume safely)
-                'rate', '44100',                          // Sample rate
-                'dither'                                  // Dithering
+                'gain', '-h',                             // Headroom before effects
+                'overdrive', influences.overdrive.toString(), '2.0',  // Tape saturation (lower gain=warmer)
+                'bass', `+${influences.bass}`,            // Low warmth
+                'treble', influences.treble >= 0 ? `+${influences.treble}` : influences.treble.toString(),
+                'echo', influences.echo.delay.toString(), influences.echo.decay.toString(), '6', '0.03',  // Subtle space
+                'compand', `${influences.compand.attack},0.2`, compandCurve, '-3', '-40', '0.05',  // Tape glue
+                'gain', '-r',                             // Reclaim headroom
+                'rate', '44100',
+                'dither'
             ]);
             
             let stderr = '';
@@ -354,13 +365,16 @@ class AudioProcessor {
     
     static async processWithFFmpegOnly(inputPath, outputPath, influences) {
         return new Promise((resolve, reject) => {
-            // FFmpeg fallback that approximates Sox effects
+            // FFmpeg fallback: tape-saturation emulation via soft clipping + gentle compand
+            const ratio = influences.compand?.ratio || 3;
+            const attackMs = Math.round((influences.compand?.attack || 0.06) * 1000);
             const soxLikeFilters = [
                 'volume=-1.5dB',
                 `bass=g=${influences.bass}`,
                 `treble=g=${influences.treble}`,
-                `aecho=${influences.echo.delay}:${influences.echo.decay}:6.5:0.045`,
-                `acompressor=threshold=-20dB:ratio=${influences.compand.ratio || 6}:attack=${influences.compand.attack * 1000}:release=250:makeup=2`
+                `aecho=${influences.echo.delay}:${influences.echo.decay}:6:0.03`,
+                'acrusher=bits=16:mode=log:aa=1',  // Subtle bit-crush for tape grit
+                `acompressor=threshold=-22dB:ratio=${ratio}:attack=${attackMs}:release=120:makeup=2`
             ].join(',');
             
             ffmpeg(inputPath)
@@ -385,38 +399,34 @@ class AudioProcessor {
     
     static async processFFmpeg(inputPath, outputPath, settings = {}) {
         return new Promise((resolve, reject) => {
-            // Extract format from output path or use settings
             const outputExt = path.extname(outputPath).slice(1).toLowerCase();
             const format = settings?.output?.format || outputExt || 'mp3';
             const quality = settings?.output?.quality || 'high';
             const sampleRate = settings?.output?.sampleRate || 44100;
 
-            // PROFESSIONAL MASTERING CHAIN (2025 best practices):
-            // EQ → Compression → Limiting → Loudness Normalization → Safety Limiter
+            // TAPE-CASSETTE MASTERING CHAIN:
+            // Warm EQ → Gentle glue compression → Loudness → Single safety limiter
             const filterComplex = [
-                // 1. EQUALIZATION: Shape frequency response before dynamics
-                'equalizer=f=100:t=q:w=1:g=0.3',      // Low bass boost
-                'equalizer=f=800:t=q:w=1.2:g=0.5',    // Low-mid presence
-                'equalizer=f=1600:t=q:w=1:g=0.4',     // Mid clarity
-                'equalizer=f=5000:t=q:w=1:g=0.3',     // High-mid sparkle
+                // 1. TAPE-STYLE EQUALIZATION: Warm low-mids, gentle high rolloff
+                'equalizer=f=60:t=q:w=1.2:g=1.0',      // Sub warmth (tape head bump)
+                'equalizer=f=200:t=q:w=1:g=0.8',       // Body / thickness
+                'equalizer=f=2500:t=q:w=1:g=0.4',      // Presence without harshness
+                'equalizer=f=8000:t=q:w=1:g=-0.8',     // Gentle tape rolloff (no brittle highs)
 
-                // 2. COMPRESSION: Tighter ratio for mastering (4:1 instead of 2:1)
-                //    Lower threshold (-18dB) catches more dynamics
-                //    Faster attack (5ms) for transient control
-                //    Moderate release (50ms) for natural sound
-                //    Makeup gain (+4dB) compensates for reduction
-                'acompressor=threshold=-18dB:ratio=4:attack=5:release=50:makeup=4',
+                // 2. GLUE COMPRESSION: Musical, slow, barely-there
+                //    Higher threshold (-22dB) = only catches louder passages
+                //    Low ratio (2:1) = transparent glue, not squash
+                //    Slow attack (15ms) = transients breathe through
+                //    Long release (120ms) = natural pump
+                //    Low makeup (+2dB) = subtle leveling
+                'acompressor=threshold=-22dB:ratio=2:attack=15:release=120:makeup=2',
 
-                // 3. FIRST LIMITING: Catch peaks at -0.5dB (95% = -0.45dB)
-                'alimiter=limit=0.95',
-
-                // 4. LOUDNESS NORMALIZATION: EBU R128 standard
-                //    Integrated loudness: -16 LUFS (streaming standard)
-                //    True peak: -1.5dB (headroom for codec)
-                //    Loudness range: 11 LU (moderate dynamics)
+                // 3. LOUDNESS NORMALIZATION: EBU R128 streaming standard
+                //    -16 LUFS integrated, -1.5dB true peak, moderate dynamics
                 'loudnorm=I=-16:TP=-1.5:LRA=11',
 
-                // 5. SAFETY LIMITER: Final protection at -0.3dB (97%)
+                // 4. SAFETY LIMITER: Single final ceiling at -0.3dB (97%)
+                //    Protects against inter-sample peaks for lossy codecs
                 'alimiter=limit=0.97'
             ].join(',');
             
