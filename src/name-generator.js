@@ -38,7 +38,7 @@ class NameGenerator {
         // Skate/Punk
         "Thrashed", "Shredded", "Grinded", "Wrecked", "Crushed", "Stoked",
         // Weather/Time
-        "Morning", "Dawn", "Dusk", "Noon", "Midnight", "Sunny", "Foggy", "Misty",
+        "Sunny", "Foggy", "Misty", "Stormy", "Hazy", "Overcast", "Grey",
     ];
 
     // Core middle concepts
@@ -115,8 +115,8 @@ class NameGenerator {
         "betwixt", "amidst", "throughout", "beyond-the", "beneath-the",
         "within-the", "through-the", "outside-the", "inside-the",
         // Tech
-        "via", "using", "while", "during", "after", "before", "error", "exception",
-        "interrupt", "buffer", "cache", "stack", "null", "void", "undefined",
+        "via", "using", "while", "during", "after", "before",
+        "buffer", "cache", "stack", "void",
         // Action-based
         "corrupted-by", "glitched-through", "destroyed-by", "consumed-by",
         "processed-by", "filtered-through", "converted-to", "transformed-into",
@@ -161,13 +161,11 @@ class NameGenerator {
         '∴', '∵', '≈', '≡', '∂', '∇',
     ];
 
-    // Version markers
+    // Version markers (no single letters — look like typos)
     static versionMarkers = [
         'v1', 'v2', 'v3', 'v4', 'v5',
         'mk1', 'mk2', 'mk3',
         'alpha', 'beta', 'gamma', 'delta', 'epsilon',
-        'a', 'b', 'c', 'x', 'y', 'z',
-        'i', 'ii', 'iii', 'iv', 'v',
     ];
 
     // Lunar phase word mappings
@@ -285,67 +283,43 @@ class NameGenerator {
         let result = name;
         const r = randomFunc;
 
-        // 15%: Add numerology suffix
-        if (r() < 0.15) {
+        // 10%: Add numerology suffix
+        if (r() < 0.10) {
             result += `_${this.pick(this.powerNumbers, r)}`;
         }
 
-        // 30%: Add version marker
-        if (r() < 0.30) {
+        // 22%: Add version marker
+        if (r() < 0.22) {
             result += `_${this.pick(this.versionMarkers, r)}`;
         }
 
-        // 8%: Witch house cross framing
-        if (r() < 0.08) {
+        // 6%: Witch house geometric framing
+        if (r() < 0.06) {
             const sym = this.pick(this.witchSymbols, r);
             result = `${sym}_${result}_${sym}`;
         }
 
-        //
-        // 10%: Vaporwave fragment insertion
-        if (r() < 0.10) {
-            const frag = this.pick(this.vaporwaveFrags, r);
-            const parts = result.split('_');
-            const pos = Math.floor(r() * (parts.length + 1));
-            parts.splice(pos, 0, frag);
-            result = parts.join('_');
-        }
-
-        // 5%: Glitch/zalgo a random word in the name
-        if (r() < 0.05) {
+        // 4%: Glitch/zalgo a random word (rare, fun surprise)
+        if (r() < 0.04) {
             const parts = result.split('_');
             const idx = Math.floor(r() * parts.length);
             parts[idx] = this.applyZalgo(parts[idx], r);
             result = parts.join('_');
         }
 
-        // 12%: Geometric symbol prefix
-        if (r() < 0.12) {
+        // 8%: Geometric symbol prefix
+        if (r() < 0.08) {
             result = `${this.pick(this.geometricSymbols, r)}_${result}`;
         }
 
-        // 20%: Force-lowercase the whole thing
-        if (r() < 0.20) {
+        // 18%: Force-lowercase the whole thing
+        if (r() < 0.18) {
             result = result.toLowerCase();
         }
 
-        // 10%: ALL CAPS mode
-        if (r() < 0.10) {
+        // 8%: ALL CAPS mode
+        if (r() < 0.08) {
             result = result.toUpperCase();
-        }
-
-        // 5%: Corrupt with hex insertion
-        if (r() < 0.05) {
-            const hex = Math.floor(r() * 255).toString(16).padStart(2, '0');
-            result += `_0x${hex}`;
-        }
-
-        // 5%: Reverse one word
-        if (r() < 0.05) {
-            const parts = result.split('_');
-            const idx = Math.floor(r() * parts.length);
-            parts[idx] = parts[idx].split('').reverse().join('');
-            result = parts.join('_');
         }
 
         return result;
@@ -418,12 +392,11 @@ class NameGenerator {
             // Action verb starter
             name = this.generateActionName(rng);
         } else {
-            // Wildcard: pure compound with extra mutations
+            // Wildcard: pure compound, no extra mutations
             name = this.buildCompoundName(rng);
-            name = this.mutate(name, rng); // double mutate for chaos
         }
 
-        // Apply mutations
+        // Apply mutations once
         name = this.mutate(name, rng);
 
         // Sanitize
@@ -444,47 +417,59 @@ class NameGenerator {
         const phaseWords = this.lunarNames[phaseName] || this.lunarNames['New Moon'];
         const lunarWord = this.pick(phaseWords, rng);
 
-        const patterns = [
-            () => `${this.capitalize(lunarWord)}_${this.pick(this.enders, rng)}`,
-            () => `${this.capitalize(this.pick(this.starters, rng))}_${lunarWord}`,
-            () => `${lunarWord}_of_the_${this.pick(this.middles, rng).toLowerCase()}`,
-            () => `${phaseName.toLowerCase().replace(/ /g, '_')}_${this.pick(this.enders, rng)}`,
-            () => {
-                const lunarDay = Math.floor(moonPhase.phase * 29.53);
-                return `lunar_day_${lunarDay}_${this.pick(this.enders, rng)}`;
-            },
-        ];
-
-        return this.pick(patterns, rng)();
+        // Weighted patterns — less _of_the_, more variety
+        const roll = rng() * 100;
+        if (roll < 20) {
+            return `${this.capitalize(lunarWord)}_${this.pick(this.enders, rng)}`;
+        } else if (roll < 40) {
+            return `${this.capitalize(this.pick(this.starters, rng))}_${lunarWord}`;
+        } else if (roll < 55) {
+            return `${lunarWord}_of_the_${this.pick(this.middles, rng).toLowerCase()}`;
+        } else if (roll < 72) {
+            return `${phaseName.toLowerCase().replace(/ /g, '_')}_${this.pick(this.enders, rng)}`;
+        } else if (roll < 88) {
+            return `${this.capitalize(lunarWord)}_${this.pick(this.starters, rng).toLowerCase()}_${this.pick(this.middles, rng).toLowerCase()}`;
+        } else {
+            return `${this.pick(this.starters, rng)}_${lunarWord}_${this.pick(this.enders, rng)}`;
+        }
     }
 
     static generateTimeName(hour, rng) {
-        let timeWord;
-        if (hour < 4) timeWord = 'Nocturnal';
-        else if (hour < 6) timeWord = 'PreDawn';
-        else if (hour < 8) timeWord = 'Dawn';
-        else if (hour < 12) timeWord = 'Morning';
-        else if (hour < 14) timeWord = 'Noon';
-        else if (hour < 17) timeWord = 'Afternoon';
-        else if (hour < 20) timeWord = 'Dusk';
-        else if (hour < 23) timeWord = 'Twilight';
-        else timeWord = 'Midnight';
+        const timeWords = {
+            dead: ['Nocturnal', 'Witching', 'Deepnight', 'Voidhour'],
+            dawn: ['PreDawn', 'Firstlight', 'Dawn', 'Daybreak'],
+            morning: ['Morning', 'Rising', 'Waking', 'Sunrise'],
+            noon: ['Meridian', 'HighNoon', 'Zenith', 'Overhead'],
+            afternoon: ['Afternoon', 'Sunkissed', 'Golden', 'Declining'],
+            dusk: ['Dusk', 'Gloaming', 'Eventide', 'Fading'],
+            twilight: ['Twilight', 'Dusking', 'Bleeding', 'Violet'],
+            midnight: ['Midnight', 'Witching', 'ZeroHour', 'Deepnight'],
+        };
 
+        let key;
+        if (hour < 4) key = 'dead';
+        else if (hour < 6) key = 'dawn';
+        else if (hour < 12) key = 'morning';
+        else if (hour < 14) key = 'noon';
+        else if (hour < 17) key = 'afternoon';
+        else if (hour < 20) key = 'dusk';
+        else if (hour < 23) key = 'twilight';
+        else key = 'midnight';
+
+        const timeWord = this.pick(timeWords[key], rng);
         return `${timeWord}_${this.pick(this.enders, rng)}`;
     }
 
     static generateStyledName(rng) {
-        // Witch house or vaporwave flavored
+        // Geometric-framed or vaporwave-flavored
         if (rng() < 0.5) {
-            // Witch house: cross-framed dark word
             const word = this.pick(this.middles, rng);
             const sym = this.pick(this.witchSymbols, rng);
             return `${sym}_${word}_${sym}`.toUpperCase();
         } else {
-            // Vaporwave: fullwidth aesthetic
-            const frag = this.pick(this.vaporwaveFrags, rng);
+            const frag = this.pick(this.vaporwaveFrags, rng).charAt(0) + this.pick(this.vaporwaveFrags, rng).slice(1).toLowerCase();
             const word = this.pick(this.enders, rng);
-            return `${frag}_${word}`;
+            return `${this.capitalize(frag)}_${word}`;
         }
     }
 
