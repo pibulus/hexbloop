@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self';">
     <title>HEXBLOOP</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -49,6 +49,9 @@
         <audio id="ambientAudio" loop>
             <source src="../../assets/ambient_loop.mp3" type="audio/mpeg">
         </audio>
+
+        <!-- A/B playback element — the hexagon becomes the player after processing -->
+        <audio id="abAudio" loop></audio>
     </div>
     
     <script src="app.js"></script>

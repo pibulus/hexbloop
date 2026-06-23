@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openPreferences: () => ipcRenderer.invoke('open-preferences'),
     getSettings: () => ipcRenderer.invoke('get-settings'),
 
+    // Read an audio file's bytes so the renderer can A/B play it via a Blob URL
+    // (webSecurity + CSP block <audio> from loading file:// paths directly)
+    readAudioFile: (filePath) => ipcRenderer.invoke('read-audio-file', filePath),
+
     // New method for getting file paths from dropped files (Electron v32+ compatible)
     getFilePathsFromFiles: (files) => {
         return files.map(file => webUtils.getPathForFile(file));

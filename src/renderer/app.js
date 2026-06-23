@@ -48,6 +48,13 @@ class HexbloopMystic {
         
         // Ambient audio system
         this.ambientAudio = document.getElementById('ambientAudio');
+
+        // A/B playback system — the hexagon becomes the player after processing.
+        // Glowing = you're hearing the PROCESSED master, dimmed = the ORIGINAL.
+        this.abAudio = document.getElementById('abAudio');
+        this.abState = null;           // null = nothing loaded, 'processed' | 'original'
+        this.abBlobs = { original: null, processed: null };  // { url, mime }
+        this.hasABResult = false;
         
         // Track timeouts and event listeners for cleanup
         this.activeTimeouts = new Set();
@@ -476,7 +483,14 @@ class HexbloopMystic {
     
     async onClick() {
         if (this.isProcessing) return;
-        
+
+        // If a result is loaded, the hexagon is a player — tap flips A/B.
+        if (this.hasABResult) {
+            this.flipAB();
+            return;
+        }
+
+        // Otherwise it's the offering gesture — pick files to process.
         try {
             const paths = await window.electronAPI.selectFiles();
             if (paths && paths.length > 0) {
@@ -492,26 +506,142 @@ class HexbloopMystic {
         return /\.(mp3|wav|m4a|aiff|aif|flac|ogg|aac|opus|wma|mka|ape|alac|wv|au|snd|voc|8svx|amb|caf)$/i.test(file.name);
     }
     
+    // === A/B Playback — the hexagon is the player ===
+    // After processing, the result auto-plays (PROCESSED, glowing). Tapping the
+    // hexagon flips between processed and original at the same playback position,
+    // so you hear exactly what the moon did. No transport, no text — just glow.
+
+    // Read a file's bytes via IPC and turn them into a renderer Blob URL
+    async _fetchBlobUrl(filePath) {
+        const result = await window.electronAPI.readAudioFile(filePath);
+        if (!result || !result.success || !result.data) {
+            throw new Error(result?.error || 'Could not read audio file');
+        }
+        const blob = new Blob([result.data], { type: result.mime });
+        return { url: URL.createObjectURL(blob), mime: result.mime };
+    }
+
+    // Load a processed result so the hexagon can A/B it, then auto-play processed
+    async loadABResult(originalPath, processedPath) {
+        this.clearAB();
+
+        try {
+            // Load both sides up front so the flip is instant
+            const [original, processed] = await Promise.all([
+                this._fetchBlobUrl(originalPath),
+                this._fetchBlobUrl(processedPath)
+            ]);
+
+            this.abBlobs.original = original;
+            this.abBlobs.processed = processed;
+            this.hasABResult = true;
+
+            // Auto-play the processed master
+            this._playSide('processed', 0);
+        } catch (error) {
+            console.log('🔇 A/B playback unavailable:', error.message);
+            this.clearAB();
+        }
+    }
+
+    // Switch which side is playing, preserving the current position
+    _playSide(side, position = null) {
+        const blob = this.abBlobs[side];
+        if (!blob) return;
+
+        const resumeAt = position !== null
+            ? position
+            : (Number.isFinite(this.abAudio.currentTime) ? this.abAudio.currentTime : 0);
+
+        this.abState = side;
+        this.abAudio.src = blob.url;
+        this.abAudio.volume = 0.85;
+
+        // Restore position once the new source is ready
+        const seekAndPlay = () => {
+            try {
+                if (resumeAt > 0 && Number.isFinite(this.abAudio.duration)) {
+                    this.abAudio.currentTime = Math.min(resumeAt, this.abAudio.duration - 0.05);
+                }
+            } catch (e) { /* seeking before metadata — ignore */ }
+            this.abAudio.play().catch(err => console.log('🔇 A/B play blocked:', err.message));
+        };
+
+        if (this.abAudio.readyState >= 1) {
+            seekAndPlay();
+        } else {
+            this.abAudio.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+        }
+
+        this._updateABGlow();
+    }
+
+    // Tap-to-flip: processed <-> original at the same moment in the track
+    flipAB() {
+        if (!this.hasABResult) return;
+        const next = this.abState === 'processed' ? 'original' : 'processed';
+        this._playSide(next);
+        console.log(`🔁 A/B flip → now hearing the ${next} (${next === 'processed' ? 'glowing' : 'dimmed'})`);
+    }
+
+    // Reflect which side is playing in the hexagon's glow
+    _updateABGlow() {
+        this.hexStack.classList.remove('ab-processed', 'ab-original');
+        if (this.abState === 'processed') {
+            this.hexStack.classList.add('ab-processed');
+        } else if (this.abState === 'original') {
+            this.hexStack.classList.add('ab-original');
+        }
+    }
+
+    // Stop A/B playback and release blob URLs
+    clearAB() {
+        if (this.abAudio) {
+            this.abAudio.pause();
+            this.abAudio.removeAttribute('src');
+            try { this.abAudio.load(); } catch (e) { /* noop */ }
+        }
+        for (const side of ['original', 'processed']) {
+            if (this.abBlobs[side]?.url) {
+                URL.revokeObjectURL(this.abBlobs[side].url);
+            }
+            this.abBlobs[side] = null;
+        }
+        this.abState = null;
+        this.hasABResult = false;
+        this.hexStack.classList.remove('ab-processed', 'ab-original');
+    }
+
     // === Audio Processing ===
     async processFiles(paths) {
         this.isProcessing = true;
         this.startProcessing();
-        
+
+        // New offering — stop any A/B playback from the previous result
+        this.clearAB();
+
         // Start spectrum visualization
         if (this.spectrum) {
             this.spectrum.startVisualization();
         }
-        
+
         try {
             console.log('🎵 Processing mystical audio:', paths);
-            
+
             const results = await window.electronAPI.processAudio(paths);
             console.log('✅ Mystical transformation complete:', results);
-            
+
             const successfulFiles = results.filter(r => r.success);
             if (successfulFiles.length > 0) {
                 this.showSuccess();
                 console.log(`🎉 Successfully processed ${successfulFiles.length} files!`);
+
+                // The hexagon becomes the player: auto-play the processed master,
+                // tap to A/B against the original. Use the first successful result.
+                const first = successfulFiles[0];
+                if (first.originalFile && first.outputFile) {
+                    this.loadABResult(first.originalFile, first.outputFile);
+                }
             } else {
                 console.error('❌ No files were successfully processed');
             }
@@ -693,7 +823,10 @@ class HexbloopMystic {
             this.ambientAudio.pause();
             this.ambientAudio.src = '';
         }
-        
+
+        // Release A/B playback blobs
+        this.clearAB();
+
         console.log('✨ Cleanup complete');
     }
 }

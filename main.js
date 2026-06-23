@@ -384,6 +384,44 @@ ipcMain.handle('get-file-paths-from-drop', async (event, fileData) => {
     return paths;
 });
 
+// Read an audio file's bytes for in-app A/B playback.
+// The renderer can't load file:// URLs directly (webSecurity + CSP),
+// so we hand it the raw bytes and it builds a Blob URL.
+const AUDIO_MIME_TYPES = {
+    '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4',
+    '.aiff': 'audio/aiff', '.aif': 'audio/aiff', '.flac': 'audio/flac',
+    '.ogg': 'audio/ogg', '.opus': 'audio/ogg', '.aac': 'audio/aac',
+    '.caf': 'audio/x-caf', '.au': 'audio/basic'
+};
+
+ipcMain.handle('read-audio-file', async (event, filePath) => {
+    try {
+        if (!filePath || typeof filePath !== 'string') {
+            throw new Error('Invalid file path');
+        }
+
+        const resolvedPath = path.resolve(filePath);
+        if (!fs.existsSync(resolvedPath)) {
+            throw new Error('File not found');
+        }
+
+        const stats = fs.statSync(resolvedPath);
+        if (!stats.isFile()) {
+            throw new Error('Path is not a file');
+        }
+
+        const ext = path.extname(resolvedPath).toLowerCase();
+        const mime = AUDIO_MIME_TYPES[ext] || 'application/octet-stream';
+        const buffer = await fs.promises.readFile(resolvedPath);
+
+        // Return as ArrayBuffer-friendly payload for the renderer
+        return { success: true, mime, data: buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) };
+    } catch (error) {
+        console.error('❌ Failed to read audio file for playback:', error.message);
+        return { success: false, error: error.message };
+    }
+});
+
 // Handle ambient audio toggle from menu
 ipcMain.on('toggle-ambient-audio', (event, enabled) => {
     // Forward to all renderer windows (in case we have multiple in the future)

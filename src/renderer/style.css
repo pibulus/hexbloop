@@ -896,3 +896,36 @@ body {
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
 }
+
+/* ===================================================================
+   A/B PLAYBACK STATES — the hexagon is the player
+   After processing, the result auto-plays. The glow tells you which
+   side you're hearing, with no text:
+     • ab-processed = ALIVE, vivid, fully glowing → the master/the magic
+     • ab-original  = dimmed, desaturated, pulled back → the raw source
+   The contrast between the two IS the feedback that the moon did something.
+   =================================================================== */
+
+/* PROCESSED — the magic. Lift the whole stack: brighter, more saturated. */
+.hexagon-stack.ab-processed {
+    transition: filter 0.7s cubic-bezier(0.4, 0.0, 0.6, 1.0);
+    filter: brightness(1.12) saturate(1.25);
+}
+
+.hexagon-stack.ab-processed .pentagram {
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow:
+        0 0 24px rgba(159, 121, 234, 0.9),
+        0 0 48px rgba(255, 45, 85, 0.4);
+}
+
+/* ORIGINAL — the raw source. Dim and desaturate so the loss of magic is felt. */
+.hexagon-stack.ab-original {
+    transition: filter 0.7s cubic-bezier(0.4, 0.0, 0.6, 1.0);
+    filter: brightness(0.6) saturate(0.35) contrast(0.95);
+}
+
+.hexagon-stack.ab-original .pentagram {
+    color: rgba(255, 255, 255, 0.3);
+    text-shadow: 0 0 12px rgba(120, 120, 140, 0.4);
+}
