@@ -47,7 +47,7 @@
       "!README.md",
       "!GLOSSARY.md",
       "!CLAUDE.md",
-      "!swift/**",
+      "!docs/**",
       "!dist/**",
       "!*.log",
       "!.git/**"
