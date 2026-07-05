@@ -5,9 +5,16 @@ Branch: `fable-audit-2026-07-05` (from `c06ec55`). Pre-audit working tree
 preserved in stash `fable-audit-safepoint WIP` — **do not drop it** until
 you've confirmed the branch has everything you expect.
 
-Every fix below was verified: all four test suites pass (44 checks), a
-real end-to-end harness ran the actual pipeline against the fixture across
-the format/stage matrix, and the app boots clean.
+Every fix below was verified: all test suites pass, a real end-to-end
+harness runs the actual pipeline against the fixture across the
+format/stage matrix, and the app boots clean.
+
+> **Pass two (2026-07-06)** added: CSS control dedupe (screenshot-verified),
+> A/B playback + IPC hardening (path allowlist, size cap, dead-channel
+> removal, boot race fix, crash-loop guard, visible errors), and foundation
+> work (E2E test + output-path unit tests now IN the repo, constants pruned,
+> web assets excluded from the bundle). See the "PASS TWO" section near the
+> bottom.
 
 ---
 
@@ -149,10 +156,81 @@ files) back to mp3. Schema enum shrunk to the truth: mp3/wav/flac.
 6. **electron/electron-builder major bumps**: out of scope per audit rules
    (dependency bumps are risky without a full regression pass).
 
-## 📊 The numbers
+## 📊 The numbers (pass one)
 
 - 8 commits, ~2,000 lines touched
 - 3 launch-blocking bugs fixed (sox chain, WAV/FLAC output, ambient pref)
 - ~460 lines of provably-dead code removed
 - 0 test regressions; 1 pre-existing test failure fixed; sox test upgraded
   from availability-check to real execution
+
+---
+
+# 🌙 PASS TWO — 2026-07-06
+
+Second sweep, now with the codebase understood. Focus shifted from
+"fix what's broken" to "make it a solid foundation to build on."
+
+## 🎨 CSS control dedupe (screenshot-verified)
+
+`.ambient-toggle` was defined **three times** and `.settings-button` /
+`.toggle-icon` / `.settings-icon` twice each — the last-in-cascade block
+won, the rest were dead weight that made the file lie about what renders.
+Collapsed each to a single definition, preserving the `.playing` state,
+`:active` feedback, and `gentle-pulse`; dropped the orphaned `audio-pulse`
+keyframe. **Verified** by capturing before/after Electron screenshots with
+the `.playing` state forced and comparing — identical layout/controls
+(the only pixel delta was the glow's random animation phase, which is
+noisier run-to-run than the change itself). 127 lines removed, 930 → 803.
+
+## 🔒 A/B playback + IPC hardening
+
+`read-audio-file` was the softest remaining spot — it read any path the
+renderer named, fully into memory, twice:
+- **Path allowlist**: the renderer can now only read files THIS session
+  processed (inputs + outputs), not arbitrary disk paths.
+- **200MB size cap**: both A/B sides load into renderer memory at once, so
+  a multi-hour WAV would OOM the tab. Now rejected with a clear message.
+- **Dead IPC removed**: `get-file-paths-from-drop` (renderer uses webUtils)
+  and the `processing-update` channel + `onProcessingUpdate` listener (no
+  sender, no listener) — pure attack surface, gone.
+
+## 🩹 Boot & resilience
+
+- **Prefs boot race fixed** (was "deliberately left" #4): `PreferencesManager`
+  now exposes `whenReady()`; `main` awaits it before creating the window, so
+  a file dropped in the first tick can't see defaults instead of saved prefs.
+- **Renderer crash-loop guard** (was "left as-is" #5): `render-process-gone`
+  auto-reload is capped at 3 retries with a 30s recovery reset — a renderer
+  that crashes on load can no longer spin forever.
+- **Errors are visible**: `showError` writes the reason into the progress
+  line instead of only flashing the hexagon red.
+
+## 🧱 Foundation (the "build on it" part)
+
+- **E2E test now lives in the repo** (`test/pipeline-e2e.test.js`,
+  `npm run test:e2e`). The harness that caught the sox/WAV/FLAC bugs is no
+  longer a throwaway in scratch — it runs the real pipeline across the
+  format/stage matrix under a headless electron stub and ffprobes every
+  output. Skips cleanly without ffprobe.
+- **Output-path uniquifier extracted** to `src/shared/output-path.js` with
+  6 unit tests (batch + disk collisions). Was inline in main.js, untested.
+- **constants.js pruned**: only `WINDOW_CONFIG` was ever imported; removed
+  4 dead export groups.
+- **Packaging hygiene**: website-only assets (favicon*, apple-touch-icon,
+  icon-192/512, manifest.json — they belong to the Fresh site) excluded
+  from the app bundle.
+
+## 📊 The numbers (pass two)
+
+- 4 commits, ~350 lines touched
+- 2 new test suites in-repo (E2E pipeline, output-path); `npm test` now
+  runs 5 suites + a separate `npm run test:e2e`
+- ~130 lines of dead CSS + dead IPC/constants removed
+- All suites green, E2E 6/6, boot clean
+
+## 🤔 Still deliberately left (unchanged from pass one)
+
+- **Vendor binaries not bundled** — biggest remaining launch decision.
+- **`ambient_loop.mp3` is 13MB** — could be ~3MB re-encoded; taste call.
+- **electron/electron-builder major bumps** — need a full regression pass.
