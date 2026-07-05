@@ -4,23 +4,17 @@
  * @description Ultra-lightweight mystical interface with hexagonal design
  */
 
-// Import spectrum visualizer
-const SpectrumVisualizer = typeof require !== 'undefined' ? require('./spectrum-visualizer') : null;
-
 class HexbloopMystic {
     constructor() {
         this.isProcessing = false;
-        
+
         // UI elements
         this.hexStack = document.getElementById('hexStack');
         this.pentagram = document.getElementById('pentagram');
         this.processingGlow = document.getElementById('processingGlow');
         this.progressIndicator = document.getElementById('progressIndicator');
         this.progressText = document.getElementById('progressText');
-        
-        // Initialize spectrum visualizer
-        this.spectrum = SpectrumVisualizer ? new SpectrumVisualizer() : null;
-        
+
         // Progress tracking
         this.currentFileIndex = 0;
         this.totalFiles = 0;
@@ -71,12 +65,7 @@ class HexbloopMystic {
         this.initParallax();
         this.initAmbientAudio();
         this.initSettingsButton();
-        
-        // Initialize spectrum visualizer
-        if (this.spectrum) {
-            this.spectrum.init();
-        }
-        
+
         console.log('🔥 Mystical hexagon awakened - ready for sacrifices 🤘');
     }
     
@@ -210,19 +199,18 @@ class HexbloopMystic {
     }
     
     async initAmbientAudio() {
+        if (!this.ambientAudio) return;
+
         // Set initial volume
         this.ambientAudio.volume = 0.3;
 
         // Add toggle click handler
-        this.ambientToggle.addEventListener('click', () => {
-            this.toggleAmbientAudio();
-        });
-
-        // Listen for ambient audio toggle from menu
-        window.electronAPI.onAmbientToggle((event, enabled) => {
-            console.log(`🎵 Ambient audio toggled from menu: ${enabled}`);
-            this.toggleAmbientAudio(enabled);
-        });
+        // (menu/preferences toggles arrive via onAmbientToggle in initProgressListeners)
+        if (this.ambientToggle) {
+            this.ambientToggle.addEventListener('click', () => {
+                this.toggleAmbientAudio();
+            });
+        }
 
         // Load settings and only auto-start if enabled
         try {
@@ -258,8 +246,10 @@ class HexbloopMystic {
     }
     
     toggleAmbientAudio(forceState = null) {
+        if (!this.ambientAudio) return;
+
         const shouldPlay = forceState !== null ? forceState : !this.isAudioPlaying;
-        
+
         if (shouldPlay && !this.isAudioPlaying) {
             this.ambientAudio.play().then(() => {
                 this.isAudioPlaying = true;
@@ -289,25 +279,11 @@ class HexbloopMystic {
     }
     
     initSettingsButton() {
-        // Add settings button handler to open preferences window
+        // Settings button click handler (hover styling handled in CSS)
         if (this.settingsButton) {
             this.settingsButton.addEventListener('click', () => {
                 console.log('⚙️ Opening preferences window...');
-                // Send IPC message to open preferences window
-                if (window.electronAPI && window.electronAPI.openPreferences) {
-                    window.electronAPI.openPreferences();
-                } else {
-                    console.log('⚠️ Preferences API not available');
-                }
-            });
-            
-            // Add hover effect
-            this.settingsButton.addEventListener('mouseenter', () => {
-                this.settingsButton.classList.add('hover');
-            });
-            
-            this.settingsButton.addEventListener('mouseleave', () => {
-                this.settingsButton.classList.remove('hover');
+                window.electronAPI.openPreferences();
             });
         }
     }
@@ -319,14 +295,9 @@ class HexbloopMystic {
         
         if (status === 'processing') {
             console.log(`🎵 Processing ${current}/${total}: ${fileName}`);
-            
+
             this.progressIndicator.classList.add('active');
-            
-            // Start spectrum visualization when processing begins
-            if (this.spectrum && current === 1) {
-                this.spectrum.startVisualization();
-            }
-            
+
             // Let the hexagon speak through its geometric nature
             const hexagonalPhrase = this.generateHexagonalPhrase(current, total);
             this.progressText.textContent = `${hexagonalPhrase} • ${fileName}`;
@@ -342,18 +313,6 @@ class HexbloopMystic {
                 speed = 6; // Satisfied completion rhythm
             }
             this.pentagram.style.animationDuration = `${speed}s`;
-            
-            // Pulse spectrum on each file
-            if (this.spectrum) {
-                this.spectrum.pulse();
-            }
-        }
-        
-        // Stop visualization when processing completes
-        if (status === 'complete' && this.spectrum) {
-            setTimeout(() => {
-                this.spectrum.stopVisualization();
-            }, 2000);
         }
     }
     
@@ -620,11 +579,6 @@ class HexbloopMystic {
         // New offering — stop any A/B playback from the previous result
         this.clearAB();
 
-        // Start spectrum visualization
-        if (this.spectrum) {
-            this.spectrum.startVisualization();
-        }
-
         try {
             console.log('🎵 Processing mystical audio:', paths);
 
@@ -644,21 +598,16 @@ class HexbloopMystic {
                 }
             } else {
                 console.error('❌ No files were successfully processed');
+                const firstError = results.find(r => r.error)?.error || 'Unknown error';
+                this.showError(`Processing failed: ${firstError}`);
             }
-            
+
         } catch (error) {
             console.error('❌ Mystical transformation failed:', error);
             this.showError('Audio processing failed. Check console for details.');
         } finally {
             this.isProcessing = false;
             this.stopProcessing();
-            
-            // Stop spectrum visualization after a delay
-            if (this.spectrum) {
-                setTimeout(() => {
-                    this.spectrum.stopVisualization();
-                }, 3000);
-            }
         }
     }
     
@@ -737,51 +686,6 @@ class HexbloopMystic {
         }, 1500);
     }
     
-    initAmbientAudio() {
-        // Ambient audio toggle handler
-        if (this.ambientToggle) {
-            this.ambientToggle.addEventListener('click', () => {
-                this.toggleAmbientAudio();
-            });
-        }
-        
-        // Initialize audio element with low volume
-        if (this.ambientAudio) {
-            this.ambientAudio.volume = 0.3;
-        }
-    }
-    
-    toggleAmbientAudio(forceState = null) {
-        if (!this.ambientAudio) return;
-        
-        const shouldPlay = forceState !== null ? forceState : !this.isAudioPlaying;
-        
-        if (shouldPlay) {
-            this.ambientAudio.play().then(() => {
-                this.isAudioPlaying = true;
-                this.ambientToggle.classList.add('active');
-                console.log('🎵 Ambient audio started');
-            }).catch(err => {
-                console.log('🔇 Ambient audio playback failed:', err);
-            });
-        } else {
-            this.ambientAudio.pause();
-            this.isAudioPlaying = false;
-            this.ambientToggle.classList.remove('active');
-            console.log('🔇 Ambient audio paused');
-        }
-    }
-    
-    initSettingsButton() {
-        // Settings button click handler
-        if (this.settingsButton) {
-            this.settingsButton.addEventListener('click', () => {
-                console.log('⚙️ Opening preferences window...');
-                window.electronAPI.openPreferences();
-            });
-        }
-    }
-    
     // Add custom setTimeout that tracks timeouts
     setTrackedTimeout(callback, delay) {
         const timeoutId = setTimeout(() => {
@@ -805,13 +709,7 @@ class HexbloopMystic {
             clearTimeout(this.dragLeaveTimeout);
             this.dragLeaveTimeout = null;
         }
-        
-        // Cleanup spectrum visualizer
-        if (this.spectrum) {
-            this.spectrum.destroy();
-            this.spectrum = null;
-        }
-        
+
         // Remove all tracked event listeners
         this.eventListeners.forEach(({ element, event, handler }) => {
             element.removeEventListener(event, handler);
