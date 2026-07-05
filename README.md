@@ -20,9 +20,11 @@ Hexbloop is a **chaos magic audio engine** that enhances your audio files with m
 ### 🎵 Audio Processing
 - **High-quality audio pipeline** using sox → ffmpeg processing chain
 - **Lunar-influenced parameters** that change with moon phases and time
-- **Batch processing** with drag-and-drop support
-- **Multiple format support**: MP3, WAV, M4A, AIFF, FLAC, OGG
-- **MP3 output** with embedded artwork and metadata
+- **Batch processing** with drag-and-drop support (collision-safe naming)
+- **Wide input support**: MP3, WAV, M4A, AIFF, FLAC, OGG, and a dozen more
+- **MP3 / WAV / FLAC output** with embedded artwork and metadata
+- **A/B playback**: after processing, tap the hexagon to flip between the
+  processed master (glowing) and the original (dimmed) at the same position
 
 ### 🌙 Mystical Influences
 - **New Moon**: Dark, heavy processing (high overdrive, deep bass)
@@ -30,11 +32,14 @@ Hexbloop is a **chaos magic audio engine** that enhances your audio files with m
 - **Waxing/Waning**: Graduated processing between extremes
 - **Time of Day**: Night enhances darkness, morning brightens, evening mellows
 
-### 🎭 Name Generation Styles
-- **Sparklepop**: GLITTERSTAR8400, PRISMPULSE2165, RAINBOWDREAM3421
-- **Blackmetal**: BONEALTAR5166, GRAVEVOID1387, DEMONTHRONE5210
-- **Witchhouse**: MYSTICPROTOCOL6765, SPIRITMACHINE6429, ASTRALNETWORK1977
-- **Mixed**: Combination of all styles based on lunar and time influences
+### 🎭 Name Generation
+A chaotic naming engine built on large word banks and 15+ patterns:
+- **Compound**: `Shadow_Circuit_entropy`, `Basement_Raccoon_v2`
+- **Lunar**: `waning_gibbous_monolith`, `Radiant_frost`
+- **Time-based**: `Twilight_vortex`, `Witching_static`
+- **Styled**: `△_RITUAL_△`, `Vapor_nebula`
+- Mutations sprinkle in power numbers, version markers, and geometric symbols;
+  everything is sanitized filename-safe and collision-proofed per batch
 
 ### 🎨 Visual Design
 - **Hexagonal interface** with CSS clip-path polygons
@@ -119,13 +124,14 @@ The app calculates the current moon phase using astronomical algorithms:
 - **Lunar Cycle**: 29.53 days average
 - **Phase Precision**: Calculated to determine exact influence
 
-### Processing Parameters by Phase
-- **New Moon (Dark)**: Overdrive 6.0, Bass +4.0, Treble -0.5
-- **Waxing Crescent (Building)**: Overdrive 3.5, Bass +2.0, Treble +0.5
-- **First Quarter (Balanced)**: Overdrive 4.0, Bass +2.5, Treble +1.0
-- **Waxing Gibbous (Growing)**: Overdrive 3.0, Bass +1.5, Treble +1.5
-- **Full Moon (Ethereal)**: Overdrive 2.0, Bass +1.0, Treble +2.5
+### Processing Parameters by Phase (tape-cassette calibrated)
+- **New Moon (Dark)**: Overdrive 2.8, Bass +2.2, Treble -0.8 — thick tape saturation
+- **Waxing Crescent (Building)**: Overdrive 2.0, Bass +1.5, Treble 0.0
+- **First Quarter (Balanced)**: Overdrive 2.3, Bass +1.5, Treble +0.5
+- **Waxing Gibbous (Growing)**: Overdrive 1.7, Bass +1.0, Treble +0.8
+- **Full Moon (Ethereal)**: Overdrive 1.2, Bass +0.5, Treble +1.5 — light touch
 - **Waning Phases**: Gradual return to darkness
+- **Time of day** multiplies the moon base: deep night darkens, morning brightens
 
 ## 🎨 Visual Effects
 
@@ -149,19 +155,22 @@ The app calculates the current moon phase using astronomical algorithms:
 
 ### Project Structure
 ```
-hexbloop-electron/
-├── README.md
-├── package.json
-├── .gitignore
-├── main.js              # Main Electron process
-├── preload.js           # Secure IPC bridge
-├── app.js               # Renderer UI logic
-├── index.html           # Minimal HTML structure
-├── style.css            # Complete mystical styling
-└── src/
-    ├── audio-processor.js    # Audio processing pipeline
-    ├── lunar-processor.js    # Moon phase calculations
-    └── name-generator.js     # Mystical name generation
+hexbloop/
+├── main.js                  # Main Electron process (IPC, batch orchestration)
+├── preload.js               # Secure IPC bridge
+├── src/
+│   ├── audio-processor.js       # Sox + FFmpeg pipeline
+│   ├── audio-analyzer.js        # Audio features for artwork
+│   ├── lunar-processor.js       # Moon phase calculations
+│   ├── name-generator.js        # Chaotic mystical naming
+│   ├── metadata-embedder.js     # Tags + cover art (MP3/WAV/FLAC)
+│   ├── artwork-generator-vibrant-refined.js  # 8-style procedural art
+│   ├── binary-resolver.js       # Bundled/system ffmpeg + sox discovery
+│   ├── batch/                   # Batch naming engine
+│   ├── menu/                    # Native menu + preferences manager/window
+│   ├── shared/                  # Settings schema, constants
+│   └── renderer/                # Hexagon UI + preferences UI
+└── test/                    # Pipeline, naming, artwork, hardening tests
 ```
 
 ### Building for Distribution
@@ -198,28 +207,30 @@ This Electron version provides identical functionality to the original Swift mac
 
 ### Sample Generated Names
 ```
-🌟 Sparklepop: GLITTERSTAR8400, RAINBOWBEAM7329, CRYSTALPULSE2165
-🖤 Blackmetal: BONEALTAR5166, DEATHCULT6939, GRAVEVOID1387
-🔮 Witchhouse: MYSTICPROTOCOL6765, ASTRALNETWORK1977, SPIRITMACHINE6429
+🌙 Lunar: waning_gibbous_monolith, Radiant_frost, void_of_the_abyss
+⚡ Compound: Shadow_Circuit_entropy, Basement_Raccoon_v2, Cyber_Wolf_beyond_steel
+🕐 Time-based: Twilight_vortex, Witching_static, Meridian_thunder
+🔮 Styled: △_RITUAL_△, Vapor_nebula, ▽_PHANTOM_▽
 ```
 
 ### Lunar Influence Examples
 ```
-🌑 New Moon + Deep Night: HELLRITUAL4605 (Dark, heavy processing)
-🌕 Full Moon + Morning: GLITTERBEAM3421 (Ethereal, bright processing)
-🌓 First Quarter + Evening: MYSTICFLUX7892 (Balanced, mystical processing)
+🌑 New Moon + Deep Night: darkest, thickest tape saturation
+🌕 Full Moon + Morning: brightest, lightest touch
+🌓 First Quarter + Evening: balanced glue with warm evening tilt
 ```
 
 ## 🛡️ Security Notes
 
-- **File Access**: `webSecurity: false` is required for drag-drop functionality
-- **Process Isolation**: Renderer process cannot directly access Node.js APIs
-- **IPC Validation**: All inter-process communication is validated
-- **Dependency Security**: All npm packages are from trusted sources
+- **Sandboxed renderer**: `webSecurity: true`, `contextIsolation: true`,
+  `nodeIntegration: false` — drag-drop uses `webUtils.getPathForFile()`
+- **IPC Validation**: file paths and settings are validated in the main process
+- **No shell interpolation**: external binaries are spawned with argument
+  arrays, so hostile filenames can't inject commands
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+ISC — see `package.json`.
 
 ## 🙏 Credits
 

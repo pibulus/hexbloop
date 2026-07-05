@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🔮 Project Overview
 
-Hexbloop is a mystical audio processing application with THREE implementations:
-1. **Electron App** (Primary) - Cross-platform desktop app in root directory
-2. **Swift App** - Native macOS app in `/swift/Hexbloop/`
-3. **Marketing Website** - Deno Fresh site in `/hexbloop-site/` (separate repo)
+Hexbloop is a mystical audio processing application:
+1. **Electron App** (this repo) - Cross-platform desktop app in root directory
+2. **Marketing Website** - Deno Fresh site in `../hexbloop-site/` (separate repo)
+
+(The old native Swift implementation has been archived and removed from this repo.)
 
 ## 🚀 Development Commands
 
@@ -26,21 +27,11 @@ npm run dist          # Build macOS distribution
 npm run dist:all      # Build for all platforms
 
 # Testing
-npm test              # Run basic tests
+npm test              # Runs all four suites: audio pipeline, naming, artwork, release hardening
 
 # Maintenance
 npm run clean         # Remove node_modules and package-lock
 npm run clean:install # Clean and reinstall dependencies
-```
-
-### Swift Version (macOS Native)
-```bash
-# Open in Xcode
-open swift/Hexbloop/Hexbloop.xcodeproj
-
-# Build from command line
-cd swift/Hexbloop
-xcodebuild -scheme Hexbloop build
 ```
 
 ### Marketing Website (Deno Fresh)
@@ -61,7 +52,7 @@ deno task preview    # Preview production build
 ## 🏗 Architecture Overview
 
 ### Audio Processing Pipeline
-The core mystical processing flow shared between implementations:
+The core mystical processing flow:
 
 1. **Lunar Calculation** (`src/lunar-processor.js`)
    - Calculates current moon phase using astronomical algorithms
@@ -69,24 +60,25 @@ The core mystical processing flow shared between implementations:
    - Reference date: January 6, 2000 (known new moon)
 
 2. **Audio Processing** (`src/audio-processor.js`)
-   - Uses sox for initial transformation with lunar parameters
-   - Pipes to ffmpeg for final mastering
-   - Applies overdrive, bass, treble based on moon phase
+   - Sox tape chain (headroom → overdrive → EQ → echo → compand → normalize)
+     with lunar parameters; FFmpeg emulation fallback if sox is missing
+   - FFmpeg mastering: tape EQ → 2:1 glue compression → loudnorm → limiter
    - Time of day modifies parameters (night = darker, morning = brighter)
+   - Output formats: mp3 / wav / flac (resolveOutputFormat guards the rest)
 
 3. **Name Generation** (`src/name-generator.js`)
-   - Three style pools: sparklepop, blackmetal, witchhouse
-   - Combines prefixes and suffixes with random numbers
-   - Style selection influenced by moon phase and time
+   - Chaotic engine: large word banks, compound/lunar/time/styled patterns
+   - Mutations (power numbers, version markers, symbols), filename-safe sanitize
+   - Batch schemes + session folders via `src/batch/batch-naming-engine.js`
 
 4. **Artwork Generation** (`src/artwork-generator-vibrant-refined.js`)
-   - Creates procedural artwork using Canvas API
-   - Audio-responsive visual elements
-   - Multiple generators available (original, vibrant, refined)
+   - Creates procedural artwork using Canvas API (the single, current generator)
+   - Audio-responsive (energy/tempo via `src/audio-analyzer.js`) + moon phase
+   - 8 styles: neon-plasma, cosmic-flow, vapor-dream, cyber-matrix,
+     sunset-liquid, electric-storm, crystal-prism, ocean-aurora
 
 5. **Metadata Embedding** (`src/metadata-embedder.js`)
-   - Embeds artwork and metadata into MP3 files
-   - Uses node-id3 for tagging
+   - MP3 via node-id3; WAV/FLAC via FFmpeg (artwork failure retries tags-only)
 
 ### IPC Communication Pattern
 The Electron app uses a secure IPC bridge:
@@ -103,15 +95,15 @@ The Electron app uses a secure IPC bridge:
 
 ## 🎨 Key Implementation Details
 
-### Moon Phase Processing Parameters
+### Moon Phase Processing Parameters (tape-cassette calibrated)
 ```javascript
-// New Moon (Dark): High overdrive, deep bass
-{ overdrive: 6.0, bass: 4.0, treble: -0.5 }
+// New Moon (Dark): thick tape saturation, deep bass
+{ overdrive: 2.8, bass: 2.2, treble: -0.8 }
 
-// Full Moon (Ethereal): Low overdrive, bright treble
-{ overdrive: 2.0, bass: 1.0, treble: 2.5 }
+// Full Moon (Ethereal): light touch, bright treble
+{ overdrive: 1.2, bass: 0.5, treble: 1.5 }
 
-// Phases interpolate between extremes
+// Phases interpolate between extremes; time of day multiplies the base
 ```
 
 ### Hexagon Animation Timing
@@ -123,10 +115,11 @@ The Electron app uses a secure IPC bridge:
 ### Output File Structure
 ```
 ~/Documents/HexbloopOutput/
-├── GLITTERSTAR8400.mp3      # Sparklepop style
-├── BONEALTAR5166.mp3        # Blackmetal style
-└── MYSTICPROTOCOL6765.mp3   # Witchhouse style
+├── Shadow_Circuit_entropy.mp3       # Compound pattern
+├── waning_gibbous_monolith.mp3      # Lunar pattern
+└── Twilight_vortex_v2.mp3           # Time pattern + mutation
 ```
+(Names collide-proof: batch siblings and reruns get _2, _3 suffixes.)
 
 ## 🔧 Dependencies & Requirements
 
@@ -157,20 +150,18 @@ The app follows "Maximum magic, minimal engineering":
 ## 📍 Important Files
 
 ### Core Processing
-- `main.js`: Electron main process, file handling
+- `main.js`: Electron main process, file handling, batch orchestration
 - `src/audio-processor.js`: Sox/FFmpeg pipeline
 - `src/lunar-processor.js`: Moon phase calculations
 - `src/name-generator.js`: Mystical naming system
-- `src/artwork-generator-vibrant-refined.js`: Latest art generator
+- `src/artwork-generator-vibrant-refined.js`: The art generator (single, current)
+- `src/metadata-embedder.js`: Tags + cover art (MP3/WAV/FLAC)
 
 ### UI & Interaction
-- `src/renderer/app.js`: Main UI logic
+- `src/renderer/app.js`: Main UI logic (hexagon, drag-drop, A/B playback)
 - `src/renderer/style.css`: Complete visual design
 - `src/renderer/index.html`: Minimal markup structure
-
-### Swift Version (for reference)
-- `swift/Hexbloop/MacAudioEngine.swift`: Native audio processing
-- `swift/Hexbloop/ArtGenerator.swift`: 7 art styles implementation
+- `src/renderer/preferences/`: Preferences window UI
 
 ### Website
 - `hexbloop-site/routes/index.tsx`: Main landing page
@@ -180,15 +171,18 @@ The app follows "Maximum magic, minimal engineering":
 
 ## 🚨 Known Issues & Considerations
 
-1. **Web Security**: Electron runs with `webSecurity: false` for file access
+1. **Web Security**: renderer runs sandboxed (`webSecurity: true`,
+   `contextIsolation: true`); drag-drop uses `webUtils.getPathForFile()`
 2. **Multiple Website Instances**: Check for running Deno processes on port 8000
-3. **Artwork Generator**: Two versions exist - use `vibrant-refined` for best results
-4. **Swift Version**: Lacks batch processing and preferences UI
-5. **Performance**: Hexagon animations may lag with multiple files processing
+3. **Vendor binaries**: `vendor/` is empty in dev (system sox/ffmpeg used);
+   run `npm run vendor:setup` before packaging a self-contained build
+4. **Performance**: Hexagon animations may lag with multiple files processing
+5. **style.css**: has duplicated selector blocks (e.g. `.ambient-toggle`) —
+   cosmetic debt, last-in-cascade wins; dedupe carefully with visual checks
 
 ## 🎯 Current Development Focus
 
-- Unifying best features from Electron and Swift versions
+- Launch readiness: packaging with bundled binaries, DMG polish
+- A/B hexagon player refinements (latest shipped feature)
 - Improving audio analysis for dynamic artwork generation
-- Adding more mystical name generation styles
 - Optimizing website performance and animations

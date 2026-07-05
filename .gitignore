@@ -25,6 +25,10 @@ vendor/linux/
 # Hexbloop output directory
 HexbloopOutput/
 
+# Test artifacts (fixture wav regenerates via sox when missing)
+test/fixtures/
+test/output/
+
 # Local / secrets / OS cruft
 .env
 .aider*
