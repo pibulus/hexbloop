@@ -19,6 +19,7 @@ const BatchNamingEngine = require('./src/batch/batch-naming-engine');
 const { MenuBuilder } = require('./src/menu/menu-builder');
 const { getPreferencesManager } = require('./src/menu/preferences');
 const { PreferencesWindow } = require('./src/menu/preferences-window');
+const { resolveUniqueOutputPath } = require('./src/shared/output-path');
 
 let mainWindow;
 let preferencesWindow;
@@ -280,13 +281,9 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             const outputFormat = AudioProcessor.resolveOutputFormat(settings);
 
             // Uniquify: never clobber an existing file or a batch sibling
-            let outputPath = path.join(outputDirectory, `${generatedName}.${outputFormat}`);
-            let suffix = 2;
-            while (takenOutputs.has(outputPath) || fs.existsSync(outputPath)) {
-                outputPath = path.join(outputDirectory, `${generatedName}_${suffix}.${outputFormat}`);
-                suffix++;
-            }
-            takenOutputs.add(outputPath);
+            const outputPath = resolveUniqueOutputPath(
+                outputDirectory, generatedName, outputFormat, takenOutputs
+            );
             const finalName = path.parse(outputPath).name;
 
             console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${path.basename(outputPath)}`);
