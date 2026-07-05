@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { execSync, spawn } = require('child_process');
+const { execFileSync, spawn } = require('child_process');
 const path = require('path');
 const binaries = require('./binary-resolver');
 
@@ -25,9 +25,15 @@ class AudioAnalyzer {
 
         try {
             // Get duration using ffprobe (bundled or system)
+            // execFileSync with an arg array — no shell, so filenames with
+            // quotes/spaces/$() can't break or inject anything
             const ffprobeBin = binaries.ffprobe.path || 'ffprobe';
-            const durationCmd = `"${ffprobeBin}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${inputPath}"`;
-            features.duration = parseFloat(execSync(durationCmd, { encoding: 'utf8' }).trim());
+            features.duration = parseFloat(execFileSync(ffprobeBin, [
+                '-v', 'error',
+                '-show_entries', 'format=duration',
+                '-of', 'default=noprint_wrappers=1:nokey=1',
+                inputPath
+            ], { encoding: 'utf8', timeout: 10000 }).trim());
             
             // Extract waveform samples (downsample for visualization)
             // We want ~360 samples for circular visualization
@@ -48,7 +54,11 @@ class AudioAnalyzer {
             }
 
             // Estimate tempo based on peak intervals (simplified)
-            if (features.peaks.length > 1) {
+            // Guard: a NaN/zero duration would ripple NaN into tempo and artwork math
+            if (!Number.isFinite(features.duration) || features.duration <= 0) {
+                features.duration = 0;
+            }
+            if (features.duration > 0 && features.peaks.length > 1) {
                 const intervals = [];
                 for (let i = 1; i < features.peaks.length && i < 10; i++) {
                     intervals.push(features.peaks[i] - features.peaks[i-1]);

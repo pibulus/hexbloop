@@ -6,7 +6,7 @@
  */
 
 const ffmpeg = require('fluent-ffmpeg');
-const { spawn, execSync } = require('child_process');
+const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -28,6 +28,16 @@ if (binaries.ffprobe.path) {
 }
 
 class AudioProcessor {
+    // Formats the whole pipeline (mastering, conversion, metadata, artwork)
+    // actually supports end-to-end. The preferences UI offers exactly these;
+    // anything else in a settings file falls back to mp3.
+    static SUPPORTED_OUTPUT_FORMATS = ['mp3', 'wav', 'flac'];
+
+    static resolveOutputFormat(settings) {
+        const format = settings?.output?.format;
+        return this.SUPPORTED_OUTPUT_FORMATS.includes(format) ? format : 'mp3';
+    }
+
     static async processFile(inputPath, outputPath) {
         console.log(`🎵 Processing: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`);
         
@@ -95,10 +105,10 @@ class AudioProcessor {
                 currentFile = masteringOutput;
             } else {
                 console.log('⏭️ Skipping mastering stage');
-                // If no mastering but we have a processed file, convert it
+                // If no mastering but we have a sox-processed file, convert it
+                // to the user's chosen output format (not hardcoded mp3)
                 if (currentFile !== inputPath) {
-                    // Convert to MP3 without mastering
-                    await this.convertToMp3(currentFile, processedFile, settings);
+                    await this.convertToFormat(currentFile, processedFile, settings);
                     currentFile = processedFile;
                 }
             }
@@ -262,7 +272,7 @@ class AudioProcessor {
             
             // If no processing was done, convert the original file
             if (currentFile === inputPath) {
-                await this.convertToMp3(inputPath, processedFile, settings);
+                await this.convertToFormat(inputPath, processedFile, settings);
                 currentFile = processedFile;
             }
             
@@ -284,8 +294,6 @@ class AudioProcessor {
                 metadata: metadataForEmbedding
             };
 
-        } catch (error) {
-            throw error;
         } finally {
             // Clean up temp directory and all its contents
             try {
@@ -300,13 +308,40 @@ class AudioProcessor {
     }
     
     static buildCompandCurve(ratio) {
-        // Build a tape-style compand transfer curve from the ratio
-        // Gentle knee: input above 0dB gets squashed, quiet passages lifted slightly
-        // ratio 2 → light glue, ratio 3.5 → heavy tape squash
-        const clamp = Math.max(2, Math.min(4, ratio));
-        const knee = -6 * clamp;           // -12 to -24 dB knee point
-        const quiet = -4 * clamp;          // -8 to -16 dB for quiet lift
-        return `6:${knee},-20,${quiet}`;
+        // Parametrized tape-glue transfer: unity gain below the knee, 1/ratio above.
+        // Transfer points sit 18dB apart so the 6dB soft knee can't make them
+        // collide — sox rejects transfers whose points overlap after knee
+        // smoothing ("input values must be strictly increasing").
+        // ratio 2 → light glue, ratio 4 → heavy tape squash
+        const clamped = Math.max(2, Math.min(4, ratio));
+        const knee = Math.round(-6 * clamped);            // -12 … -24 dB knee point
+        const floor = knee - 18;                          // unity anchor below the knee
+        const ceil = Math.round(knee - knee / clamped);   // 0dB in → compressed out
+        return `6:${floor},${floor},${knee},${knee},0,${ceil}`;
+    }
+
+    /**
+     * Tape-cassette style sox chain:
+     * fixed headroom → saturation → EQ → space → tape glue → normalize → dither
+     * (gain -h/-r headroom *tracking* breaks across overdrive on real sox
+     *  builds, so headroom is a fixed -4dB and reclaim is a -1dBFS normalize)
+     */
+    static buildSoxArgs(inputPath, outputPath, influences) {
+        const ratio = influences.compand.ratio || 3;
+        const compandCurve = this.buildCompandCurve(ratio);
+        return [
+            inputPath,
+            outputPath,
+            'gain', '-4',                             // Headroom before saturation
+            'overdrive', influences.overdrive.toString(), '2.0',  // Tape saturation (lower gain=warmer)
+            'bass', `+${influences.bass}`,            // Low warmth
+            'treble', influences.treble >= 0 ? `+${influences.treble}` : influences.treble.toString(),
+            'echo', influences.echo.delay.toString(), influences.echo.decay.toString(), '6', '0.03',  // Subtle space
+            'compand', `${influences.compand.attack},0.2`, compandCurve, '-3', '-40', '0.05',  // Tape glue
+            'gain', '-n', '-1',                       // Normalize to -1dBFS (deterministic reclaim)
+            'rate', '44100',
+            'dither'
+        ];
     }
 
     static async processSox(inputPath, outputPath, influences) {
@@ -322,70 +357,98 @@ class AudioProcessor {
                 };
             }
 
-            // Tape-cassette style Sox chain:
-            // headroom → saturation → EQ → gentle compand → reclaim → dither
-            const ratio = influences.compand.ratio || 3;
-            const compandCurve = this.buildCompandCurve(ratio);
             const soxBin = binaries.sox.path || 'sox';
-            const soxProcess = spawn(soxBin, [
-                inputPath,
-                outputPath,
-                'gain', '-h',                             // Headroom before effects
-                'overdrive', influences.overdrive.toString(), '2.0',  // Tape saturation (lower gain=warmer)
-                'bass', `+${influences.bass}`,            // Low warmth
-                'treble', influences.treble >= 0 ? `+${influences.treble}` : influences.treble.toString(),
-                'echo', influences.echo.delay.toString(), influences.echo.decay.toString(), '6', '0.03',  // Subtle space
-                'compand', `${influences.compand.attack},0.2`, compandCurve, '-3', '-40', '0.05',  // Tape glue
-                'gain', '-r',                             // Reclaim headroom
-                'rate', '44100',
-                'dither'
-            ]);
+            const soxProcess = spawn(soxBin, this.buildSoxArgs(inputPath, outputPath, influences));
             
             let stderr = '';
-            
+            // 'error' (spawn failure) and 'close' can BOTH fire — guard so the
+            // FFmpeg fallback doesn't run twice against the same output file
+            let settled = false;
+
             soxProcess.stderr.on('data', (data) => {
                 stderr += data.toString();
             });
-            
+
+            const fallbackToFFmpeg = (reason) => {
+                if (settled) return;
+                settled = true;
+                console.log(`⚠️ ${reason}, using FFmpeg for all processing...`);
+                this.processWithFFmpegOnly(inputPath, outputPath, influences).then(resolve).catch(reject);
+            };
+
             soxProcess.on('close', (code) => {
+                if (settled) return;
                 if (code === 0) {
+                    settled = true;
                     console.log('✨ Sox processing complete');
                     resolve();
                 } else {
-                    console.log('⚠️ Sox not available, using FFmpeg for all processing...');
-                    this.processWithFFmpegOnly(inputPath, outputPath, influences).then(resolve).catch(reject);
+                    if (stderr) console.log('   sox stderr:', stderr.split('\n')[0]);
+                    fallbackToFFmpeg(`Sox exited with code ${code}`);
                 }
             });
-            
-            soxProcess.on('error', (error) => {
-                console.log('⚠️ Sox not found, using FFmpeg fallback...');
-                this.processWithFFmpegOnly(inputPath, outputPath, influences).then(resolve).catch(reject);
+
+            soxProcess.on('error', () => {
+                fallbackToFFmpeg('Sox not found');
             });
         });
     }
     
     /**
-     * Convert to MP3 with configurable bitrate
+     * Configure a fluent-ffmpeg command for the user's chosen output format.
+     * Shared by mastering and plain conversion so every path honors the setting.
      */
-    static async convertToMp3(inputPath, outputPath, settings = {}) {
-        return new Promise((resolve, reject) => {
-            const bitrate = settings?.output?.mp3Bitrate || 192;
+    static applyOutputFormat(command, settings = {}) {
+        const format = this.resolveOutputFormat(settings);
+        const quality = settings?.output?.quality || 'high';
 
-            ffmpeg(inputPath)
-                .format('mp3')
-                .audioCodec('libmp3lame')
-                .audioBitrate(`${bitrate}k`)
+        switch (format) {
+            case 'wav':
+                return command.format('wav').audioCodec('pcm_s16le');
+
+            case 'flac': {
+                const flacCompression = quality === 'maximum' ? 8 : quality === 'high' ? 5 : 2;
+                return command
+                    .format('flac')
+                    .audioCodec('flac')
+                    .outputOptions('-compression_level', String(flacCompression));
+            }
+
+            case 'mp3':
+            default: {
+                const mp3Bitrate = settings?.output?.mp3Bitrate || 192;
+                return command
+                    .format('mp3')
+                    .audioCodec('libmp3lame')
+                    .audioBitrate(`${mp3Bitrate}k`);
+            }
+        }
+    }
+
+    /**
+     * Convert to the configured output format without mastering filters.
+     * Used when the mastering stage is disabled but the file still needs to
+     * land in the user's chosen format.
+     */
+    static async convertToFormat(inputPath, outputPath, settings = {}) {
+        return new Promise((resolve, reject) => {
+            const format = this.resolveOutputFormat(settings);
+
+            let command = ffmpeg(inputPath)
                 .audioFrequency(44100)
-                .audioChannels(2)
+                .audioChannels(2);
+            command = this.applyOutputFormat(command, settings);
+
+            command
                 .on('start', (commandLine) => {
-                    console.log(`🎵 Converting to MP3 (${bitrate}k): ` + commandLine);
+                    console.log(`🎵 Converting to ${format.toUpperCase()}: ` + commandLine);
                 })
                 .on('end', () => {
-                    console.log('✨ MP3 conversion complete');
+                    console.log(`✨ ${format.toUpperCase()} conversion complete`);
                     resolve();
                 })
                 .on('error', (err) => {
-                    console.error('❌ MP3 conversion failed:', err.message);
+                    console.error(`❌ ${format.toUpperCase()} conversion failed:`, err.message);
                     reject(err);
                 })
                 .save(outputPath);
@@ -428,9 +491,7 @@ class AudioProcessor {
     
     static async processFFmpeg(inputPath, outputPath, settings = {}) {
         return new Promise((resolve, reject) => {
-            const outputExt = path.extname(outputPath).slice(1).toLowerCase();
-            const format = settings?.output?.format || outputExt || 'mp3';
-            const quality = settings?.output?.quality || 'high';
+            const format = this.resolveOutputFormat(settings);
             const sampleRate = settings?.output?.sampleRate || 44100;
 
             // TAPE-CASSETTE MASTERING CHAIN:
@@ -467,65 +528,10 @@ class AudioProcessor {
             if (sampleRate > 0) {
                 command = command.audioFrequency(sampleRate);
             }
-            
-            // Configure output format
-            switch (format) {
-                case 'mp3':
-                    // Use lower bitrate for actual compression (192k is high quality but compressed)
-                    // 128k = good quality, 192k = very good, 256k = excellent, 320k = maximum
-                    const mp3Bitrate = settings?.output?.mp3Bitrate || 192;
-                    command = command
-                        .format('mp3')
-                        .audioCodec('libmp3lame')
-                        .audioBitrate(`${mp3Bitrate}k`);
-                    break;
-                    
-                case 'wav':
-                    command = command
-                        .format('wav')
-                        .audioCodec('pcm_s16le'); // 16-bit PCM
-                    break;
-                    
-                case 'flac':
-                    const flacCompression = quality === 'maximum' ? 8 : quality === 'high' ? 5 : 2;
-                    command = command
-                        .format('flac')
-                        .audioCodec('flac')
-                        .outputOptions(`-compression_level ${flacCompression}`);
-                    break;
-                    
-                case 'aac':
-                case 'm4a':
-                    const aacBitrate = quality === 'maximum' ? 320 : quality === 'high' ? 256 : quality === 'medium' ? 192 : 128;
-                    command = command
-                        .format('mp4')
-                        .audioCodec('aac')
-                        .audioBitrate(`${aacBitrate}k`);
-                    break;
-                    
-                case 'ogg':
-                    const oggQuality = quality === 'maximum' ? 10 : quality === 'high' ? 8 : quality === 'medium' ? 5 : 3;
-                    command = command
-                        .format('ogg')
-                        .audioCodec('libvorbis')
-                        .outputOptions(`-q:a ${oggQuality}`);
-                    break;
-                    
-                case 'original':
-                    // Keep original format, just apply effects
-                    const originalExt = path.extname(inputPath).slice(1).toLowerCase();
-                    command = command.format(originalExt);
-                    break;
-                    
-                default:
-                    // Default to MP3 with user's configured bitrate
-                    const defaultBitrate = settings?.output?.mp3Bitrate || 192;
-                    command = command
-                        .format('mp3')
-                        .audioCodec('libmp3lame')
-                        .audioBitrate(`${defaultBitrate}k`);
-            }
-            
+
+            // Configure output format (shared with convertToFormat)
+            command = this.applyOutputFormat(command, settings);
+
             command
                 .on('start', (commandLine) => {
                     console.log(`🎛️ FFmpeg mastering to ${format.toUpperCase()}: ${commandLine}`);

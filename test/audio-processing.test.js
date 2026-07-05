@@ -175,21 +175,50 @@ if (require.main === module) {
             testResults.failed++;
         }
 
-        // Test 3: AudioProcessor Sox chain
-        console.log('\n📝 Testing Sox Headroom Management...');
+        // Test 3: AudioProcessor Sox chain — actually run it across the
+        // lunar parameter extremes (the old test only checked sox --version,
+        // which let a broken effect chain ship unnoticed)
+        console.log('\n📝 Testing Sox Effect Chain (real run, lunar extremes)...');
         try {
-            // Check sox availability
             const soxAvailable = await new Promise((resolve) => {
                 const proc = spawn('sox', ['--version']);
                 proc.on('close', (code) => resolve(code === 0));
                 proc.on('error', () => resolve(false));
             });
 
-            if (soxAvailable) {
-                console.log('  ✅ Sox available with headroom management (gain -h / gain -r)');
+            if (soxAvailable && fs.existsSync(inputPath)) {
+                const extremes = [
+                    { label: 'new moon deep night', overdrive: 3.64, bass: 2.7, treble: -0.8,
+                      echo: { delay: 0.63, decay: 0.112 }, compand: { attack: 0.08, ratio: 3.5 } },
+                    { label: 'full moon morning', overdrive: 0.96, bass: 0.2, treble: 2.0,
+                      echo: { delay: 0.14, decay: 0.021 }, compand: { attack: 0.04, ratio: 2.0 } },
+                    { label: 'clamp ceiling', overdrive: 5.0, bass: 3.0, treble: 0.0,
+                      echo: { delay: 0.3, decay: 0.05 }, compand: { attack: 0.06, ratio: 4.0 } }
+                ];
+
+                for (const influences of extremes) {
+                    // sox 'overdrive' needs gain >= 0; the pipeline floors at 1.0
+                    influences.overdrive = Math.max(1.0, influences.overdrive);
+                    const outPath = path.join(TEST_OUTPUT_DIR, `sox_chain_${influences.compand.ratio}.aif`);
+                    const args = AudioProcessor.buildSoxArgs(inputPath, outPath, influences);
+
+                    const { code, stderr } = await new Promise((resolve) => {
+                        const proc = spawn('sox', args);
+                        let stderr = '';
+                        proc.stderr.on('data', d => { stderr += d.toString(); });
+                        proc.on('close', (code) => resolve({ code, stderr }));
+                        proc.on('error', (err) => resolve({ code: -1, stderr: err.message }));
+                    });
+
+                    assert.strictEqual(code, 0, `sox failed for ${influences.label}: ${stderr.trim()}`);
+                    assert(fs.existsSync(outPath), `no output for ${influences.label}`);
+                    fs.unlinkSync(outPath);
+                }
+
+                console.log(`  ✅ Sox chain ran clean for ${extremes.length} lunar extremes`);
                 testResults.passed++;
             } else {
-                console.log('  ⏭️  Sox not available (install: brew install sox)');
+                console.log('  ⏭️  Sox or fixture not available (install: brew install sox)');
                 testResults.skipped++;
             }
         } catch (error) {

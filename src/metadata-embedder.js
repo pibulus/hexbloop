@@ -103,58 +103,47 @@ class MetadataEmbedder {
 
     /**
      * Embed metadata and artwork using FFmpeg (for WAV, FLAC, AAC, OGG, etc.)
+     *
+     * If artwork muxing fails (container/codec combos vary), the file is
+     * retried tags-only — losing the cover must never lose the track.
      */
     async embedMetadataFFmpeg(inputPath, outputPath, metadata, artworkPath = null) {
-        return new Promise((resolve, reject) => {
-            console.log(`🎵 Embedding metadata via FFmpeg: ${metadata.artist} - ${metadata.title}`);
+        const ext = path.extname(outputPath).toLowerCase();
+        const artworkSupported = ['.flac', '.m4a'].includes(ext);
+        const wantArtwork = Boolean(artworkPath && /\.(png|jpe?g)$/i.test(artworkPath));
 
+        if (wantArtwork && !artworkSupported) {
+            console.log(`ℹ️  Embedded artwork not supported for ${ext}, writing tags only`);
+        }
+
+        const run = (withArtwork) => new Promise((resolve, reject) => {
             const resolvedYear = metadata.year || metadata.date || new Date().getFullYear();
 
             let command = ffmpeg(inputPath);
 
-            // Add metadata tags
+            // IMPORTANT: two-arg outputOptions form — fluent-ffmpeg passes each
+            // argument verbatim to spawn. Array strings get re-tokenized on
+            // spaces, which mangles values like 'Lunar Transmutations'.
             command = command
-                .outputOptions([
-                    `-metadata title="${this.escapeMetadata(metadata.title || 'Unknown Title')}"`,
-                    `-metadata artist="${this.escapeMetadata(metadata.artist || 'Unknown Artist')}"`,
-                    `-metadata album="${this.escapeMetadata(metadata.album || 'Unknown Album')}"`,
-                    `-metadata date="${resolvedYear}"`,
-                    `-metadata genre="${this.escapeMetadata(metadata.genre || 'Electronic')}"`,
-                    `-metadata comment="${this.escapeMetadata(metadata.comment || 'Processed with Hexbloop')}"`
-                ]);
+                .outputOptions('-metadata', `title=${metadata.title || 'Unknown Title'}`)
+                .outputOptions('-metadata', `artist=${metadata.artist || 'Unknown Artist'}`)
+                .outputOptions('-metadata', `album=${metadata.album || 'Unknown Album'}`)
+                .outputOptions('-metadata', `date=${resolvedYear}`)
+                .outputOptions('-metadata', `genre=${metadata.genre || 'Electronic'}`)
+                .outputOptions('-metadata', `comment=${metadata.comment || 'Processed with Hexbloop'}`);
 
-            // Add artwork if provided (works for FLAC, AAC/M4A, OGG)
-            if (artworkPath && /\.(png|jpe?g)$/i.test(artworkPath)) {
-                const ext = path.extname(outputPath).toLowerCase();
-
-                // Different formats need different artwork embedding approaches
-                if (ext === '.flac' || ext === '.m4a' || ext === '.ogg') {
-                    try {
-                        command = command
-                            .input(artworkPath)
-                            .outputOptions([
-                                '-map 0:a',  // Map audio from first input
-                                '-map 1:v',  // Map artwork from second input
-                                '-c:a copy', // Copy audio codec
-                                '-c:v copy', // Copy image codec
-                                '-metadata:s:v title="Album cover"',
-                                '-metadata:s:v comment="Cover (front)"',
-                                '-disposition:v:0 attached_pic'
-                            ]);
-                        console.log(`🎨 Embedding artwork via FFmpeg (${ext.toUpperCase()})`);
-                    } catch (error) {
-                        console.log(`⚠️  Could not add artwork for ${ext}: ${error.message}`);
-                    }
-                } else if (ext === '.wav') {
-                    // WAV doesn't support embedded artwork, skip silently
-                    console.log(`ℹ️  WAV format doesn't support embedded artwork`);
-                } else {
-                    console.log(`ℹ️  Artwork embedding not yet supported for ${ext}`);
-                }
-            }
-
-            // Copy codec to preserve quality
-            if (!artworkPath || path.extname(outputPath).toLowerCase() === '.wav') {
+            if (withArtwork) {
+                command = command
+                    .input(artworkPath)
+                    .outputOptions('-map', '0:a')
+                    .outputOptions('-map', '1:v')
+                    .outputOptions('-c:a', 'copy')
+                    .outputOptions('-c:v', 'copy')
+                    .outputOptions('-metadata:s:v', 'title=Album cover')
+                    .outputOptions('-metadata:s:v', 'comment=Cover (front)')
+                    .outputOptions('-disposition:v:0', 'attached_pic');
+                console.log(`🎨 Embedding artwork via FFmpeg (${ext.toUpperCase()})`);
+            } else {
                 command = command.audioCodec('copy');
             }
 
@@ -166,88 +155,22 @@ class MetadataEmbedder {
                     console.log('✅ FFmpeg metadata embedded successfully');
                     resolve(outputPath);
                 })
-                .on('error', (err) => {
-                    console.error('❌ FFmpeg metadata embedding failed:', err.message);
-                    reject(err);
-                })
+                .on('error', reject)
                 .save(outputPath);
         });
-    }
 
-    /**
-     * Escape special characters in metadata for FFmpeg
-     */
-    escapeMetadata(str) {
-        return str.replace(/["\\]/g, '\\$&');
-    }
-    
-    /**
-     * Convert SVG artwork to PNG for embedding
-     */
-    async convertArtworkForEmbedding(svgPath, outputPath) {
-        if (!this.ffmpegPath) {
-            console.log('⚠️  FFmpeg not available - cannot convert SVG to PNG');
-            return null;
-        }
-        
-        // FFmpeg doesn't handle SVG directly, so we'll need to use a different approach
-        // For now, we'll save the SVG content as a comment in the metadata
+        console.log(`🎵 Embedding metadata via FFmpeg: ${metadata.artist} - ${metadata.title}`);
+
         try {
-            const svgContent = await fs.readFile(svgPath, 'utf8');
-            console.log('📝 SVG artwork will be embedded as metadata comment');
-            return svgPath; // Return original path for reference
+            return await run(wantArtwork && artworkSupported);
         } catch (error) {
-            console.error(`❌ Error reading SVG file: ${error.message}`);
-            return null;
+            if (wantArtwork && artworkSupported) {
+                console.log(`⚠️  Artwork embed failed (${error.message}), retrying tags-only`);
+                return await run(false);
+            }
+            console.error('❌ FFmpeg metadata embedding failed:', error.message);
+            throw error;
         }
-    }
-    
-    /**
-     * Process file with metadata and artwork
-     */
-    async processFileWithMetadata(inputPath, outputPath, bandName, artworkPath = null) {
-        const metadata = this.generateMetadata(bandName, path.basename(inputPath));
-        
-        try {
-            // First embed metadata
-            const metadataResult = await this.embedMetadata(inputPath, outputPath, metadata, artworkPath);
-            
-            console.log(`✅ File processed with metadata: ${outputPath}`);
-            return {
-                success: true,
-                outputPath: metadataResult,
-                metadata: metadata,
-                artworkPath: artworkPath
-            };
-        } catch (error) {
-            console.error(`❌ Error processing file with metadata: ${error.message}`);
-            // Fallback: copy file without metadata
-            await fs.copyFile(inputPath, outputPath);
-            return {
-                success: false,
-                outputPath: outputPath,
-                error: error.message,
-                metadata: metadata
-            };
-        }
-    }
-    
-    /**
-     * Check if metadata embedding is available
-     */
-    isAvailable() {
-        return this.ffmpegPath !== null;
-    }
-    
-    /**
-     * Get status information
-     */
-    getStatus() {
-        return {
-            available: this.isAvailable(),
-            ffmpegPath: this.ffmpegPath,
-            capabilities: this.ffmpegPath ? ['metadata', 'artwork'] : ['limited']
-        };
     }
 }
 

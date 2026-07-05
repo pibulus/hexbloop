@@ -61,13 +61,19 @@ function createWindow() {
 
     // Workaround: intercept file:// navigation to handle drag-drop
     mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-        const parsedUrl = new URL(navigationUrl);
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(navigationUrl);
+        } catch {
+            event.preventDefault();
+            return;
+        }
         if (parsedUrl.protocol === 'file:') {
             event.preventDefault();
-            
+
             const filePath = decodeURIComponent(parsedUrl.pathname);
             console.log('🔍 Detected file drag:', filePath);
-            
+
             if (/\.(mp3|wav|m4a|aiff|aif|flac|ogg|aac|opus|wma|mka|ape|alac|wv|au|snd|voc|8svx|amb|caf)$/i.test(filePath)) {
                 mainWindow.webContents.send('file-dropped', [filePath]);
             }
@@ -90,14 +96,25 @@ function createWindow() {
     if (process.env.NODE_ENV === 'development') {
         mainWindow.webContents.openDevTools();
     }
+
+    // On macOS the app keeps running after the window closes — clear the
+    // reference so menu/IPC handlers don't touch a destroyed window
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+    });
+}
+
+// A live main window, or null (macOS keeps the app alive with no windows)
+function getMainWindow() {
+    return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
 }
 
 // === Preferences Window ===
 async function showPreferencesWindow() {
     try {
         console.log('🔧 showPreferencesWindow called');
-        
-        if (!mainWindow) {
+
+        if (!getMainWindow()) {
             console.error('❌ Main window not available');
             return;
         }
@@ -180,20 +197,19 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
         console.log(`✨ Created output directory: ${outputDirectory}`);
     }
     
-    // Save manifest if session folders are enabled
-    if (sessionFolder) {
-        const manifest = {
-            timestamp: new Date().toISOString(),
-            moonPhase: namingEngine.moonPhase,
-            fileCount: filePaths.length,
-            settings: settings.batch,
-            files: []
-        };
-        
-        // Will be updated as files are processed
-        results.manifest = manifest;
-    }
-    
+    // Session manifest (written at the end when session folders are enabled)
+    const manifest = sessionFolder ? {
+        timestamp: new Date().toISOString(),
+        moonPhase: namingEngine.moonPhase,
+        fileCount: filePaths.length,
+        settings: settings.batch,
+        files: []
+    } : null;
+
+    // Track output paths so two files in a batch (or a rerun with 'keep
+    // original filenames') can never silently overwrite each other
+    const takenOutputs = new Set();
+
     for (let i = 0; i < filePaths.length; i++) {
         const filePath = filePaths[i];
         try {
@@ -250,11 +266,20 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             const generatedName = keepOriginalFilenames
                 ? path.parse(resolvedPath).name
                 : namingEngine.generateName(resolvedPath, i, filePaths.length);
-            const outputFormat = settings.output.format || 'mp3';
-            const outputPath = path.join(outputDirectory, `${generatedName}.${outputFormat}`);
-            
-            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${generatedName}.${outputFormat}`);
-            
+            const outputFormat = AudioProcessor.resolveOutputFormat(settings);
+
+            // Uniquify: never clobber an existing file or a batch sibling
+            let outputPath = path.join(outputDirectory, `${generatedName}.${outputFormat}`);
+            let suffix = 2;
+            while (takenOutputs.has(outputPath) || fs.existsSync(outputPath)) {
+                outputPath = path.join(outputDirectory, `${generatedName}_${suffix}.${outputFormat}`);
+                suffix++;
+            }
+            takenOutputs.add(outputPath);
+            const finalName = path.parse(outputPath).name;
+
+            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${path.basename(outputPath)}`);
+
             // Process the audio file
             await AudioProcessor.processFile(resolvedPath, outputPath);
             
@@ -267,14 +292,14 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
                 success: true,
                 originalFile: filePath,
                 outputFile: outputPath,
-                mysticalName: generatedName
+                mysticalName: finalName
             });
-            
+
             // Update manifest if session folders are enabled
-            if (results.manifest) {
-                results.manifest.files.push({
+            if (manifest) {
+                manifest.files.push({
                     original: path.basename(filePath),
-                    output: `${generatedName}.${outputFormat}`,
+                    output: path.basename(outputPath),
                     success: true
                 });
             }
@@ -291,14 +316,22 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
                 originalFile: filePath,
                 error: error.message
             });
+
+            if (manifest) {
+                manifest.files.push({
+                    original: path.basename(filePath),
+                    success: false,
+                    error: error.message
+                });
+            }
         }
     }
-    
+
     // Save manifest file if session folders are enabled
-    if (results.manifest && sessionFolder) {
+    if (manifest) {
         const manifestPath = path.join(outputDirectory, 'manifest.json');
         try {
-            fs.writeFileSync(manifestPath, JSON.stringify(results.manifest, null, 2));
+            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
             console.log(`📝 Saved session manifest: ${manifestPath}`);
         } catch (error) {
             console.error('Failed to save manifest:', error);
@@ -328,7 +361,7 @@ ipcMain.handle('preview-batch-naming', async (event, filePaths) => {
     const preferencesManager = getPreferencesManager();
     const settings = preferencesManager.getSettings();
     const namingEngine = new BatchNamingEngine(settings.batch);
-    const outputFormat = settings.output.format || 'mp3';
+    const outputFormat = AudioProcessor.resolveOutputFormat(settings);
     const keepOriginalFilenames = settings.processing.naming === 'original';
 
     if (keepOriginalFilenames) {
@@ -345,7 +378,7 @@ ipcMain.handle('preview-batch-naming', async (event, filePaths) => {
 });
 
 ipcMain.handle('select-files', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const dialogOptions = {
         properties: ['openFile', 'multiSelections'],
         filters: [
             { name: 'Audio Files', extensions: [
@@ -356,7 +389,12 @@ ipcMain.handle('select-files', async () => {
             { name: 'Common Formats', extensions: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg'] },
             { name: 'All Files', extensions: ['*'] }
         ]
-    });
+    };
+
+    const parent = getMainWindow();
+    const result = parent
+        ? await dialog.showOpenDialog(parent, dialogOptions)
+        : await dialog.showOpenDialog(dialogOptions);
 
     return result.filePaths;
 });
@@ -422,10 +460,12 @@ ipcMain.handle('read-audio-file', async (event, filePath) => {
     }
 });
 
-// Handle ambient audio toggle from menu
+// Handle ambient audio toggle from menu/preferences
 ipcMain.on('toggle-ambient-audio', (event, enabled) => {
-    // Forward to all renderer windows (in case we have multiple in the future)
-    mainWindow.webContents.send('toggle-ambient-audio', enabled);
+    const window = getMainWindow();
+    if (window) {
+        window.webContents.send('toggle-ambient-audio', enabled);
+    }
 });
 
 // Get current settings for renderer
@@ -566,11 +606,15 @@ ipcMain.handle('preferences-import', async (event, importData) => {
  */
 ipcMain.handle('preferences-choose-output-folder', async () => {
     try {
-        const result = await dialog.showOpenDialog(mainWindow, {
+        const dialogOptions = {
             properties: ['openDirectory'],
             title: 'Choose Output Folder for Processed Audio Files',
             defaultPath: path.join(app.getPath('documents'), 'HexbloopOutput')
-        });
+        };
+        const parent = getMainWindow();
+        const result = parent
+            ? await dialog.showOpenDialog(parent, dialogOptions)
+            : await dialog.showOpenDialog(dialogOptions);
         
         if (!result.canceled && result.filePaths.length > 0) {
             const selectedPath = result.filePaths[0];
@@ -620,15 +664,12 @@ ipcMain.handle('preferences-choose-output-folder', async () => {
  */
 ipcMain.handle('preferences-close', () => {
     try {
-        const { PreferencesWindow } = require('./src/menu/preferences-window');
-        const prefWindow = new PreferencesWindow(mainWindow);
-        
-        if (prefWindow.isOpen()) {
-            prefWindow.close();
+        if (preferencesWindow && preferencesWindow.isOpen()) {
+            preferencesWindow.close();
             console.log('Preferences window closed');
             return { success: true };
         }
-        
+
         console.log('No preferences window found to close');
         return { success: false, error: 'No preferences window found' };
     } catch (error) {
