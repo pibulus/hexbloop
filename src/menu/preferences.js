@@ -7,10 +7,11 @@
 const { app } = require('electron');
 const fs = require('fs').promises;
 const path = require('path');
-const { 
-    DEFAULT_SETTINGS, 
-    validateSettings, 
-    mergeWithDefaults 
+const {
+    DEFAULT_SETTINGS,
+    validateSettings,
+    coerceSettings,
+    mergeWithDefaults
 } = require('../shared/settings-schema');
 
 class PreferencesManager {
@@ -47,13 +48,12 @@ class PreferencesManager {
             
             // Merge with defaults to ensure all fields exist
             this.currentSettings = mergeWithDefaults(userSettings);
-            
-            // Validate settings
-            const errors = validateSettings(this.currentSettings);
-            if (errors.length > 0) {
-                console.warn('⚠️ Settings validation errors:', errors);
-                // Auto-fix by merging with defaults again
-                this.currentSettings = mergeWithDefaults(DEFAULT_SETTINGS);
+
+            // Coerce invalid values back to THEIR defaults (never wipe the
+            // user's whole config over one bad key)
+            const coerced = coerceSettings(this.currentSettings);
+            if (coerced.length > 0) {
+                console.warn('⚠️ Reset invalid settings to defaults:', coerced.join(', '));
                 await this.saveSettings();
             }
             

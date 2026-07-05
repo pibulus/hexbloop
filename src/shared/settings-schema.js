@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS = {
         folderScheme: 'date'          // 'date' | 'lunar' | 'counter' | 'none'
     },
     output: {
-        format: 'mp3',                // 'mp3' | 'wav' | 'flac' | 'aac' | 'ogg' | 'original'
+        format: 'mp3',                // 'mp3' | 'wav' | 'flac' — the formats the whole pipeline supports
         quality: 'high',              // 'low' | 'medium' | 'high' | 'maximum'
         mp3Bitrate: 192,              // kbps for MP3 (192k = high quality compressed)
         sampleRate: 0                 // 0 = preserve original, or 44100, 48000, etc.
@@ -86,7 +86,9 @@ const SETTINGS_SCHEMA = {
         folderScheme: ['date', 'lunar', 'counter', 'none']
     },
     output: {
-        format: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'original'],
+        // Only formats supported end-to-end (mastering + tagging + artwork);
+        // matches the preferences UI dropdown and AudioProcessor.SUPPORTED_OUTPUT_FORMATS
+        format: ['mp3', 'wav', 'flac'],
         quality: ['low', 'medium', 'high', 'maximum'],
         mp3Bitrate: 'number',
         sampleRate: 'number'
@@ -151,6 +153,44 @@ function validateSettings(settings) {
 }
 
 /**
+ * Coerce settings against the schema: any individual invalid value falls
+ * back to ITS default, everything valid is preserved. Returns the list of
+ * coerced paths so callers can log/save.
+ * (The old behavior — factory-resetting ALL settings because one key was
+ *  bad — silently destroyed user preferences.)
+ */
+function coerceSettings(settings) {
+    const coerced = [];
+
+    function coerceObject(obj, schema, defaults, pathPrefix = '') {
+        for (const [key, expectedType] of Object.entries(schema)) {
+            const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+            const value = obj[key];
+
+            if (Array.isArray(expectedType)) {
+                if (!expectedType.includes(value)) {
+                    obj[key] = defaults[key];
+                    coerced.push(currentPath);
+                }
+            } else if (typeof expectedType === 'object') {
+                if (typeof value !== 'object' || value === null) {
+                    obj[key] = JSON.parse(JSON.stringify(defaults[key]));
+                    coerced.push(currentPath);
+                } else {
+                    coerceObject(value, expectedType, defaults[key], currentPath);
+                }
+            } else if (typeof value !== expectedType) {
+                obj[key] = defaults[key];
+                coerced.push(currentPath);
+            }
+        }
+    }
+
+    coerceObject(settings, SETTINGS_SCHEMA, DEFAULT_SETTINGS);
+    return coerced;
+}
+
+/**
  * Merge user settings with defaults, ensuring all required fields exist
  */
 function mergeWithDefaults(userSettings) {
@@ -197,6 +237,7 @@ module.exports = {
     DEFAULT_SETTINGS,
     SETTINGS_SCHEMA,
     validateSettings,
+    coerceSettings,
     mergeWithDefaults,
     getEnabledProcessingStages
 };
