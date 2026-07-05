@@ -6,13 +6,26 @@
 
 const { Menu, shell, dialog, app } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const { getPreferencesManager } = require('./preferences');
+
+const GITHUB_REPO_URL = 'https://github.com/pibulus/hexbloop';
 
 class MenuBuilder {
     constructor(mainWindow) {
         this.mainWindow = mainWindow;
         this.preferencesManager = getPreferencesManager();
         this.preferencesWindow = null;
+    }
+
+    /**
+     * The main window if it's still alive, else null.
+     * On macOS the app (and menu) outlive the window — every menu action
+     * that touches the window must go through this.
+     */
+    getWindow() {
+        return this.mainWindow && !this.mainWindow.isDestroyed() ? this.mainWindow : null;
     }
     
     /**
@@ -161,10 +174,9 @@ class MenuBuilder {
                         label: 'Enter Fullscreen',
                         accelerator: process.platform === 'darwin' ? 'Ctrl+Command+F' : 'F11',
                         click: () => {
-                            if (this.mainWindow.isFullScreen()) {
-                                this.mainWindow.setFullScreen(false);
-                            } else {
-                                this.mainWindow.setFullScreen(true);
+                            const window = this.getWindow();
+                            if (window) {
+                                window.setFullScreen(!window.isFullScreen());
                             }
                         }
                     },
@@ -177,12 +189,12 @@ class MenuBuilder {
                             {
                                 label: 'Reload App',
                                 accelerator: 'CmdOrCtrl+R',
-                                click: () => this.mainWindow.webContents.reload()
+                                click: () => this.getWindow()?.webContents.reload()
                             },
                             {
                                 label: 'Toggle Developer Tools',
                                 accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-                                click: () => this.mainWindow.webContents.toggleDevTools()
+                                click: () => this.getWindow()?.webContents.toggleDevTools()
                             }
                         ]
                     }
@@ -216,7 +228,7 @@ class MenuBuilder {
                     },
                     {
                         label: 'Report an Issue',
-                        click: () => shell.openExternal('https://github.com/hexbloop/hexbloop/issues')
+                        click: () => shell.openExternal(`${GITHUB_REPO_URL}/issues`)
                     },
                     {
                         type: 'separator'
@@ -238,11 +250,7 @@ class MenuBuilder {
      * Show mystical about dialog
      */
     showAbout() {
-        dialog.showMessageBox(this.mainWindow, {
-            type: 'info',
-            title: 'About Hexbloop',
-            message: '🔮 Hexbloop - Chaos Magic Audio Engine',
-            detail: `Version 1.0.0
+        const detail = `Version ${app.getVersion()}
 
 Transform your audio files with lunar-influenced processing algorithms. Features include audio effects, mastering, artwork generation, and mystical naming.
 
@@ -255,10 +263,23 @@ Drag audio files onto the hexagonal interface or use File > Open Audio Files.
 Output files appear in ~/Documents/HexbloopOutput/
 
 Built with mystical precision and technical excellence.
-Hexbloop Audio Labs © 2024`,
+Hexbloop Audio Labs © ${new Date().getFullYear()}`;
+
+        const options = {
+            type: 'info',
+            title: 'About Hexbloop',
+            message: '🔮 Hexbloop - Chaos Magic Audio Engine',
+            detail,
             buttons: ['✨ Close'],
             defaultId: 0
-        });
+        };
+
+        const window = this.getWindow();
+        if (window) {
+            dialog.showMessageBox(window, options);
+        } else {
+            dialog.showMessageBox(options);
+        }
     }
     
     /**
@@ -274,7 +295,13 @@ Hexbloop Audio Labs © 2024`,
      * Select audio offerings (files)
      */
     async selectOfferings() {
-        const result = await dialog.showOpenDialog(this.mainWindow, {
+        const window = this.getWindow();
+        if (!window) {
+            console.log('⚠️ No main window to receive files');
+            return;
+        }
+
+        const result = await dialog.showOpenDialog(window, {
             properties: ['openFile', 'multiSelections'],
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'm4a', 'aiff', 'flac', 'ogg'] },
@@ -282,10 +309,10 @@ Hexbloop Audio Labs © 2024`,
             ],
             title: 'Select Audio Files to Process'
         });
-        
+
         if (!result.canceled && result.filePaths.length > 0) {
             // Send to main window for processing
-            this.mainWindow.webContents.send('file-dropped', result.filePaths);
+            window.webContents.send('file-dropped', result.filePaths);
         }
     }
     
@@ -328,58 +355,87 @@ Hexbloop Audio Labs © 2024`,
     async toggleAmbientAudio(enabled) {
         try {
             await this.preferencesManager.updateSetting('ui.ambientAudio', enabled);
-            
+
             // Send to renderer to toggle audio
-            this.mainWindow.webContents.send('toggle-ambient-audio', enabled);
-            
+            this.getWindow()?.webContents.send('toggle-ambient-audio', enabled);
+
             console.log(`🔮 Ambient audio ${enabled ? 'enabled' : 'disabled'}`);
             this.updateMenu();
         } catch (error) {
             console.error('❌ Failed to toggle ambient audio:', error);
         }
     }
-    
+
     /**
-     * Show output folder
+     * Show output folder (create it first so Finder has something to show)
      */
     showOutputFolder() {
         const outputFolder = this.preferencesManager.getSetting('ui.outputFolder');
-        shell.showItemInFolder(outputFolder);
+        if (!outputFolder) return;
+        try {
+            fs.mkdirSync(outputFolder, { recursive: true });
+            shell.openPath(outputFolder);
+        } catch (error) {
+            console.error('❌ Could not open output folder:', error);
+        }
     }
-    
+
     /**
-     * Clear mystical cache
+     * Clear mystical cache — removes leftover hexbloop-* temp directories
+     * (normally cleaned per-run; this catches ones orphaned by crashes)
      */
     async clearCache() {
-        const response = await dialog.showMessageBox(this.mainWindow, {
+        const window = this.getWindow();
+        const options = {
             type: 'question',
             title: 'Clear Cache',
             message: 'Clear all temporary files?',
-            detail: 'This will remove cached artwork, temporary files, and processing logs.',
+            detail: 'This removes leftover Hexbloop processing files from the system temp folder.',
             buttons: ['Clear Cache', 'Cancel'],
             defaultId: 1,
             cancelId: 1
-        });
-        
-        if (response.response === 0) {
-            // Implementation for clearing cache
-            console.log('🧹 Mystical cache cleared');
+        };
+        const response = window
+            ? await dialog.showMessageBox(window, options)
+            : await dialog.showMessageBox(options);
+
+        if (response.response !== 0) return;
+
+        let removed = 0;
+        try {
+            const tmpDir = os.tmpdir();
+            const entries = fs.readdirSync(tmpDir);
+            for (const entry of entries) {
+                if (!entry.startsWith('hexbloop-')) continue;
+                const fullPath = path.join(tmpDir, entry);
+                try {
+                    if (fs.statSync(fullPath).isDirectory()) {
+                        fs.rmSync(fullPath, { recursive: true, force: true });
+                        removed++;
+                    }
+                } catch (entryError) {
+                    console.log(`⚠️ Could not remove ${entry}: ${entryError.message}`);
+                }
+            }
+            console.log(`🧹 Mystical cache cleared (${removed} temp director${removed === 1 ? 'y' : 'ies'})`);
+        } catch (error) {
+            console.error('❌ Cache clear failed:', error);
         }
     }
-    
+
     /**
      * Show help documentation
      */
     showHelp() {
-        // Could open local help file or external documentation
-        shell.openExternal('https://github.com/hexbloop/hexbloop#readme');
+        shell.openExternal(`${GITHUB_REPO_URL}#readme`);
     }
     
     /**
      * Reset preferences with confirmation
      */
     async resetPreferences() {
-        const response = await dialog.showMessageBox(this.mainWindow, {
+        const window = this.getWindow();
+        const confirmOptions = {
             type: 'warning',
             title: 'Reset Preferences',
             message: 'Reset all preferences to defaults?',
@@ -387,19 +443,27 @@ Hexbloop Audio Labs © 2024`,
             buttons: ['Reset to Defaults', 'Cancel'],
             defaultId: 1,
             cancelId: 1
-        });
-        
+        };
+        const response = window
+            ? await dialog.showMessageBox(window, confirmOptions)
+            : await dialog.showMessageBox(confirmOptions);
+
         if (response.response === 0) {
             try {
                 await this.preferencesManager.resetToDefaults();
                 this.updateMenu();
-                
-                dialog.showMessageBox(this.mainWindow, {
+
+                const doneOptions = {
                     type: 'info',
                     title: 'Preferences Reset',
                     message: 'All preferences have been reset to defaults.',
                     buttons: ['OK']
-                });
+                };
+                if (window) {
+                    dialog.showMessageBox(window, doneOptions);
+                } else {
+                    dialog.showMessageBox(doneOptions);
+                }
             } catch (error) {
                 console.error('❌ Failed to reset preferences:', error);
             }
