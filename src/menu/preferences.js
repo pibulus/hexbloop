@@ -20,9 +20,23 @@ class PreferencesManager {
         this.settingsPath = path.join(this.userDataPath, 'hexbloop-settings.json');
         this.backupPath = path.join(this.userDataPath, 'hexbloop-settings.backup.json');
         this.currentSettings = null;
-        
-        // Initialize settings on startup
-        this.initializeSettings();
+
+        // Initialize settings on startup. Keep the promise so callers can
+        // await a guaranteed-loaded state (avoids a boot race where a file
+        // dropped in the first tick sees defaults instead of saved prefs).
+        this.ready = this.initializeSettings();
+    }
+
+    /**
+     * Resolves once settings have been loaded from disk (or defaults created).
+     */
+    async whenReady() {
+        try {
+            await this.ready;
+        } catch {
+            // initializeSettings already falls back to defaults on failure
+        }
+        return this.currentSettings;
     }
     
     /**

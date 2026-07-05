@@ -684,6 +684,18 @@ class HexbloopMystic {
         setTimeout(() => {
             this.hexStack.style.filter = '';
         }, 1500);
+
+        // Surface the reason in the progress line so failure isn't just a
+        // silent red flash — the user needs to know WHAT went wrong
+        if (this.progressText && message) {
+            this.progressIndicator.classList.add('active');
+            this.progressText.textContent = message;
+            clearTimeout(this._errorTextTimer);
+            this._errorTextTimer = setTimeout(() => {
+                this.progressText.textContent = '';
+                this.progressIndicator.classList.remove('active');
+            }, 4000);
+        }
     }
     
     // Add custom setTimeout that tracks timeouts

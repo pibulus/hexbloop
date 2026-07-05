@@ -23,6 +23,15 @@ const { PreferencesWindow } = require('./src/menu/preferences-window');
 let mainWindow;
 let preferencesWindow;
 
+// Paths the renderer is allowed to read back for A/B playback: only files
+// this session actually processed (inputs) or produced (outputs). Prevents
+// the renderer from asking the main process to read arbitrary disk paths.
+const playbackAllowlist = new Set();
+
+// A/B playback loads a file fully into renderer memory (original + processed
+// at once), so cap what we'll hand back — a multi-hour WAV would OOM the tab.
+const MAX_PLAYBACK_BYTES = 200 * 1024 * 1024; // 200MB
+
 // === Window Management ===
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -147,8 +156,10 @@ module.exports.showPreferencesWindow = showPreferencesWindow;
 
 // === App Lifecycle ===
 app.setName('Hexbloop');
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     app.setName('Hexbloop');
+    // Load persisted settings before the window can accept a dropped file
+    await getPreferencesManager().whenReady();
     createWindow();
 });
 
@@ -295,6 +306,10 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
                 mysticalName: finalName
             });
 
+            // Allow the renderer to read these two back for A/B playback
+            playbackAllowlist.add(resolvedPath);
+            playbackAllowlist.add(path.resolve(outputPath));
+
             // Update manifest if session folders are enabled
             if (manifest) {
                 manifest.files.push({
@@ -399,29 +414,6 @@ ipcMain.handle('select-files', async () => {
     return result.filePaths;
 });
 
-// Legacy drag-drop handler (kept for compatibility)
-ipcMain.handle('get-file-paths-from-drop', async (event, fileData) => {
-    console.log('🔍 Processing drag-drop file data:', fileData);
-    
-    const paths = [];
-    for (const file of fileData) {
-        if (file.path) {
-            paths.push(file.path);
-        } else if (file.name) {
-            console.log(`⚠️ Cannot determine full path for: ${file.name}`);
-        }
-    }
-    
-    console.log('🔍 Extracted file paths from drop:', paths);
-    
-    if (paths.length === 0) {
-        console.log('❌ Could not extract file paths from drag-drop');
-        return [];
-    }
-    
-    return paths;
-});
-
 // Read an audio file's bytes for in-app A/B playback.
 // The renderer can't load file:// URLs directly (webSecurity + CSP),
 // so we hand it the raw bytes and it builds a Blob URL.
@@ -439,6 +431,13 @@ ipcMain.handle('read-audio-file', async (event, filePath) => {
         }
 
         const resolvedPath = path.resolve(filePath);
+
+        // Only files this session processed may be read back — the renderer
+        // can't coax the main process into reading arbitrary disk paths
+        if (!playbackAllowlist.has(resolvedPath)) {
+            throw new Error('File not available for playback');
+        }
+
         if (!fs.existsSync(resolvedPath)) {
             throw new Error('File not found');
         }
@@ -446,6 +445,11 @@ ipcMain.handle('read-audio-file', async (event, filePath) => {
         const stats = fs.statSync(resolvedPath);
         if (!stats.isFile()) {
             throw new Error('Path is not a file');
+        }
+
+        // Cap size — both A/B sides load fully into renderer memory at once
+        if (stats.size > MAX_PLAYBACK_BYTES) {
+            throw new Error(`File too large for in-app playback (${Math.round(stats.size / 1024 / 1024)}MB)`);
         }
 
         const ext = path.extname(resolvedPath).toLowerCase();
@@ -714,12 +718,29 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
     console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
 });
+// Auto-reload a crashed renderer, but cap retries so a renderer that
+// crashes on load can't spin in an infinite reload loop
+let rendererReloads = 0;
+let rendererReloadResetTimer = null;
 app.on('render-process-gone', (event, webContents, details) => {
     console.error('🚨 Renderer process gone:', details);
-    if (details.reason === 'crashed') {
-        console.log('🔄 Attempting to reload...');
-        webContents.reload();
+    if (details.reason !== 'crashed' && details.reason !== 'oom') return;
+
+    if (rendererReloads >= 3) {
+        console.error('🛑 Renderer crashed repeatedly — not reloading again.');
+        return;
     }
+    rendererReloads++;
+    console.log(`🔄 Attempting to reload (${rendererReloads}/3)...`);
+    try {
+        webContents.reload();
+    } catch (e) {
+        console.error('Reload failed:', e.message);
+    }
+
+    // If it stays up for 30s, treat it as recovered and reset the counter
+    clearTimeout(rendererReloadResetTimer);
+    rendererReloadResetTimer = setTimeout(() => { rendererReloads = 0; }, 30000);
 });
 
 // === Startup ===
