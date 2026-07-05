@@ -387,7 +387,7 @@ class NameGenerator {
             name = this.generateTimeName(hour, rng);
         } else if (roll < 80) {
             // Style-flavored (witch house / vaporwave)
-            name = this.generateStyledName(rng);
+            name = this.generateAestheticName(rng);
         } else if (roll < 90) {
             // Action verb starter
             name = this.generateActionName(rng);
@@ -412,7 +412,7 @@ class NameGenerator {
 
     // ---- Sub-generators ----
 
-    static generateLunarName(moonPhase, rng) {
+    static generateLunarName(moonPhase, rng = Math.random) {
         const phaseName = moonPhase.name || 'New Moon';
         const phaseWords = this.lunarNames[phaseName] || this.lunarNames['New Moon'];
         const lunarWord = this.pick(phaseWords, rng);
@@ -460,8 +460,10 @@ class NameGenerator {
         return `${timeWord}_${this.pick(this.enders, rng)}`;
     }
 
-    static generateStyledName(rng) {
+    static generateAestheticName(rng) {
         // Geometric-framed or vaporwave-flavored
+        // (NOT named generateStyledName — that's the compat wrapper below,
+        //  and a same-name class member would silently shadow this one)
         if (rng() < 0.5) {
             const word = this.pick(this.middles, rng);
             const sym = this.pick(this.witchSymbols, rng);
