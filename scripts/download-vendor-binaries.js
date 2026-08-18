@@ -156,8 +156,34 @@ async function main() {
                 if (PLATFORM !== 'win') fs.chmodSync(ffprobeDest, 0o755);
                 console.log(`✅ FFprobe copied to ${ffprobeDest}`);
             } else {
-                console.log('⚠️  FFprobe not found in ffmpeg-static package');
-                console.log('   You may need to download it manually (see instructions above)');
+                // ffmpeg-static ships ONLY ffmpeg — it has never carried ffprobe, so
+                // looking beside the binary always came up empty and left the app
+                // resolving ffprobe off the build machine's PATH. Its sibling package
+                // is the actual source.
+                console.log('   ffprobe is not in ffmpeg-static; trying ffprobe-static...');
+                try {
+                    execSync('npm install --no-save ffprobe-static', {
+                        cwd: path.join(__dirname, '..'),
+                        stdio: 'inherit',
+                        timeout: 120000
+                    });
+                    const ffprobeStatic = require('ffprobe-static');
+                    const src = ffprobeStatic && (ffprobeStatic.path || ffprobeStatic);
+                    if (src && fs.existsSync(src)) {
+                        const ffprobeDest = path.join(VENDOR_DIR, `ffprobe${ext}`);
+                        fs.copyFileSync(src, ffprobeDest);
+                        if (PLATFORM !== 'win') fs.chmodSync(ffprobeDest, 0o755);
+                        console.log(`✅ FFprobe copied to ${ffprobeDest}`);
+                    } else {
+                        console.log('⚠️  ffprobe-static did not yield a binary');
+                    }
+                    execSync('npm uninstall ffprobe-static', {
+                        cwd: path.join(__dirname, '..'),
+                        stdio: 'ignore'
+                    });
+                } catch (probeError) {
+                    console.log('⚠️  ffprobe auto-download failed:', probeError.message);
+                }
             }
         }
 

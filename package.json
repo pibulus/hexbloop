@@ -9,8 +9,8 @@
     "build": "electron-builder",
     "test": "node test/audio-processing.test.js && node test/name-generation.test.js && node test/artwork-generation.test.js && node test/output-path.test.js && node test/release-hardening.test.js",
     "test:e2e": "node test/pipeline-e2e.test.js",
-    "dist": "electron-builder --mac",
-    "dist:all": "electron-builder --mac --win --linux",
+    "dist": "npm run vendor:setup && electron-builder --mac",
+    "dist:all": "npm run vendor:setup && electron-builder --mac --win --linux",
     "clean": "rm -rf node_modules package-lock.json",
     "clean:install": "npm run clean && npm install",
     "postinstall": "electron-builder install-app-deps",
@@ -70,7 +70,10 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extraResources": [
-        { "from": "vendor/mac/", "to": "vendor/mac/" }
+        {
+          "from": "vendor/mac/",
+          "to": "vendor/mac/"
+        }
       ]
     },
     "dmg": {
@@ -98,14 +101,20 @@
       ],
       "icon": "assets/icon.ico",
       "extraResources": [
-        { "from": "vendor/win/", "to": "vendor/win/" }
+        {
+          "from": "vendor/win/",
+          "to": "vendor/win/"
+        }
       ]
     },
     "linux": {
       "target": "AppImage",
       "icon": "assets",
       "extraResources": [
-        { "from": "vendor/linux/", "to": "vendor/linux/" }
+        {
+          "from": "vendor/linux/",
+          "to": "vendor/linux/"
+        }
       ]
     }
   },
