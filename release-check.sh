@@ -43,13 +43,25 @@ fi
 
 # --- the audio engine has to actually be in the box ---
 RESOURCES="${APP_BUNDLE}/Contents/Resources/vendor/mac"
-for bin in ffmpeg ffprobe sox; do
+
+# ffmpeg and ffprobe are load-bearing: mastering, conversion and duration all go
+# through them, and nothing covers for them. Missing = the download is inert.
+for bin in ffmpeg ffprobe; do
     if [[ -x "${RESOURCES}/${bin}" ]]; then
         pass "Bundled ${bin} is present and executable"
     else
-        fail "Bundled ${bin} is MISSING — the app will fall back to the build machine's PATH and do nothing on a clean Mac (run: npm run vendor:setup)"
+        fail "Bundled ${bin} is MISSING — the app falls back to the build machine's PATH and does nothing on a clean Mac (run: npm run vendor:setup)"
     fi
 done
+
+# sox is optional by design. It colours the compression stage, and processSox()
+# catches its spawn failure and hands the stage to ffmpeg instead
+# (audio-processor.js fallbackToFFmpeg). Worth knowing about, not worth blocking on.
+if [[ -x "${RESOURCES}/sox" ]]; then
+    pass "Bundled sox is present and executable"
+else
+    warn "sox is not bundled — the compression stage falls back to ffmpeg. Optional flavour, not a blocker"
+fi
 
 if codesign --verify --deep --strict "$APP_BUNDLE" >/tmp/hexbloop-codesign.log 2>&1; then
     pass "App code signature verifies"
