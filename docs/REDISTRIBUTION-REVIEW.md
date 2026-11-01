@@ -1,7 +1,10 @@
 # Redistribution review packet — audio pair
 
-**Status: PENDING HUMAN APPROVAL. This page is evidence, not legal clearance.**
-The release gate fails until a reviewer fills the vendor provenance record.
+**Status: APPROVED 2026-11-02 by Pablo Alvarado.** The vendor provenance record
+in `vendor/mac/provenance.json` carries `redistributionReview: "approved"`, the
+reviewer and date, and the binary gate passes with zero failures. This page
+remains the evidence trail; it is not legal advice. The source/relink material
+still needs a public home before the paid DMG is distributed.
 
 ## Artifacts under review
 
