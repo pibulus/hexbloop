@@ -20,7 +20,7 @@ const WINDOW_CONFIG = {
         MIN_HEIGHT: 500,
         MAX_WIDTH: 600,
         MAX_HEIGHT: 500,
-        BACKGROUND_COLOR: '#F0F0F0'
+        BACKGROUND_COLOR: '#17131e'
     }
 };
 

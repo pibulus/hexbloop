@@ -27,7 +27,7 @@ const probe = file => JSON.parse(execFileSync(binary('ffprobe'), ['-v', 'error',
     fs.writeFileSync(path.join(inputs, 'ignored.txt'), 'Not audio');
     if (!fs.existsSync(path.join(inputs, 'shortcut.wav'))) fs.symlinkSync(path.join(inputs, 'input.wav'), path.join(inputs, 'shortcut.wav'));
     application = await _electron.launch({ executablePath: path.join(appPath, 'Contents/MacOS/Hexbloop LOCAL TEST'),
-        env: { ...process.env, PATH: '/usr/bin:/bin:/usr/sbin:/sbin' }, timeout: 45000 });
+        env: { ...process.env, PATH: '/usr/bin:/bin:/usr/sbin:/sbin' }, cwd: root, timeout: 45000 });
     const processLog = fs.createWriteStream(path.join(root, 'app-test-process.log'));
     application.process().stdout?.pipe(processLog);
     application.process().stderr?.pipe(processLog);
@@ -47,6 +47,30 @@ const probe = file => JSON.parse(execFileSync(binary('ffprobe'), ['-v', 'error',
         assert.strictEqual(info.security.webSecurity, true);
         return { ...info, security: { nodeIntegration: false, contextIsolation: true, webSecurity: true, sandbox: info.security.sandbox } };
     });
+    await page.mouse.move(20, 300);
+    await page.screenshot({ path: path.join(root, 'hud-idle.png') });
+    await check('Settings opens outside the repo; Output/Character save through real IPC', async () => {
+        const opening = application.waitForEvent('window');
+        await page.locator('#settingsButton').click();
+        const preferences = await opening;
+        await preferences.waitForFunction(() => Boolean(window.preferencesAPI && document.getElementById('output-folder').value));
+        assert.strictEqual(await preferences.locator('[role="tab"]').count(), 2);
+        assert.strictEqual(await preferences.locator('[data-setting^="processing."]').count(), 0);
+        await preferences.screenshot({ path: path.join(root, 'settings-output.png') });
+        await preferences.locator('#output-format').selectOption('flac');
+        await page.waitForFunction(() => document.getElementById('currentFormat').textContent === 'FLAC');
+        await preferences.locator('#output-format').selectOption('source');
+        await preferences.locator('#character-label').click();
+        assert(await preferences.locator('#custom-metadata-section').isHidden());
+        await preferences.screenshot({ path: path.join(root, 'settings-character.png') });
+        await preferences.locator('#metadata-custom').check();
+        await preferences.locator('#custom-artist').fill('Local Artist');
+        await preferences.locator('#custom-album').focus();
+        await preferences.waitForFunction(async () => (await window.preferencesAPI.getSettings()).metadata.artist === 'Local Artist');
+        await preferences.screenshot({ path: path.join(root, 'settings-custom.png') });
+        await preferences.locator('#metadata-generated').check();
+        await preferences.close();
+    });
     await check('Bundled native DSP and genuine audio analysis; no Homebrew/Sox', async () => {
         const info = await application.evaluate(async ({ app }, input) => {
             const modules = app.getAppPath();
@@ -60,13 +84,26 @@ const probe = file => JSON.parse(execFileSync(binary('ffprobe'), ['-v', 'error',
         assert(info.analysisAvailable && info.duration > 0);
         return info;
     });
-    // Only the native picker result is substituted. The actual button, secure
+    // Only the native picker result is substituted. The actual menu, secure
     // IPC, recursive discovery, DSP and renderer receipt all run unchanged.
     await application.evaluate(({ dialog }, folder) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
     }, inputs);
-    await check('Folder button processes nested MP3/WAV/FLAC and skips symlinks', async () => {
-        await page.locator('#chooseFolder').click();
+    await check('File menu processes nested MP3/WAV/FLAC and skips symlinks', async () => {
+        await application.evaluate(({ Menu }) => {
+            const find = items => {
+                for (const item of items) {
+                    if (item.label.startsWith('Choose Audio Folder')) return item;
+                    const nested = item.submenu && find(item.submenu.items);
+                    if (nested) return nested;
+                }
+            };
+            const item = find(Menu.getApplicationMenu().items);
+            if (!item) throw new Error('Choose Audio Folder menu item missing');
+            item.click();
+        });
+        await page.waitForFunction(() => window.hexbloopMystic.isProcessing && document.getElementById('progressText').textContent.startsWith('Blooping '));
+        await page.screenshot({ path: path.join(root, 'hud-processing.png') });
         await page.waitForFunction(() => document.getElementById('receiptSummary').textContent === '3 ready', undefined, { timeout: 90000 });
         const pairs = await page.evaluate(() => window.hexbloopMystic.successfulPairs);
         assert.strictEqual(pairs.length, 3);
@@ -76,6 +113,7 @@ const probe = file => JSON.parse(execFileSync(binary('ffprobe'), ['-v', 'error',
         return pairs;
     });
     const pairs = await page.evaluate(() => window.hexbloopMystic.successfulPairs);
+    await page.screenshot({ path: path.join(root, 'hud-completed.png') });
     for (const pair of pairs) {
         await check(path.extname(pair.outputFile) + ' processed audio, metadata and 1000px art', async () => {
             const info = probe(pair.outputFile);

@@ -4,364 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-    <title>Hexbloop Preferences</title>
+    <title>Hexbloop Settings</title>
     <link rel="stylesheet" href="preferences.css">
 </head>
 <body>
-    <!-- Mystical background effects -->
-    <div class="hexagon-particles">
-        <div class="hex-particle hex-particle-1">⬡</div>
-        <div class="hex-particle hex-particle-2">⬢</div>
-        <div class="hex-particle hex-particle-3">⬡</div>
-        <div class="hex-particle hex-particle-4">⬢</div>
-        <div class="hex-particle hex-particle-5">⬡</div>
-        <div class="hex-particle hex-particle-6">⬢</div>
-    </div>
-    
     <div class="preferences-container">
-        <!-- macOS-style tab bar -->
-        <div class="tab-bar">
-            <button class="tab-button active" data-tab="processing">
-                <span class="tab-icon">🎚️</span>
-                <span class="tab-label">Audio</span>
-            </button>
-            <button class="tab-button" data-tab="naming">
-                <span class="tab-icon">✨</span>
-                <span class="tab-label">Naming</span>
-            </button>
-            <button class="tab-button" data-tab="output">
-                <span class="tab-icon">📂</span>
-                <span class="tab-label">Output</span>
-            </button>
-            <button class="tab-button" data-tab="artwork">
-                <span class="tab-icon">🎨</span>
-                <span class="tab-label">Artwork</span>
-            </button>
-        </div>
-
-        <!-- Main preferences content -->
+        <header class="settings-header">
+            <div class="tab-bar" role="tablist" aria-label="Settings">
+                <button class="tab-button active" id="output-label" data-tab="output" role="tab" aria-selected="true" aria-controls="output-tab">Output</button>
+                <button class="tab-button" id="character-label" data-tab="character" role="tab" aria-selected="false" aria-controls="character-tab" tabindex="-1">Character</button>
+            </div>
+            <details class="settings-menu" id="settingsMenu">
+                <summary aria-label="Settings actions">•••</summary>
+                <div class="settings-menu-items">
+                    <button type="button" id="export-btn">Export Settings…</button>
+                    <button type="button" id="import-btn">Import Settings…</button>
+                    <button type="button" id="reset-btn">Reset to Defaults…</button>
+                </div>
+            </details>
+        </header>
         <main class="preferences-content">
-            <!-- Processing Tab -->
-            <div class="tab-panel active" id="processing-tab">
-            <section class="preference-section">
-                <div class="section-header">
-                    <h2 class="section-title">Audio Processing</h2>
-                    <div class="section-description">Five independent stages. Format stays separate.</div>
+            <section class="tab-panel active" id="output-tab" role="tabpanel" aria-labelledby="output-label">
+                <div class="setting-row destination-row">
+                    <label for="output-folder">Destination</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="output-folder" data-setting="ui.outputFolder" readonly title="Output folder">
+                        <button type="button" id="choose-folder-btn">Choose…</button>
+                    </div>
                 </div>
-                
-                <div class="settings-grid">
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="compressing">
-                            <div class="setting-info">
-                                <h3 id="audio-effects-label">Compress</h3>
-                                <p id="audio-effects-desc">Lunar tape color and compand; not MP3 encoding</p>
-                            </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox" 
-                                       id="compressing" 
-                                       data-setting="processing.compressing"
-                                       aria-labelledby="audio-effects-label"
-                                       aria-describedby="audio-effects-desc"
-                                       role="switch">
-                                <span class="slider" aria-hidden="true"></span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="mastering">
-                            <div class="setting-info">
-                                <h3 id="audio-mastering-label">Master</h3>
-                                <p id="audio-mastering-desc">EQ, loudness, and limiting</p>
-                            </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox" 
-                                       id="mastering" 
-                                       data-setting="processing.mastering"
-                                       aria-labelledby="audio-mastering-label"
-                                       aria-describedby="audio-mastering-desc"
-                                       role="switch">
-                                <span class="slider" aria-hidden="true"></span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="coverArt">
-                            <div class="setting-info">
-                                <h3 id="generate-artwork-label">Cover Art</h3>
-                                <p id="generate-artwork-desc">Create procedural album cover artwork</p>
-                            </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox" 
-                                       id="coverArt" 
-                                       data-setting="processing.coverArt"
-                                       aria-labelledby="generate-artwork-label"
-                                       aria-describedby="generate-artwork-desc"
-                                       role="switch">
-                                <span class="slider" aria-hidden="true"></span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="metadata-switch">
-                            <div class="setting-info"><h3>Metadata</h3><p>Write generated or custom text tags</p></div>
-                            <div class="toggle-switch"><input type="checkbox" id="metadata-switch" data-setting="processing.metadata" role="switch"><span class="slider" aria-hidden="true"></span></div>
-                        </label>
-                    </div>
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="renaming-switch">
-                            <div class="setting-info"><h3>Rename</h3><p>Fresh filenames; original audio stays intact</p></div>
-                            <div class="toggle-switch"><input type="checkbox" id="renaming-switch" data-setting="processing.renaming" role="switch"><span class="slider" aria-hidden="true"></span></div>
-                        </label>
-                    </div>
-
+                <div class="setting-row">
+                    <label for="output-format">Format</label>
+                    <select id="output-format" data-setting="output.format">
+                        <option value="source">Source</option><option value="mp3">MP3</option><option value="wav">WAV</option><option value="flac">FLAC</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label for="batch-session-folders">Session folders<small>Each batch in its own folder.</small></label>
+                    <input type="checkbox" id="batch-session-folders" data-setting="batch.sessionFolders" role="switch">
+                </div>
+                <div class="setting-row" id="batch-folder-scheme-wrapper" hidden>
+                    <label for="batch-folder-scheme">Folder names</label>
+                    <select id="batch-folder-scheme" data-setting="batch.folderScheme">
+                        <option value="date">Date</option><option value="lunar">Moon phase</option><option value="counter">Session number</option>
+                    </select>
                 </div>
             </section>
-
-            <section class="info-panel compact">
-                <h4>Processing Order</h4>
-                <p>Compress colors sound. Master shapes loudness. Cover Art, Metadata, and Rename work independently.</p>
-            </section>
-            </div>
-
-            <!-- Naming Tab -->
-            <div class="tab-panel" id="naming-tab">
-            <section class="preference-section">
-                <div class="section-header">
-                    <h2 class="section-title" id="file-naming-title">Metadata Style</h2>
-                    <div class="section-description">The Metadata switch controls whether text tags change.</div>
+            <section class="tab-panel" id="character-tab" role="tabpanel" aria-labelledby="character-label" hidden>
+                <div class="setting-row">
+                    <label for="artwork-style">Artwork</label>
+                    <select id="artwork-style" data-setting="artwork.defaultStyle">
+                        <option value="auto">Auto · audio-driven</option>
+                        <option value="neon-plasma">Neon Plasma</option><option value="cosmic-flow">Cosmic Flow</option>
+                        <option value="vapor-dream">Vapor Dream</option><option value="cyber-matrix">Cyber Matrix</option>
+                        <option value="sunset-liquid">Sunset Liquid</option><option value="electric-storm">Electric Storm</option>
+                        <option value="crystal-prism">Crystal Prism</option><option value="ocean-aurora">Ocean Aurora</option>
+                    </select>
                 </div>
-                
-                <div class="radio-cards" role="radiogroup" aria-labelledby="file-naming-title">
-                    <label class="radio-card" for="metadata-generated">
-                        <input type="radio"
-                               id="metadata-generated"
-                               name="metadata-mode"
-                               value="generated"
-                               data-setting="metadata.mode"
-                               aria-describedby="metadata-generated-desc">
-                        <div class="radio-content">
-                            <h3>Generated</h3>
-                            <p id="metadata-generated-desc">Lunar titles and session details</p>
-                        </div>
-                        <div class="radio-indicator" aria-hidden="true"></div>
-                    </label>
-
-                    <label class="radio-card" for="metadata-custom">
-                        <input type="radio" 
-                               id="metadata-custom"
-                               name="metadata-mode"
-                               value="custom" 
-                               data-setting="metadata.mode"
-                               aria-describedby="metadata-custom-desc">
-                        <div class="radio-content">
-                            <h3>Custom</h3>
-                            <p id="metadata-custom-desc">Artist and album from the fields below</p>
-                        </div>
-                        <div class="radio-indicator" aria-hidden="true"></div>
-                    </label>
-
+                <fieldset class="setting-row metadata-modes">
+                    <legend class="sr-only">Metadata</legend>
+                    <span aria-hidden="true">Metadata</span>
+                    <div class="radio-options">
+                        <label><input type="radio" id="metadata-generated" name="metadata-mode" value="generated" data-setting="metadata.mode"> Generated</label>
+                        <label><input type="radio" id="metadata-custom" name="metadata-mode" value="custom" data-setting="metadata.mode"> Custom</label>
+                    </div>
+                </fieldset>
+                <div id="custom-metadata-section" class="metadata-fields" hidden>
+                    <label for="custom-artist">Artist<input type="text" id="custom-artist" data-setting="metadata.artist" maxlength="100" placeholder="Artist name"></label>
+                    <label for="custom-album">Album<input type="text" id="custom-album" data-setting="metadata.album" maxlength="100" placeholder="Album title"></label>
+                    <label for="custom-year">Year<input type="number" id="custom-year" data-setting="metadata.year" min="1900" max="2100"></label>
+                    <label for="custom-genre">Genre<input type="text" id="custom-genre" data-setting="metadata.genre" maxlength="50" placeholder="Genre"></label>
+                </div>
+                <div class="setting-row">
+                    <label for="ambientAudio">Background sound<small>The room between tracks.</small></label>
+                    <input type="checkbox" id="ambientAudio" data-setting="ui.ambientAudio" role="switch">
                 </div>
             </section>
-
-            <!-- Custom Metadata Section -->
-            <section class="preference-section" id="custom-metadata-section">
-                <div class="section-header">
-                    <h2 class="section-title" id="custom-metadata-title">Custom Metadata</h2>
-                    <div class="section-description">Add your artist info to the audio files</div>
-                </div>
-                
-                <div class="metadata-form" role="group" aria-labelledby="custom-metadata-title">
-                    <div class="form-row">
-                        <div class="form-field">
-                            <label for="custom-artist">Artist Name</label>
-                            <input type="text" 
-                                   id="custom-artist" 
-                                   data-setting="metadata.artist" 
-                                   placeholder="Artist name"
-                                   aria-label="Artist name for custom metadata"
-                                   maxlength="100">
-                        </div>
-
-                        <div class="form-field">
-                            <label for="custom-album">Album Title</label>
-                            <input type="text" 
-                                   id="custom-album" 
-                                   data-setting="metadata.album" 
-                                   placeholder="Your album title"
-                                   aria-label="Album title for custom metadata"
-                                   maxlength="100">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-field form-field-small">
-                            <label for="custom-year">Year</label>
-                            <input type="number" 
-                                   id="custom-year" 
-                                   data-setting="metadata.year" 
-                                   min="1900" 
-                                   max="2100" 
-                                   placeholder="2025"
-                                   aria-label="Release year"
-                                   aria-valuemin="1900"
-                                   aria-valuemax="2100">
-                        </div>
-
-                        <div class="form-field">
-                            <label for="custom-genre">Genre</label>
-                            <input type="text" 
-                                   id="custom-genre" 
-                                   data-setting="metadata.genre" 
-                                   placeholder="Mystical Audio"
-                                   aria-label="Music genre"
-                                   maxlength="50">
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="info-panel compact">
-                <h4>Independent controls</h4>
-                <p>Rename handles filenames. Metadata handles text tags. Either switch works alone.</p>
-            </section>
-            </div>
-
-            <!-- Output Tab -->
-            <div class="tab-panel" id="output-tab">
-            <section class="preference-section">
-                <div class="section-header">
-                    <h2 class="section-title">Output</h2>
-                    <div class="section-description">Where and how files are saved</div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field" style="flex:1">
-                        <label for="output-folder">Output Folder</label>
-                        <div class="folder-input-group">
-                            <input type="text" id="output-folder" data-setting="ui.outputFolder" readonly placeholder="~/Documents/HexbloopOutput">
-                            <button type="button" id="choose-folder-btn" class="btn btn-secondary">Choose</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-row" style="margin-top: 16px;">
-                    <div class="form-field" style="flex:1">
-                        <label for="output-format">File Format</label>
-                        <select id="output-format" data-setting="output.format">
-                            <option value="source">Source (keep original format)</option>
-                            <option value="mp3">MP3</option>
-                            <option value="wav">WAV</option>
-                            <option value="flac">FLAC</option>
-                        </select>
-                        <p>Choosing MP3, WAV, or FLAC makes conversion explicit. Compress never chooses the codec.</p>
-                    </div>
-                </div>
-
-                <div class="settings-grid" style="margin-top: 16px;">
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="batch-session-folders">
-                            <div class="setting-info">
-                                <h3>Session Folders</h3>
-                                <p>Group each batch in its own subfolder</p>
-                            </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="batch-session-folders" data-setting="batch.sessionFolders">
-                                <span class="slider"></span>
-                            </div>
-                        </label>
-                        <div class="form-field" id="batch-folder-scheme-wrapper" style="margin-top: 12px; display:none">
-                            <label for="batch-folder-scheme">Folder Scheme</label>
-                            <select id="batch-folder-scheme" data-setting="batch.folderScheme">
-                                <option value="date">Date (YYYY-MM-DD)</option>
-                                <option value="lunar">Lunar phase</option>
-                                <option value="counter">Session counter</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="setting-card">
-                        <label class="setting-toggle" for="ambientAudio">
-                            <div class="setting-info">
-                                <h3 id="ambient-audio-label">Ambient Audio</h3>
-                                <p id="ambient-audio-desc">Background soundscape</p>
-                            </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox"
-                                       id="ambientAudio"
-                                       data-setting="ui.ambientAudio"
-                                       aria-labelledby="ambient-audio-label"
-                                       aria-describedby="ambient-audio-desc"
-                                       role="switch">
-                                <span class="slider" aria-hidden="true"></span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-            </section>
-            </div>
-
-            <!-- Artwork Tab -->
-            <div class="tab-panel" id="artwork-tab">
-            <section class="preference-section">
-                <div class="section-header">
-                    <h2 class="section-title">Artwork Style</h2>
-                    <div class="section-description">Each run produces unique procedural art — pick a starting point or let it choose</div>
-                </div>
-                
-                <div class="settings-grid">
-                    <div class="setting-card">
-                        <label class="setting-select" for="artwork-style">
-                            <div class="setting-info">
-                                <h3>Visual Style</h3>
-                                <p>Auto picks based on the audio's energy and mood. Lock to a specific style for consistency.</p>
-                            </div>
-                            <select id="artwork-style" data-setting="artwork.defaultStyle">
-                                <option value="auto">Auto (audio-driven)</option>
-                                <option value="neon-plasma">Neon Plasma</option>
-                                <option value="cosmic-flow">Cosmic Flow</option>
-                                <option value="vapor-dream">Vapor Dream</option>
-                                <option value="cyber-matrix">Cyber Matrix</option>
-                                <option value="sunset-liquid">Sunset Liquid</option>
-                                <option value="electric-storm">Electric Storm</option>
-                                <option value="crystal-prism">Crystal Prism</option>
-                                <option value="ocean-aurora">Ocean Aurora</option>
-                            </select>
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="info-panel" style="margin-top: 16px;">
-                    <h4>How Artwork Works</h4>
-                    <p>Energy and spectral balance influence colors. A clear rhythmic pulse nudges motion; moon phase shifts the style.</p>
-                </div>
-            </section>
-            </div>
-
         </main>
-
-        <!-- Footer with action buttons -->
-        <footer class="preferences-footer">
-            <p id="settings-status" role="status" aria-live="polite"></p>
-            <div class="footer-buttons">
-                <button type="button" id="reset-btn" class="btn btn-secondary">Reset to Defaults</button>
-                <button type="button" id="export-btn" class="btn btn-secondary">Export Settings</button>
-                <button type="button" id="import-btn" class="btn btn-secondary">Import Settings</button>
-                <button type="button" id="close-btn" class="btn btn-primary">Close</button>
-            </div>
-        </footer>
+        <footer class="preferences-footer"><p id="settings-status" role="status" aria-live="polite"></p></footer>
     </div>
-
-    <!-- Loading overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner">
-            <div class="spinner-ring"></div>
-            <p class="loading-text">Processing...</p>
-        </div>
-    </div>
-
+    <div class="loading-overlay" id="loadingOverlay" role="status"><p class="loading-text">Saving…</p></div>
     <script src="preferences.js"></script>
 </body>
 </html>

@@ -45,7 +45,7 @@ class MenuBuilder {
                         type: 'separator'
                     },
                     {
-                        label: 'Preferences...',
+                        label: 'Settings…',
                         accelerator: 'CmdOrCtrl+,',
                         click: () => this.showPreferences()
                     },
@@ -148,13 +148,6 @@ class MenuBuilder {
                             }
                         ]
                     },
-                    {
-                        type: 'separator'
-                    },
-                    {
-                        label: 'Clear Cache',
-                        click: () => this.clearCache()
-                    }
                 ]
             },
             
@@ -194,6 +187,7 @@ class MenuBuilder {
                     },
                     {
                         label: 'Developer',
+                        visible: !app.isPackaged,
                         submenu: [
                             {
                                 label: 'Reload App',
@@ -232,20 +226,13 @@ class MenuBuilder {
                 label: 'Help',
                 submenu: [
                     {
-                        label: 'User Guide',
+                        label: 'Quick Start',
                         click: () => this.showHelp()
                     },
                     {
                         label: 'Report an Issue',
                         click: () => shell.openExternal(`${GITHUB_REPO_URL}/issues`)
                     },
-                    {
-                        type: 'separator'
-                    },
-                    {
-                        label: 'Reset Preferences',
-                        click: () => this.resetPreferences()
-                    }
                 ]
             }
         ];
@@ -257,37 +244,38 @@ class MenuBuilder {
     /**
      * Show mystical about dialog
      */
-    showAbout() {
-        const detail = `Version ${app.getVersion()}
-
-Five independent stages: Master, Compress, Cover Art, Metadata, Rename.
-Format selection is separate from lunar tape color.
-
-🌙 Real-time moon phase calculations affect audio processing
-Audio pipeline: Sox when available, FFmpeg fallback
-🎨 Procedural artwork generation for each track
-⬟ Geometric naming system based on hexagonal principles
-
-Drop audio on the hex or open audio files from the File menu.
-Output destination appears in the main window.
-
-Built with mystical precision and technical excellence.
-Hexbloop Audio Labs © ${new Date().getFullYear()}`;
-
+    async showAbout() {
         const options = {
             type: 'info',
             title: 'About Hexbloop',
-            message: '🔮 Hexbloop - Chaos Magic Audio Engine',
-            detail,
-            buttons: ['✨ Close'],
-            defaultId: 0
+            message: 'Hexbloop',
+            detail: `Lunar tape color. Fresh artwork.\n\nVersion ${app.getVersion()}\nMade by Pablo`,
+            buttons: ['Website', 'Licenses', 'Close'],
+            defaultId: 2,
+            cancelId: 2
         };
-
         const window = this.getWindow();
-        if (window) {
-            dialog.showMessageBox(window, options);
-        } else {
-            dialog.showMessageBox(options);
+        const { response } = await (window ? dialog.showMessageBox(window, options) : dialog.showMessageBox(options));
+        if (response === 0) await shell.openExternal('https://hexbloop.app');
+        if (response === 1) await this.showLicenses();
+    }
+
+    async showLicenses() {
+        const roots = [path.join(process.resourcesPath || '', 'local-notices'),
+            path.join(process.resourcesPath || '', 'vendor/mac/notices'), path.join(__dirname, '../../vendor/mac/notices')];
+        const notices = roots.find(root => fs.existsSync(root));
+        const options = {
+            type: 'info', title: 'Third-party notices', message: 'Open-source foundations',
+            detail: 'FFmpeg · LAME · node-canvas and its native dependencies · Electron / Chromium\n\n' +
+                (notices ? 'Audio notices are available in the bundled notices folder. Complete dependency notices and source/relink delivery remain subject to release review.' :
+                    'The complete notices and source/relink bundle has not been assembled in this build. Public distribution remains blocked.'),
+            buttons: notices ? ['Open Audio Notices', 'Close'] : ['Close'],
+            defaultId: notices ? 1 : 0, cancelId: notices ? 1 : 0
+        };
+        const window = this.getWindow();
+        const { response } = await (window ? dialog.showMessageBox(window, options) : dialog.showMessageBox(options));
+        if (notices && response === 0) {
+            await shell.openPath(notices);
         }
     }
     
@@ -442,7 +430,13 @@ Hexbloop Audio Labs © ${new Date().getFullYear()}`;
      * Show help documentation
      */
     showHelp() {
-        shell.openExternal(`${GITHUB_REPO_URL}#readme`);
+        const options = {
+            type: 'info', title: 'Quick Start', message: 'A little Hexbloop',
+            detail: 'Drop audio or a folder · click the Hex to browse.\nTop ribbon shapes the result; A/B compares the sound.\nOutput opens finished files. Originals stay untouched.',
+            buttons: ['Close']
+        };
+        const window = this.getWindow();
+        return window ? dialog.showMessageBox(window, options) : dialog.showMessageBox(options);
     }
     
     /**

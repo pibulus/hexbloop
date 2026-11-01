@@ -55,7 +55,7 @@ class PreferencesController {
         this.currentSettings = null;
         this.settingElements = new Map();
         this.debouncedUpdates = new Map(); // Store debounced update functions
-        this.activeTab = 'processing'; // Track active tab
+        this.activeTab = 'output';
         
         this.init();
     }
@@ -109,7 +109,6 @@ class PreferencesController {
             resetBtn: document.getElementById('reset-btn'),
             exportBtn: document.getElementById('export-btn'),
             importBtn: document.getElementById('import-btn'),
-            closeBtn: document.getElementById('close-btn'),
             chooseFolderBtn: document.getElementById('choose-folder-btn'),
             customMetadataSection: document.getElementById('custom-metadata-section'),
             loadingOverlay: document.getElementById('loadingOverlay')
@@ -195,8 +194,16 @@ class PreferencesController {
         this.elements.resetBtn.addEventListener('click', () => this.resetToDefaults());
         this.elements.exportBtn.addEventListener('click', () => this.exportSettings());
         this.elements.importBtn.addEventListener('click', () => this.importSettings());
-        this.elements.closeBtn.addEventListener('click', () => this.closeWindow());
         this.elements.chooseFolderBtn.addEventListener('click', () => this.chooseOutputFolder());
+        document.addEventListener('pointerdown', event => {
+            if (!event.target.closest('#settingsMenu')) document.getElementById('settingsMenu').open = false;
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') document.getElementById('settingsMenu').open = false;
+        });
+        for (const button of [this.elements.resetBtn, this.elements.exportBtn, this.elements.importBtn]) {
+            button.addEventListener('click', () => { document.getElementById('settingsMenu').open = false; });
+        }
         
         // Both radios bind independently, not through one Map key.
         const metadataRadios = document.querySelectorAll('input[name="metadata-mode"]');
@@ -273,6 +280,11 @@ class PreferencesController {
                 // Update active states
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 tabPanels.forEach(panel => panel.classList.remove('active'));
+                tabButtons.forEach(btn => {
+                    btn.setAttribute('aria-selected', String(btn === button));
+                    btn.tabIndex = btn === button ? 0 : -1;
+                });
+                tabPanels.forEach(panel => { panel.hidden = panel.id !== `${targetTab}-tab`; });
                 
                 // Activate selected tab
                 button.classList.add('active');
@@ -289,10 +301,20 @@ class PreferencesController {
                 
                 this.activeTab = targetTab;
                 
-                // Update custom metadata visibility if on naming tab
-                if (targetTab === 'naming') {
+                // Update custom metadata visibility when the Character tab is open
+                if (targetTab === 'character') {
                     this.updateCustomMetadataVisibility();
                 }
+            });
+            button.addEventListener('keydown', event => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const buttons = [...tabButtons];
+                const step = event.key === 'ArrowRight' ? 1 : -1;
+                const index = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 :
+                    (buttons.indexOf(button) + step + buttons.length) % buttons.length;
+                buttons[index].click();
+                buttons[index].focus();
             });
         });
     }
@@ -470,18 +492,14 @@ class PreferencesController {
     updateCustomMetadataVisibility() {
         const isCustomMode = this.getSettingValue('metadata.mode') === 'custom';
         
-        if (isCustomMode) {
-            this.elements.customMetadataSection.classList.remove('disabled');
-        } else {
-            this.elements.customMetadataSection.classList.add('disabled');
-        }
+        this.elements.customMetadataSection.hidden = !isCustomMode;
     }
 
     updateSessionFolderScheme() {
         const enabled = Boolean(this.getSettingValue('batch.sessionFolders'));
         const wrapper = document.getElementById('batch-folder-scheme-wrapper');
         if (wrapper) {
-            wrapper.style.display = enabled ? '' : 'none';
+            wrapper.hidden = !enabled;
         }
         const folderSelect = document.getElementById('batch-folder-scheme');
         if (folderSelect) {
@@ -490,7 +508,7 @@ class PreferencesController {
     }
 
     async resetToDefaults() {
-        const confirmed = confirm('Reset all preferences to defaults?\n\nThis action cannot be undone.');
+        const confirmed = confirm('Restore default settings.\n\nAudio files stay unchanged.');
         
         if (confirmed) {
             try {
@@ -725,10 +743,6 @@ class PreferencesController {
             console.error('Error choosing output folder:', error);
             this.showError(`Error choosing folder: ${error.message}`);
         }
-    }
-    
-    closeWindow() {
-        window.preferencesAPI.closeWindow();
     }
     
     // Visual feedback methods

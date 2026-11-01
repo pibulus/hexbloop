@@ -95,7 +95,7 @@ class PreferencesWindow {
         
         try {
             // loadFile expects path relative to app root
-            const htmlPath = 'src/renderer/preferences/preferences.html';
+            const htmlPath = path.join(__dirname, '../renderer/preferences/preferences.html');
             console.log('📄 Loading HTML from:', htmlPath);
             
             await this.window.loadFile(htmlPath);

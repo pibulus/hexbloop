@@ -18,6 +18,8 @@
     "test:e2e": "node test/pipeline-e2e.test.js",
     "test:release-provenance": "python3 -B test/release-provenance.test.py && node test/prepare-release.test.js",
     "test:local-packaged": "NODE_PATH=\"$(npm root -g)\" node test/local-packaged.test.js",
+    "test:hud": "NODE_PATH=\"$(npm root -g)\" node test/hud.test.js",
+    "test:settings": "NODE_PATH=\"$(npm root -g)\" node test/settings-experience.test.js",
     "dist": "npm run build",
     "dist:all": "echo 'Commercial release is arm64 macOS only; use npm run dist' >&2; exit 1",
     "clean": "rm -rf node_modules package-lock.json",
