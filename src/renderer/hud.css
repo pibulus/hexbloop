@@ -64,7 +64,25 @@
 }
 .hud .processing-switch input:checked + span { color: rgba(255, 254, 247, .92); }
 .hud .processing-switch input:checked + span::before { background: #e879f9; box-shadow: 0 0 7px rgba(232, 121, 249, .65); }
-.processing-switch::after { display: none; }
+.processing-switch::after {
+    content: attr(data-hint);
+    position: absolute;
+    top: calc(100% + 9px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 7px;
+    border: 1px solid rgba(255, 254, 247, .10);
+    border-radius: 6px;
+    background: rgba(25, 18, 34, .96);
+    color: rgba(255, 254, 247, .78);
+    font: 11px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 150ms ease 350ms;
+    z-index: 120;
+}
+.processing-switch:is(:hover, :focus-within)::after { opacity: 1; }
 .format-menu { position: relative; border-left: 1px solid rgba(255, 254, 247, .10); padding-left: 6px; }
 .format-menu summary { display: flex; align-items: center; gap: 5px; list-style: none; color: rgba(255, 254, 247, .55); }
 .format-menu summary::-webkit-details-marker { display: none; }

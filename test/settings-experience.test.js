@@ -6,7 +6,7 @@ const { DEFAULT_SETTINGS } = require('../src/shared/settings-schema');
 
 (async () => {
     // Native menus/dialogs: exercise the real builder with bounded Electron stubs.
-    const dialogs = [], links = [];
+    const dialogs = [], links = [], updates = [];
     let response = 2;
     const electron = { app: { getName: () => 'Hexbloop', getVersion: () => 'test', isPackaged: true },
         Menu: { buildFromTemplate: template => template },
@@ -16,7 +16,10 @@ const { DEFAULT_SETTINGS } = require('../src/shared/settings-schema');
     Module._load = function (request, parent, ...rest) {
         if (request === 'electron') return electron;
         if (request === './preferences' && parent?.filename.endsWith('menu-builder.js')) return {
-            getPreferencesManager: () => ({ getSetting: () => true })
+            getPreferencesManager: () => ({
+                getSetting: path => ({ 'output.format': 'source', 'metadata.mode': 'generated' })[path] ?? true,
+                updateSetting: async (path, value) => { updates.push([path, value]); }
+            })
         };
         return load.call(this, request, parent, ...rest);
     };
@@ -29,6 +32,15 @@ const { DEFAULT_SETTINGS } = require('../src/shared/settings-schema');
     const items = flatten(menu);
     assert.strictEqual(items.find(item => item.label === 'Developer').visible, false);
     assert(!items.some(item => ['Clear Cache', 'User Guide', 'Reset Preferences'].includes(item.label)));
+    const format = items.find(item => item.label === 'Output Format');
+    assert.deepStrictEqual(format.submenu.map(item => item.label), ['Source', 'MP3', 'WAV', 'FLAC']);
+    assert.strictEqual(format.submenu[0].checked, true);
+    format.submenu[3].click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepStrictEqual(updates, [['output.format', 'flac']]);
+    const audio = items.find(item => item.label === 'Audio Processing');
+    assert.deepStrictEqual(audio.submenu.filter(item => item.type === 'checkbox').map(item => item.label),
+        ['Master · EQ and loudness', 'Compress · Lunar tape color', 'Artwork · image or sidecar', 'Metadata', 'Rename']);
     await builder.showAbout();
     assert.deepStrictEqual(dialogs.at(-1).buttons, ['Website', 'Licenses', 'Close']);
     assert(!/Sox|pipeline|technical excellence/.test(dialogs.at(-1).detail));

@@ -7,7 +7,6 @@
 const { Menu, shell, dialog, app } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const { getPreferencesManager } = require('./preferences');
 
 const GITHUB_REPO_URL = 'https://github.com/pibulus/hexbloop';
@@ -104,19 +103,19 @@ class MenuBuilder {
                         label: 'Audio Processing',
                         submenu: [
                             {
-                                label: 'Compress · Lunar tape color',
-                                type: 'checkbox',
-                                checked: this.preferencesManager.getSetting('processing.compressing'),
-                                click: (menuItem) => this.toggleProcessingOption('processing.compressing', menuItem.checked)
-                            },
-                            {
                                 label: 'Master · EQ and loudness',
                                 type: 'checkbox',
                                 checked: this.preferencesManager.getSetting('processing.mastering'),
                                 click: (menuItem) => this.toggleProcessingOption('processing.mastering', menuItem.checked)
                             },
                             {
-                                label: 'Generate Artwork',
+                                label: 'Compress · Lunar tape color',
+                                type: 'checkbox',
+                                checked: this.preferencesManager.getSetting('processing.compressing'),
+                                click: (menuItem) => this.toggleProcessingOption('processing.compressing', menuItem.checked)
+                            },
+                            {
+                                label: 'Artwork · image or sidecar',
                                 type: 'checkbox',
                                 checked: this.preferencesManager.getSetting('processing.coverArt'),
                                 click: (menuItem) => this.toggleProcessingOption('processing.coverArt', menuItem.checked)
@@ -145,6 +144,20 @@ class MenuBuilder {
                                 type: 'radio',
                                 checked: this.preferencesManager.getSetting('metadata.mode') === 'custom',
                                 click: () => this.setMetadataMode('custom')
+                            },
+                            {
+                                type: 'separator'
+                            },
+                            {
+                                label: 'Output Format',
+                                submenu: [
+                                    ...['source', 'mp3', 'wav', 'flac'].map(format => ({
+                                        label: format === 'source' ? 'Source' : format.toUpperCase(),
+                                        type: 'radio',
+                                        checked: this.preferencesManager.getSetting('output.format') === format,
+                                        click: () => this.setOutputFormat(format)
+                                    }))
+                                ]
                             }
                         ]
                     },
@@ -353,6 +366,18 @@ class MenuBuilder {
     }
     
     /**
+     * Set the output format; the HUD reads the same setting.
+     */
+    async setOutputFormat(format) {
+        try {
+            await this.preferencesManager.updateSetting('output.format', format);
+        } catch (error) {
+            console.error('❌ Failed to set output format:', error);
+            this.updateMenu();
+        }
+    }
+
+    /**
      * Toggle ambient audio
      */
     async toggleAmbientAudio(enabled) {
@@ -384,49 +409,6 @@ class MenuBuilder {
     }
 
     /**
-     * Clear mystical cache — removes leftover hexbloop-* temp directories
-     * (normally cleaned per-run; this catches ones orphaned by crashes)
-     */
-    async clearCache() {
-        const window = this.getWindow();
-        const options = {
-            type: 'question',
-            title: 'Clear Cache',
-            message: 'Clear all temporary files?',
-            detail: 'This removes leftover Hexbloop processing files from the system temp folder.',
-            buttons: ['Clear Cache', 'Cancel'],
-            defaultId: 1,
-            cancelId: 1
-        };
-        const response = window
-            ? await dialog.showMessageBox(window, options)
-            : await dialog.showMessageBox(options);
-
-        if (response.response !== 0) return;
-
-        let removed = 0;
-        try {
-            const tmpDir = os.tmpdir();
-            const entries = fs.readdirSync(tmpDir);
-            for (const entry of entries) {
-                if (!entry.startsWith('hexbloop-')) continue;
-                const fullPath = path.join(tmpDir, entry);
-                try {
-                    if (fs.statSync(fullPath).isDirectory()) {
-                        fs.rmSync(fullPath, { recursive: true, force: true });
-                        removed++;
-                    }
-                } catch (entryError) {
-                    console.log(`⚠️ Could not remove ${entry}: ${entryError.message}`);
-                }
-            }
-            console.log(`🧹 Mystical cache cleared (${removed} temp director${removed === 1 ? 'y' : 'ies'})`);
-        } catch (error) {
-            console.error('❌ Cache clear failed:', error);
-        }
-    }
-
-    /**
      * Show help documentation
      */
     showHelp() {
@@ -437,45 +419,6 @@ class MenuBuilder {
         };
         const window = this.getWindow();
         return window ? dialog.showMessageBox(window, options) : dialog.showMessageBox(options);
-    }
-    
-    /**
-     * Reset preferences with confirmation
-     */
-    async resetPreferences() {
-        const window = this.getWindow();
-        const confirmOptions = {
-            type: 'warning',
-            title: 'Reset Preferences',
-            message: 'Reset all preferences to defaults?',
-            detail: 'This will restore all settings to their original state. This action cannot be undone.',
-            buttons: ['Reset to Defaults', 'Cancel'],
-            defaultId: 1,
-            cancelId: 1
-        };
-        const response = window
-            ? await dialog.showMessageBox(window, confirmOptions)
-            : await dialog.showMessageBox(confirmOptions);
-
-        if (response.response === 0) {
-            try {
-                await this.preferencesManager.resetToDefaults();
-
-                const doneOptions = {
-                    type: 'info',
-                    title: 'Preferences Reset',
-                    message: 'All preferences have been reset to defaults.',
-                    buttons: ['OK']
-                };
-                if (window) {
-                    dialog.showMessageBox(window, doneOptions);
-                } else {
-                    dialog.showMessageBox(doneOptions);
-                }
-            } catch (error) {
-                console.error('❌ Failed to reset preferences:', error);
-            }
-        }
     }
     
     /**
