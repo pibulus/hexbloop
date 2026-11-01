@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('preferencesAPI', {
     updateSetting: (settingPath, value) => ipcRenderer.invoke('preferences-update-setting', settingPath, value),
     updateSettings: (newSettings) => ipcRenderer.invoke('preferences-update-settings', newSettings),
     resetToDefaults: () => ipcRenderer.invoke('preferences-reset-defaults'),
+    confirmReset: () => ipcRenderer.invoke('preferences-confirm-reset'),
     
     // Import/Export
     exportSettings: () => ipcRenderer.invoke('preferences-export'),

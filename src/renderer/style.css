@@ -829,9 +829,10 @@ body {
 }
 
 .settings-icon {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 20px;
-    transition: all 0.3s ease;
+    width: 18px;
+    height: 18px;
+    color: rgba(255, 254, 247, .65);
+    transition: color 0.2s ease;
 }
 
 .settings-button:hover .settings-icon {

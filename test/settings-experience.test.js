@@ -73,7 +73,14 @@ const { DEFAULT_SETTINGS } = require('../src/shared/settings-schema');
                     changed(structuredClone(settings)); return { success: true };
                 },
                 onWindowBlur() {}, onWindowFocus() {}, removeAllListeners() {},
-                chooseOutputFolder: async () => ({ success: true, path: '/Music/Bloops' })
+                chooseOutputFolder: async () => ({ success: true, path: '/Music/Bloops' }),
+                confirmReset: async () => window.__confirmReset !== false,
+                resetToDefaults: async () => {
+                    if (window.__confirmReset === false) return { success: false };
+                    settings = structuredClone(defaults);
+                    changed(structuredClone(settings));
+                    return { success: true };
+                }
             };
         }, DEFAULT_SETTINGS);
         await page.goto('file://' + path.resolve('src/renderer/preferences/preferences.html'));
@@ -106,6 +113,14 @@ const { DEFAULT_SETTINGS } = require('../src/shared/settings-schema');
         assert(await page.locator('#reset-btn').isVisible());
         await page.keyboard.press('Escape');
         assert(await page.locator('#reset-btn').isHidden());
+        await page.evaluate(() => { window.__confirmReset = false; });
+        await page.locator('#settingsMenu summary').click();
+        await page.locator('#reset-btn').click();
+        await page.waitForFunction(() => document.getElementById('output-format').value === 'flac');
+        await page.evaluate(() => { window.__confirmReset = true; });
+        await page.locator('#settingsMenu summary').click();
+        await page.locator('#reset-btn').click();
+        await page.waitForFunction(() => document.getElementById('output-format').value === 'source');
         await page.locator('#character-label').focus();
         await page.keyboard.press('ArrowLeft');
         assert.strictEqual(await page.locator('#output-label').getAttribute('aria-selected'), 'true');

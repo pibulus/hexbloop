@@ -508,7 +508,7 @@ class PreferencesController {
     }
 
     async resetToDefaults() {
-        const confirmed = confirm('Restore default settings.\n\nAudio files stay unchanged.');
+        const confirmed = await window.preferencesAPI.confirmReset();
         
         if (confirmed) {
             try {

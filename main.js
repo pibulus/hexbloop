@@ -612,6 +612,29 @@ ipcMain.handle('preferences-update-settings', async (event, newSettings) => {
 });
 
 /**
+ * Native confirmation for the reset action; the renderer should not need a
+ * browser dialog in a desktop app.
+ */
+ipcMain.handle('preferences-confirm-reset', async () => {
+    const options = {
+        type: 'warning',
+        title: 'Restore default settings',
+        message: 'Restore default settings?',
+        detail: 'Audio files are never touched. Current switches, folder and metadata choices return to defaults.',
+        buttons: ['Restore Defaults', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1
+    };
+    const parent = preferencesWindow?.window && !preferencesWindow.window.isDestroyed()
+        ? preferencesWindow.window
+        : getMainWindow();
+    const { response } = parent
+        ? await dialog.showMessageBox(parent, options)
+        : await dialog.showMessageBox(options);
+    return response === 0;
+});
+
+/**
  * Reset all preferences to default values
  * @returns {Promise<{success: boolean, error?: string}>} Operation result
  */
