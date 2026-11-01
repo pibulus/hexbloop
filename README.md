@@ -48,6 +48,12 @@ A chaotic naming engine built on large word banks and 15+ patterns:
 - **Real-time progress tracking** with mystical feedback
 - **Smooth animations** with SwiftUI-like easing curves
 
+## 💾 Buy
+
+The signed, notarized build is sold at **https://hexbloop.app** (A$29, one-time,
+Apple Silicon, macOS 15+). Release notes and checksums live on the
+[GitHub release](https://github.com/pibulus/hexbloop/releases).
+
 ## 🛠️ Installation
 
 ### Prerequisites

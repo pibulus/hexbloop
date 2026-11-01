@@ -3,8 +3,9 @@
 **Status: APPROVED 2026-11-02 by Pablo Alvarado.** The vendor provenance record
 in `vendor/mac/provenance.json` carries `redistributionReview: "approved"`, the
 reviewer and date, and the binary gate passes with zero failures. This page
-remains the evidence trail; it is not legal advice. The source/relink material
-still needs a public home before the paid DMG is distributed.
+remains the evidence trail; it is not legal advice. The source/relink bundle is
+published as `Hexbloop-1.0.0-source.tar.gz` on the v1.0.0 GitHub release and
+linked from https://hexbloop.app/licenses and the bundled notices.
 
 ## Artifacts under review
 

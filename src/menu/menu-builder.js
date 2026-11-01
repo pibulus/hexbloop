@@ -279,16 +279,17 @@ class MenuBuilder {
         const notices = roots.find(root => fs.existsSync(root));
         const options = {
             type: 'info', title: 'Third-party notices', message: 'Open-source foundations',
-            detail: 'FFmpeg · LAME · node-canvas and its native dependencies · Electron / Chromium\n\n' +
-                (notices ? 'Audio notices are available in the bundled notices folder. Complete dependency notices and source/relink delivery remain subject to release review.' :
-                    'The complete notices and source/relink bundle has not been assembled in this build. Public distribution remains blocked.'),
-            buttons: notices ? ['Open Audio Notices', 'Close'] : ['Close'],
-            defaultId: notices ? 1 : 0, cancelId: notices ? 1 : 0
+            detail: 'FFmpeg 6.1.6 (LGPL) · LAME 3.100 (LGPL) · node-canvas with Cairo/Pango (LGPL/MPL) · Electron/Chromium (MIT/BSD)\n\n' +
+                'The exact FFmpeg/LAME source, build recipe and binary hashes are published at hexbloop.app/licenses.',
+            buttons: notices ? ['Open Audio Notices', 'Licences Page', 'Close'] : ['Licences Page', 'Close'],
+            defaultId: notices ? 2 : 1, cancelId: notices ? 2 : 1
         };
         const window = this.getWindow();
         const { response } = await (window ? dialog.showMessageBox(window, options) : dialog.showMessageBox(options));
         if (notices && response === 0) {
             await shell.openPath(notices);
+        } else if (response === (notices ? 1 : 0)) {
+            await shell.openExternal('https://hexbloop.app/licenses');
         }
     }
     

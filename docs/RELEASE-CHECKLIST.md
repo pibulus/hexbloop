@@ -69,6 +69,10 @@ On a macOS 15 Apple Silicon Mac with **no** Homebrew, no Rosetta and no sox:
 
 ## 6. Open the store
 
+Publish `Hexbloop-<version>-source.tar.gz` (FFmpeg/LAME sources, recipe,
+hashes, notices) as a release asset and keep `https://hexbloop.app/licenses`
+pointing at it. LGPL asks for the source, not just the notices.
+
 Only after 1–5 pass, in `hexbloop-site/src/lib/config/release.ts`:
 
 ```ts
