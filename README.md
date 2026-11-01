@@ -52,12 +52,13 @@ A chaotic naming engine built on large word banks and 15+ patterns:
 
 ### Prerequisites
 - **Node.js** (v16 or higher)
-- **sox** (for audio processing)
-- **ffmpeg** (for audio mastering)
+- **ffmpeg** and **sox** for local development only. Packaged releases bundle
+  native `arm64` `ffmpeg`/`ffprobe`; `sox` is optional and only adds the full
+  lunar tape chain on top of the FFmpeg fallback.
 
 ### macOS Setup
 ```bash
-# Install dependencies via Homebrew
+# Local development convenience; not needed for the packaged app
 brew install sox ffmpeg
 
 # Clone and setup project
@@ -71,8 +72,10 @@ The app checks for `sox`, `ffmpeg`, and `ffprobe` on startup.
 
 Current release note:
 
-- Local development on macOS works well with Homebrew-installed dependencies.
-- Packaged releases are not fully self-contained yet unless vendor binaries are added before packaging.
+- Packaged releases are self-contained: the app ships `arm64` `ffmpeg` and
+  `ffprobe` under `vendor/mac` and never needs Rosetta 2 or Homebrew.
+- `npm run vendor:setup` gates those binaries on architecture, macOS floor,
+  linkage and recorded provenance before packaging.
 
 ## 🎮 Usage
 

@@ -1,74 +1,45 @@
 # 🔮 Hexbloop Installation Guide
 
-## Quick Install
+## Install
 
-1. **Download** `Hexbloop-1.0.0-arm64-mac.zip`
-2. **Extract** the ZIP file (double-click it)
-3. **Drag** `Hexbloop.app` to your Applications folder
-4. **Important:** On first launch, **right-click** the app and select **Open**
+1. Open `Hexbloop-1.0.0-arm64.dmg`
+2. Drag `Hexbloop` into Applications
+3. Double-click to launch
 
-Current release note: the macOS build still expects `ffmpeg` and `sox` to be installed on the machine unless bundled vendor binaries are added before packaging.
+The DMG is signed with a Developer ID certificate and notarized by Apple, so
+Gatekeeper verifies it on first launch. No right-click bypass, no quarantine
+script, no "unidentified developer" dance.
 
-After the first launch, you can open Hexbloop normally by double-clicking.
-
----
-
-## Why Right-Click?
-
-Hexbloop is an indie app distributed outside the Mac App Store. macOS shows a security warning on the first launch of any non-App Store app. Right-clicking bypasses this one-time warning.
-
-This is normal for indie software - it's not broken, corrupted, or dangerous. It just means I haven't paid Apple $99/year for a developer certificate 😎
-
----
-
-## Detailed Instructions
-
-### Method 1: Right-Click (Recommended)
-
-1. Extract `Hexbloop-1.0.0-arm64-mac.zip`
-2. Move `Hexbloop.app` to Applications folder
-3. **Right-click** (or Control-click) on `Hexbloop.app`
-4. Select **Open** from the menu
-5. Click **Open** in the security dialog
-6. Done! Future launches work normally
-
-### Method 2: Command Line (For Terminal Nerds)
-
-If you prefer the command line, you can remove the quarantine flag:
-
-```bash
-# Navigate to where you extracted Hexbloop
-cd ~/Downloads  # or wherever you put it
-
-# Remove quarantine flag
-xattr -cr Hexbloop.app
-
-# Move to Applications
-mv Hexbloop.app /Applications/
-
-# Launch normally
-open /Applications/Hexbloop.app
-```
+Verified with: `spctl -a -vvv -t exec /Applications/Hexbloop.app` and
+`xcrun stapler validate /Applications/Hexbloop.app`.
 
 ---
 
 ## System Requirements
 
-- **macOS:** 15.0 (Sequoia) or later on Apple Silicon
-- **Architecture:** Apple Silicon (M1/M2/M3) native
-- **Dependencies:**
-  - `sox` (currently required for the full audio chain)
-  - `ffmpeg` (currently required for mastering and metadata work)
+- **macOS:** 15.0 (Sequoia) or later. The bundled canvas libraries are built
+  against the macOS 15 SDK, so this is a real floor, not a preference.
+- **Architecture:** Apple Silicon only (M1/M2/M3/M4). The app and every binary
+  inside it are native `arm64`; Rosetta 2 is never used.
+- **Dependencies:** none. `ffmpeg` and `ffprobe` ship inside the app as native
+  `arm64` builds (LGPL, no Homebrew linkage).
 
-### Installing Dependencies
+Optional: if `sox` is installed, Hexbloop uses the full lunar tape chain.
+Without it, the FFmpeg tape-saturation chain runs and the app still works.
 
-If you don't have sox and ffmpeg installed:
+Check any bundled binary with:
 
 ```bash
-brew install sox ffmpeg
+file /Applications/Hexbloop.app/Contents/Resources/vendor/mac/ffprobe
+# Mach-O 64-bit executable arm64
 ```
 
-If you don't have Homebrew, install it from [brew.sh](https://brew.sh)
+---
+
+## Where Output Goes
+
+Finished files land in `~/Documents/HexbloopOutput` unless another destination
+is chosen in Settings. Originals are never modified in place.
 
 ---
 
@@ -76,52 +47,40 @@ If you don't have Homebrew, install it from [brew.sh](https://brew.sh)
 
 ### "App is damaged and can't be opened"
 
-This usually means you double-clicked instead of right-clicking on first launch. Try:
-1. Delete the app from Applications
-2. Re-extract from the ZIP
-3. **Right-click → Open** (don't double-click!)
+The download is probably incomplete. Verify it against the size and checksum
+published with the release, then re-download. Rebuilding from source is not the
+fix for a truncated DMG.
 
-### "sox" or "ffmpeg" not found
-
-Install via Homebrew:
-```bash
-brew install sox ffmpeg
-```
-
-### Windows release status
-
-The Windows packaging path exists, but it is still being hardened. Treat the current Windows output as experimental until a validated NSIS installer and bundled vendor binaries are in place.
-
-### Still Having Issues?
-
-The app includes a helper script. Run this in Terminal:
+### Gatekeeper or notarization questions
 
 ```bash
-# Remove quarantine from installed app
-xattr -cr /Applications/Hexbloop.app
+codesign --verify --deep --strict /Applications/Hexbloop.app
+spctl -a -vvv -t exec /Applications/Hexbloop.app
 ```
+
+A notarized build passes both. If they fail, the copy was modified or the
+download was corrupted.
+
+### Windows and Linux
+
+Not available. Hexbloop is a macOS app for Apple Silicon.
+
+### Still stuck?
+
+Release support lives at https://hexbloop.app/support. Include the macOS version
+and the exact message; that is enough to reproduce most launch problems.
 
 ---
 
 ## What Hexbloop Does
 
-Hexbloop transforms your audio files using mystical chaos magic influenced by real astronomical data:
+Five switches decide the batch: Master, Compress, Cover Art, Metadata, Rename.
+Any combination is valid, including turning audio stages off so only renaming or
+tagging happens.
 
-- **Moon Phase Processing** - Different audio characteristics based on current lunar cycle
-- **Time-Based Variations** - Night vs morning creates different sonic signatures
-- **Mystical Naming** - Auto-generates sparklepop/blackmetal/witchhouse style names
-- **Procedural Artwork** - Each file gets unique generative cover art
+- Lunar tape color and FFmpeg mastering
+- Procedural cover art driven by the audio itself
+- Mystical or preserved filenames
+- Tags written only when Metadata is on
 
-Drop an audio file, let the hexagons breathe, receive your transformed creation.
-
----
-
-## Support
-
-This is indie software built with love, chaos, and late-night coding sessions. If you find it useful and want to support development:
-
-- Share it with friends who like weird audio tools
-- Report bugs on GitHub (if available)
-- Send good vibes into the universe
-
-Enjoy your mystical audio adventures! 🔮✨
+Drop files or whole folders onto the hexagon, or click it to browse.
