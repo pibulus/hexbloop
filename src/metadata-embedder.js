@@ -39,28 +39,23 @@ class MetadataEmbedder {
      */
     async embedMetadataMP3(inputPath, outputPath, metadata, artworkPath = null) {
         // First copy the file to output location
-        await fs.copyFile(inputPath, outputPath);
+        await fs.copyFile(inputPath, outputPath, require('fs').constants.COPYFILE_EXCL);
 
         // Build ID3 tags
-        const tags = {
-            title: metadata.title || 'Unknown Title',
-            artist: metadata.artist || 'Unknown Artist',
-            album: metadata.album || 'Unknown Album',
-            year: (metadata.year || new Date().getFullYear()).toString(),
-            genre: metadata.genre || 'Electronic',
-            comment: {
-                language: 'eng',
-                text: metadata.comment || 'Processed with Hexbloop',
-            },
-        };
+        const tags = {};
+        for (const key of ['title', 'artist', 'album', 'genre']) {
+            if (metadata?.[key] != null) tags[key] = String(metadata[key]);
+        }
+        if (metadata?.year) tags.year = String(metadata.year);
+        if (metadata?.comment) tags.comment = { language: 'eng', text: metadata.comment };
 
         // Add date if provided (TDAT frame)
-        if (metadata.date) {
+        if (metadata?.date) {
             tags.date = metadata.date;
         }
 
         // Add track number if provided
-        if (metadata.trackNumber) {
+        if (metadata?.trackNumber) {
             tags.trackNumber = String(metadata.trackNumber);
         }
 
@@ -80,7 +75,7 @@ class MetadataEmbedder {
                 };
                 console.log(`🎨 Embedding ${isJpg ? 'JPG' : 'PNG'} artwork (MP3): ${artworkPath}`);
             } catch (error) {
-                console.log(`⚠️  Could not read artwork file: ${error.message}`);
+                throw new Error(`Cover art could not be read: ${error.message}`);
             }
         }
 
@@ -88,7 +83,7 @@ class MetadataEmbedder {
 
         try {
             // Write tags to MP3 file
-            const success = NodeID3.write(tags, outputPath);
+            const success = NodeID3.update(tags, outputPath);
             if (success) {
                 console.log('✅ MP3 metadata and artwork embedded successfully');
                 return outputPath;
@@ -117,20 +112,16 @@ class MetadataEmbedder {
         }
 
         const run = (withArtwork) => new Promise((resolve, reject) => {
-            const resolvedYear = metadata.year || metadata.date || new Date().getFullYear();
-
-            let command = ffmpeg(inputPath);
+            let command = ffmpeg(inputPath).outputOptions('-map_metadata', '0');
 
             // IMPORTANT: two-arg outputOptions form — fluent-ffmpeg passes each
             // argument verbatim to spawn. Array strings get re-tokenized on
             // spaces, which mangles values like 'Lunar Transmutations'.
-            command = command
-                .outputOptions('-metadata', `title=${metadata.title || 'Unknown Title'}`)
-                .outputOptions('-metadata', `artist=${metadata.artist || 'Unknown Artist'}`)
-                .outputOptions('-metadata', `album=${metadata.album || 'Unknown Album'}`)
-                .outputOptions('-metadata', `date=${resolvedYear}`)
-                .outputOptions('-metadata', `genre=${metadata.genre || 'Electronic'}`)
-                .outputOptions('-metadata', `comment=${metadata.comment || 'Processed with Hexbloop'}`);
+            for (const [key, value] of Object.entries(metadata || {})) {
+                if (key === 'year' && metadata.date) continue;
+                if (value != null && value !== '') command = command.outputOptions('-metadata',
+                    `${key === 'year' ? 'date' : key === 'trackNumber' ? 'track' : key}=${value}`);
+            }
 
             if (withArtwork) {
                 command = command
@@ -144,7 +135,10 @@ class MetadataEmbedder {
                     .outputOptions('-disposition:v:0', 'attached_pic');
                 console.log(`🎨 Embedding artwork via FFmpeg (${ext.toUpperCase()})`);
             } else {
-                command = command.audioCodec('copy');
+                // Retain an input's existing attached picture while changing
+                // text tags; FFmpeg's automatic stream selection can drop it.
+                command = command.outputOptions('-map', '0:a:0').outputOptions('-c', 'copy');
+                if (!wantArtwork) command = command.outputOptions('-map', '0:v?');
             }
 
             command
@@ -159,14 +153,15 @@ class MetadataEmbedder {
                 .save(outputPath);
         });
 
-        console.log(`🎵 Embedding metadata via FFmpeg: ${metadata.artist} - ${metadata.title}`);
+        console.log(`🎵 Embedding metadata via FFmpeg: ${metadata?.artist || 'original'} - ${metadata?.title || 'original'}`);
 
         try {
             return await run(wantArtwork && artworkSupported);
         } catch (error) {
             if (wantArtwork && artworkSupported) {
                 console.log(`⚠️  Artwork embed failed (${error.message}), retrying tags-only`);
-                return await run(false);
+                await run(false);
+                return { path: outputPath, artworkEmbedded: false };
             }
             console.error('❌ FFmpeg metadata embedding failed:', error.message);
             throw error;

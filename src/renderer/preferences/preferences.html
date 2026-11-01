@@ -46,15 +46,15 @@
             <section class="preference-section">
                 <div class="section-header">
                     <h2 class="section-title">Audio Processing</h2>
-                    <div class="section-description">Choose which effects to apply to your audio</div>
+                    <div class="section-description">Five independent stages. Format stays separate.</div>
                 </div>
                 
                 <div class="settings-grid">
                     <div class="setting-card">
                         <label class="setting-toggle" for="compressing">
                             <div class="setting-info">
-                                <h3 id="audio-effects-label">Moon-Influenced Effects</h3>
-                                <p id="audio-effects-desc">Distortion and filtering based on current lunar phase</p>
+                                <h3 id="audio-effects-label">Compress</h3>
+                                <p id="audio-effects-desc">Lunar tape color and compand; not MP3 encoding</p>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" 
@@ -71,8 +71,8 @@
                     <div class="setting-card">
                         <label class="setting-toggle" for="mastering">
                             <div class="setting-info">
-                                <h3 id="audio-mastering-label">Professional Mastering</h3>
-                                <p id="audio-mastering-desc">EQ, compression, and limiting for polished sound</p>
+                                <h3 id="audio-mastering-label">Master</h3>
+                                <p id="audio-mastering-desc">EQ, loudness, and limiting</p>
                             </div>
                             <div class="toggle-switch">
                                 <input type="checkbox" 
@@ -89,7 +89,7 @@
                     <div class="setting-card">
                         <label class="setting-toggle" for="coverArt">
                             <div class="setting-info">
-                                <h3 id="generate-artwork-label">Generate Artwork</h3>
+                                <h3 id="generate-artwork-label">Cover Art</h3>
                                 <p id="generate-artwork-desc">Create procedural album cover artwork</p>
                             </div>
                             <div class="toggle-switch">
@@ -104,12 +104,25 @@
                         </label>
                     </div>
 
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="metadata-switch">
+                            <div class="setting-info"><h3>Metadata</h3><p>Write generated or custom text tags</p></div>
+                            <div class="toggle-switch"><input type="checkbox" id="metadata-switch" data-setting="processing.metadata" role="switch"><span class="slider" aria-hidden="true"></span></div>
+                        </label>
+                    </div>
+                    <div class="setting-card">
+                        <label class="setting-toggle" for="renaming-switch">
+                            <div class="setting-info"><h3>Rename</h3><p>Fresh filenames; original audio stays intact</p></div>
+                            <div class="toggle-switch"><input type="checkbox" id="renaming-switch" data-setting="processing.renaming" role="switch"><span class="slider" aria-hidden="true"></span></div>
+                        </label>
+                    </div>
+
                 </div>
             </section>
 
             <section class="info-panel compact">
                 <h4>Processing Order</h4>
-                <p>Run any combination you like—Hexbloop chains compression → mastering → artwork → naming in that order.</p>
+                <p>Compress colors sound. Master shapes loudness. Cover Art, Metadata, and Rename work independently.</p>
             </section>
             </div>
 
@@ -117,52 +130,39 @@
             <div class="tab-panel" id="naming-tab">
             <section class="preference-section">
                 <div class="section-header">
-                    <h2 class="section-title" id="file-naming-title">Naming & Metadata</h2>
-                    <div class="section-description">Choose how Hexbloop names files and whether it embeds your custom tags</div>
+                    <h2 class="section-title" id="file-naming-title">Metadata Style</h2>
+                    <div class="section-description">The Metadata switch controls whether text tags change.</div>
                 </div>
                 
                 <div class="radio-cards" role="radiogroup" aria-labelledby="file-naming-title">
-                    <label class="radio-card" for="naming-mystical">
+                    <label class="radio-card" for="metadata-generated">
                         <input type="radio"
-                               id="naming-mystical"
-                               name="naming"
-                               value="mystical"
-                               data-setting="processing.naming"
-                               aria-describedby="naming-mystical-desc">
+                               id="metadata-generated"
+                               name="metadata-mode"
+                               value="generated"
+                               data-setting="metadata.mode"
+                               aria-describedby="metadata-generated-desc">
                         <div class="radio-content">
-                            <h3>Generated Output Names</h3>
-                            <p id="naming-mystical-desc">Use Hexbloop's generated naming patterns for saved files</p>
+                            <h3>Generated</h3>
+                            <p id="metadata-generated-desc">Lunar titles and session details</p>
                         </div>
                         <div class="radio-indicator" aria-hidden="true"></div>
                     </label>
 
-                    <label class="radio-card" for="naming-custom">
+                    <label class="radio-card" for="metadata-custom">
                         <input type="radio" 
-                               id="naming-custom" 
-                               name="naming" 
+                               id="metadata-custom"
+                               name="metadata-mode"
                                value="custom" 
-                               data-setting="processing.naming"
-                               aria-describedby="naming-custom-desc">
+                               data-setting="metadata.mode"
+                               aria-describedby="metadata-custom-desc">
                         <div class="radio-content">
-                            <h3>Custom Metadata Tags</h3>
-                            <p id="naming-custom-desc">Keep your current filename pattern, but embed the artist and album details below</p>
+                            <h3>Custom</h3>
+                            <p id="metadata-custom-desc">Artist and album from the fields below</p>
                         </div>
                         <div class="radio-indicator" aria-hidden="true"></div>
                     </label>
 
-                    <label class="radio-card" for="naming-original">
-                        <input type="radio" 
-                               id="naming-original" 
-                               name="naming" 
-                               value="original" 
-                               data-setting="processing.naming"
-                               aria-describedby="naming-original-desc">
-                        <div class="radio-content">
-                            <h3>Keep Original Filenames</h3>
-                            <p id="naming-original-desc">Save output files with the source filename instead of generated names</p>
-                        </div>
-                        <div class="radio-indicator" aria-hidden="true"></div>
-                    </label>
                 </div>
             </section>
 
@@ -180,7 +180,7 @@
                             <input type="text" 
                                    id="custom-artist" 
                                    data-setting="metadata.artist" 
-                                   placeholder="Your artist name"
+                                   placeholder="Artist name"
                                    aria-label="Artist name for custom metadata"
                                    maxlength="100">
                         </div>
@@ -224,8 +224,8 @@
             </section>
 
             <section class="info-panel compact">
-                <h4>How Naming Works</h4>
-                <p>"Generated" creates a fresh mystical name each time. "Custom Metadata Tags" uses your source filename but embeds artist/album tags inside. "Keep Original" leaves everything as-is.</p>
+                <h4>Independent controls</h4>
+                <p>Rename handles filenames. Metadata handles text tags. Either switch works alone.</p>
             </section>
             </div>
 
@@ -251,10 +251,12 @@
                     <div class="form-field" style="flex:1">
                         <label for="output-format">File Format</label>
                         <select id="output-format" data-setting="output.format">
+                            <option value="source">Source (keep original format)</option>
                             <option value="mp3">MP3</option>
                             <option value="wav">WAV</option>
                             <option value="flac">FLAC</option>
                         </select>
+                        <p>Choosing MP3, WAV, or FLAC makes conversion explicit. Compress never chooses the codec.</p>
                     </div>
                 </div>
 
@@ -333,7 +335,7 @@
                 
                 <div class="info-panel" style="margin-top: 16px;">
                     <h4>How Artwork Works</h4>
-                    <p>Artwork is generated fresh each time from your audio's energy, tempo, and the current moon phase. Set to <strong>Auto</strong> to let the vibe decide — each run will surprise you.</p>
+                    <p>Energy and spectral balance influence colors. A clear rhythmic pulse nudges motion; moon phase shifts the style.</p>
                 </div>
             </section>
             </div>
@@ -342,6 +344,7 @@
 
         <!-- Footer with action buttons -->
         <footer class="preferences-footer">
+            <p id="settings-status" role="status" aria-live="polite"></p>
             <div class="footer-buttons">
                 <button type="button" id="reset-btn" class="btn btn-secondary">Reset to Defaults</button>
                 <button type="button" id="export-btn" class="btn btn-secondary">Export Settings</button>

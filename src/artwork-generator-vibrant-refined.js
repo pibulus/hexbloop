@@ -19,7 +19,10 @@ class VibrantRefinedArtworkGenerator {
         this.ctx.imageSmoothingEnabled = options.imageSmoothing !== false;
         this.ctx.imageSmoothingQuality = options.imageSmoothingQuality || 'high';  // 'low', 'medium', 'high'
 
-        this.noiseOffset = Math.random() * 1000;
+        this.seed = null;
+        this.noiseOffset = 0;
+        this.offscreenA = null;
+        this.offscreenB = null;
 
         // Expanded styles with better names
         this.styles = [
@@ -32,6 +35,12 @@ class VibrantRefinedArtworkGenerator {
             'crystal-prism',
             'ocean-aurora'
         ];
+    }
+
+    random() {
+        if (this.seed === null) return Math.random(); // palette preview outside generate()
+        this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
+        return this.seed / 0x100000000;
     }
     
     // ===================================================================
@@ -121,8 +130,8 @@ class VibrantRefinedArtworkGenerator {
         
         // Higher color variation means less deterministic palette choice
         const variationChance = 0.1 + (Math.max(0, Math.min(1, colorVariation)) * 0.6);
-        if (Math.random() < variationChance) {
-            variationIndex = Math.floor(Math.random() * stylePalettes.length);
+        if (this.random() < variationChance) {
+            variationIndex = Math.floor(this.random() * stylePalettes.length);
         }
         
         let selectedPalette = [...stylePalettes[variationIndex]];
@@ -130,15 +139,15 @@ class VibrantRefinedArtworkGenerator {
         // Shuffle colors for variety, scaled by the requested variation amount
         const shufflePasses = Math.max(1, Math.round(colorVariation * selectedPalette.length));
         for (let pass = 0; pass < shufflePasses; pass++) {
-            const i = Math.floor(Math.random() * selectedPalette.length);
-            const j = Math.floor(Math.random() * selectedPalette.length);
+            const i = Math.floor(this.random() * selectedPalette.length);
+            const j = Math.floor(this.random() * selectedPalette.length);
             [selectedPalette[i], selectedPalette[j]] = [selectedPalette[j], selectedPalette[i]];
         }
         
         // Add accent colors (10% chance)
-        if (Math.random() < (0.05 + (colorVariation * 0.2))) {
+        if (this.random() < (0.05 + (colorVariation * 0.2))) {
             const accentColors = ['#FFD700', '#FF1493', '#00FF00', '#FF00FF', '#00FFFF'];
-            selectedPalette.push(accentColors[Math.floor(Math.random() * accentColors.length)]);
+            selectedPalette.push(accentColors[Math.floor(this.random() * accentColors.length)]);
         }
         
         return selectedPalette;
@@ -150,8 +159,13 @@ class VibrantRefinedArtworkGenerator {
     
     renderMetaballs(balls, colors) {
         // BEST PRACTICE: Use offscreen canvas for pre-rendering and proper filter application
-        const tempCanvas = createCanvas(this.width, this.height);
+        const tempCanvas = this.offscreenA ||= createCanvas(this.width, this.height);
         const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.setTransform(1, 0, 0, 1, 0, 0);
+        tempCtx.globalAlpha = 1;
+        tempCtx.globalCompositeOperation = 'source-over';
+        tempCtx.filter = 'none';
+        tempCtx.clearRect(0, 0, this.width, this.height);
 
         // Set quality for rendering
         tempCtx.patternQuality = 'best';
@@ -197,8 +211,13 @@ class VibrantRefinedArtworkGenerator {
 
         // BEST PRACTICE: Apply filter, then render filtered canvas to avoid filter being ignored
         // Create second temp canvas for filter application
-        const filteredCanvas = createCanvas(this.width, this.height);
+        const filteredCanvas = this.offscreenB ||= createCanvas(this.width, this.height);
         const filteredCtx = filteredCanvas.getContext('2d');
+        filteredCtx.setTransform(1, 0, 0, 1, 0, 0);
+        filteredCtx.globalAlpha = 1;
+        filteredCtx.globalCompositeOperation = 'source-over';
+        filteredCtx.filter = 'none';
+        filteredCtx.clearRect(0, 0, this.width, this.height);
 
         // First draw unfiltered content
         filteredCtx.drawImage(tempCanvas, 0, 0);
@@ -220,13 +239,13 @@ class VibrantRefinedArtworkGenerator {
 
         for (let i = 0; i < particleCount; i++) {
             // OPTIMIZATION: Use whole numbers for initial position
-            let x = Math.floor(Math.random() * this.width);
-            let y = Math.floor(Math.random() * this.height);
-            const color = colors[Math.floor(Math.random() * colors.length)];
+            let x = Math.floor(this.random() * this.width);
+            let y = Math.floor(this.random() * this.height);
+            const color = colors[Math.floor(this.random() * colors.length)];
 
             this.ctx.strokeStyle = color;
-            this.ctx.lineWidth = 1 + Math.random() * 2;
-            this.ctx.globalAlpha = 0.3 + Math.random() * 0.4;
+            this.ctx.lineWidth = 1 + this.random() * 2;
+            this.ctx.globalAlpha = 0.3 + this.random() * 0.4;
 
             this.ctx.beginPath();
             this.ctx.moveTo(x, y);
@@ -256,10 +275,10 @@ class VibrantRefinedArtworkGenerator {
     renderParticles(colors, count = 200, sizeRange = { min: 1, max: 5 }) {
         for (let i = 0; i < count; i++) {
             // OPTIMIZATION: Use whole numbers for pixel alignment
-            const x = Math.floor(Math.random() * this.width);
-            const y = Math.floor(Math.random() * this.height);
-            const size = sizeRange.min + Math.random() * (sizeRange.max - sizeRange.min);
-            const color = colors[Math.floor(Math.random() * colors.length)];
+            const x = Math.floor(this.random() * this.width);
+            const y = Math.floor(this.random() * this.height);
+            const size = sizeRange.min + this.random() * (sizeRange.max - sizeRange.min);
+            const color = colors[Math.floor(this.random() * colors.length)];
 
             const glow = this.ctx.createRadialGradient(x, y, 0, x, y, size * 3);
             const rgb = this.hexToRgb(color);
@@ -287,13 +306,13 @@ class VibrantRefinedArtworkGenerator {
     drawGradientMesh(colors) {
         // Create multiple gradients overlapping
         for (let i = 0; i < 3; i++) {
-            const x = Math.random() * this.width;
-            const y = Math.random() * this.height;
-            const radius = 300 + Math.random() * 400;
+            const x = this.random() * this.width;
+            const y = this.random() * this.height;
+            const radius = 300 + this.random() * 400;
             
             const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
-            const color1 = colors[Math.floor(Math.random() * colors.length)];
-            const color2 = colors[Math.floor(Math.random() * colors.length)];
+            const color1 = colors[Math.floor(this.random() * colors.length)];
+            const color2 = colors[Math.floor(this.random() * colors.length)];
             
             const rgb1 = this.hexToRgb(color1);
             const rgb2 = this.hexToRgb(color2);
@@ -332,7 +351,7 @@ class VibrantRefinedArtworkGenerator {
         // Create wave pattern with colors
         for (let i = 0; i < 5; i++) {
             const stop = i / 4;
-            const colorIndex = Math.floor(Math.random() * colors.length);
+            const colorIndex = Math.floor(this.random() * colors.length);
             const rgb = this.hexToRgb(colors[colorIndex]);
             gradient.addColorStop(stop, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.3 + Math.sin(i) * 0.2})`);
         }
@@ -348,10 +367,10 @@ class VibrantRefinedArtworkGenerator {
     renderNeonPlasma(colors, energy, tempo) {
         // Energy affects glow intensity and ball count
         const glowIntensity = 0.5 + energy * 0.5;
-        const ballCount = Math.floor(5 + energy * 10 + Math.random() * 3);
+        const ballCount = Math.floor(5 + energy * 10 + this.random() * 3);
         
         // Vibrant gradient background
-        const bgType = Math.random();
+        const bgType = this.random();
         if (bgType < 0.33) {
             this.drawRadialBurst(colors);
         } else if (bgType < 0.66) {
@@ -364,9 +383,9 @@ class VibrantRefinedArtworkGenerator {
         const balls = [];
         for (let i = 0; i < ballCount; i++) {
             balls.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height,
-                radius: (30 + Math.random() * 100) * (0.5 + energy * 0.5)
+                x: this.random() * this.width,
+                y: this.random() * this.height,
+                radius: (30 + this.random() * 100) * (0.5 + energy * 0.5)
             });
         }
         
@@ -389,8 +408,8 @@ class VibrantRefinedArtworkGenerator {
             this.ctx.globalCompositeOperation = 'screen';
             for (let i = 0; i < 5; i++) {
                 this.ctx.beginPath();
-                this.ctx.moveTo(Math.random() * this.width, 0);
-                this.ctx.lineTo(Math.random() * this.width, this.height);
+                this.ctx.moveTo(this.random() * this.width, 0);
+                this.ctx.lineTo(this.random() * this.width, this.height);
                 this.ctx.stroke();
             }
             this.ctx.globalCompositeOperation = 'source-over';
@@ -426,9 +445,9 @@ class VibrantRefinedArtworkGenerator {
         const nebulaBalls = [];
         for (let i = 0; i < nebulaCount; i++) {
             nebulaBalls.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height,
-                radius: (80 + Math.random() * 150) * (0.5 + energy)
+                x: this.random() * this.width,
+                y: this.random() * this.height,
+                radius: (80 + this.random() * 150) * (0.5 + energy)
             });
         }
         this.ctx.globalAlpha = 0.2 + energy * 0.3;
@@ -475,9 +494,9 @@ class VibrantRefinedArtworkGenerator {
         const balls = [];
         for (let i = 0; i < shapeCount; i++) {
             balls.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height,
-                radius: (20 + Math.random() * 60) * (1 + energy * 0.5)
+                x: this.random() * this.width,
+                y: this.random() * this.height,
+                radius: (20 + this.random() * 60) * (1 + energy * 0.5)
             });
         }
         
@@ -561,9 +580,9 @@ class VibrantRefinedArtworkGenerator {
         const liquidBalls = [];
         for (let i = 0; i < blobCount; i++) {
             liquidBalls.push({
-                x: Math.random() * this.width,
-                y: this.height * (0.3 + Math.random() * 0.7), // Lower half bias
-                radius: (40 + Math.random() * 100) * (0.5 + energy)
+                x: this.random() * this.width,
+                y: this.height * (0.3 + this.random() * 0.7), // Lower half bias
+                radius: (40 + this.random() * 100) * (0.5 + energy)
             });
         }
         
@@ -615,9 +634,9 @@ class VibrantRefinedArtworkGenerator {
         const cloudCount = Math.floor(5 + energy * 5);
         for (let i = 0; i < cloudCount; i++) {
             cloudBalls.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height * 0.5, // Upper half
-                radius: (60 + Math.random() * 120) * (0.5 + stormIntensity)
+                x: this.random() * this.width,
+                y: this.random() * this.height * 0.5, // Upper half
+                radius: (60 + this.random() * 120) * (0.5 + stormIntensity)
             });
         }
         this.ctx.globalAlpha = 0.3;
@@ -632,18 +651,18 @@ class VibrantRefinedArtworkGenerator {
         this.ctx.globalCompositeOperation = 'screen';
         
         for (let i = 0; i < boltCount; i++) {
-            this.ctx.lineWidth = 1 + Math.random() * 3;
-            this.ctx.globalAlpha = 0.5 + Math.random() * 0.5;
+            this.ctx.lineWidth = 1 + this.random() * 3;
+            this.ctx.globalAlpha = 0.5 + this.random() * 0.5;
             
             this.ctx.beginPath();
-            let x = Math.random() * this.width;
+            let x = this.random() * this.width;
             let y = 0;
             this.ctx.moveTo(x, y);
             
             // Zigzag down
             while (y < this.height) {
-                y += 20 + Math.random() * 50;
-                x += (Math.random() - 0.5) * 100;
+                y += 20 + this.random() * 50;
+                x += (this.random() - 0.5) * 100;
                 this.ctx.lineTo(x, y);
             }
             this.ctx.stroke();
@@ -679,11 +698,11 @@ class VibrantRefinedArtworkGenerator {
         const shapeComplexity = Math.floor(3 + energy * 5); // sides
         
         for (let i = 0; i < shapeCount; i++) {
-            const x = Math.random() * this.width;
-            const y = Math.random() * this.height;
-            const size = (30 + Math.random() * 100) * (0.5 + energy);
-            const sides = Math.floor(3 + Math.random() * shapeComplexity);
-            const rotation = Math.random() * Math.PI * 2;
+            const x = this.random() * this.width;
+            const y = this.random() * this.height;
+            const size = (30 + this.random() * 100) * (0.5 + energy);
+            const sides = Math.floor(3 + this.random() * shapeComplexity);
+            const rotation = this.random() * Math.PI * 2;
             
             this.ctx.save();
             this.ctx.translate(x, y);
@@ -701,8 +720,8 @@ class VibrantRefinedArtworkGenerator {
             gradient.addColorStop(1, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, 0)`);
             
             this.ctx.fillStyle = gradient;
-            this.ctx.globalAlpha = 0.3 + Math.random() * 0.4;
-            this.ctx.globalCompositeOperation = Math.random() > 0.5 ? 'screen' : 'overlay';
+            this.ctx.globalAlpha = 0.3 + this.random() * 0.4;
+            this.ctx.globalCompositeOperation = this.random() > 0.5 ? 'screen' : 'overlay';
             
             this.ctx.beginPath();
             for (let j = 0; j < sides; j++) {
@@ -782,7 +801,7 @@ class VibrantRefinedArtworkGenerator {
         // Create vertical aurora bands
         for (let i = 0; i < 7; i++) {
             const x = (i / 7) * this.width + Math.sin(i) * 100;
-            const width = 100 + Math.random() * 150;
+            const width = 100 + this.random() * 150;
             
             const gradient = this.ctx.createLinearGradient(x, 0, x + width, this.height);
             const color = colors[i % colors.length];
@@ -855,8 +874,8 @@ class VibrantRefinedArtworkGenerator {
             this.ctx.setLineDash([10, 5, 5, 5]);
             
             this.ctx.beginPath();
-            this.ctx.moveTo(x + Math.random() * 20, 0);
-            this.ctx.lineTo(x + Math.random() * 20, this.height);
+            this.ctx.moveTo(x + this.random() * 20, 0);
+            this.ctx.lineTo(x + this.random() * 20, this.height);
             this.ctx.stroke();
         }
         
@@ -865,14 +884,14 @@ class VibrantRefinedArtworkGenerator {
         
         // Glitch blocks
         for (let i = 0; i < 15; i++) {
-            const x = Math.random() * this.width;
-            const y = Math.random() * this.height;
-            const w = 50 + Math.random() * 150;
-            const h = 5 + Math.random() * 30;
+            const x = this.random() * this.width;
+            const y = this.random() * this.height;
+            const w = 50 + this.random() * 150;
+            const h = 5 + this.random() * 30;
             
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'difference';
-            this.ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            this.ctx.fillStyle = colors[Math.floor(this.random() * colors.length)];
             this.ctx.globalAlpha = 0.8;
             this.ctx.fillRect(x, y, w, h);
             this.ctx.restore();
@@ -883,9 +902,9 @@ class VibrantRefinedArtworkGenerator {
         const nodes = [];
         for (let i = 0; i < 8; i++) {
             nodes.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height,
-                radius: 20 + Math.random() * 40
+                x: this.random() * this.width,
+                y: this.random() * this.height,
+                radius: 20 + this.random() * 40
             });
         }
         this.renderMetaballs(nodes, colors);
@@ -911,7 +930,7 @@ class VibrantRefinedArtworkGenerator {
     
     async generate(options = {}) {
         const {
-            style = this.styles[Math.floor(Math.random() * this.styles.length)],
+            style = null,
             seed = Date.now(),
             audioEnergy = 0.5,
             tempo = 120,
@@ -932,18 +951,18 @@ class VibrantRefinedArtworkGenerator {
             console.warn(`⚠️ Tempo clamped from ${tempo} to ${validatedTempo} (valid range: 60-200)`);
         }
         
-        // BEST PRACTICE: Store original Math.random and restore after generation
-        const originalRandom = Math.random;
-
-        // Use seed for reproducible randomness
-        this.seed = seed;
-        Math.random = () => {
-            this.seed = (this.seed * 1664525 + 1013904223) % 2147483647;
-            return this.seed / 2147483647;
-        };
+        // Per-instance PRNG: render paths never mutate the process-wide RNG.
+        this.seed = Number(seed) >>> 0;
+        this.noiseOffset = this.random() * 1000;
+        const selectedStyle = style || this.styles[Math.floor(this.random() * this.styles.length)];
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.globalAlpha = 1;
+        this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.filter = 'none';
+        this.ctx.clearRect(0, 0, this.width, this.height);
         
         // Get palette with variations (use validated parameters)
-        const colors = this.getPalette(style, validatedEnergy, validatedTempo, colorVariation);
+        const colors = this.getPalette(selectedStyle, validatedEnergy, validatedTempo, colorVariation);
         
         // Clear canvas with subtle gradient
         const bgGradient = this.ctx.createRadialGradient(
@@ -956,7 +975,7 @@ class VibrantRefinedArtworkGenerator {
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         // Render based on style with enhanced versions
-        switch (style) {
+        switch (selectedStyle) {
             case 'ocean-aurora':
                 this.renderOceanAurora(colors);
                 break;
@@ -994,9 +1013,9 @@ class VibrantRefinedArtworkGenerator {
             default:
                 this.renderMetaballs(
                     Array(8).fill().map(() => ({
-                        x: Math.random() * this.width,
-                        y: Math.random() * this.height,
-                        radius: 40 + Math.random() * 100
+                        x: this.random() * this.width,
+                        y: this.random() * this.height,
+                        radius: 40 + this.random() * 100
                     })),
                     colors
                 );
@@ -1011,9 +1030,6 @@ class VibrantRefinedArtworkGenerator {
             this.ctx.fillText(title, this.width / 2, this.height - 30);
             this.ctx.restore();
         }
-
-        // CRITICAL: Restore original Math.random to prevent side effects
-        Math.random = originalRandom;
 
         return this.canvas;
     }
@@ -1040,11 +1056,10 @@ class VibrantRefinedArtworkGenerator {
         // BEST PRACTICE: Use optimal PNG compression and quality settings
         const buffer = format === 'png'
             ? this.canvas.toBuffer('image/png', {
-                compressionLevel: options.compressionLevel || 6,  // 0-9, 6 is balanced
+                compressionLevel: options.compressionLevel ?? 6,  // 0-9, 6 is balanced
                 filters: this.canvas.PNG_FILTER_NONE,              // Faster encoding
                 palette: undefined,
-                backgroundIndex: 0,
-                resolution: options.resolution || 300               // 300 PPI for print quality
+                backgroundIndex: 0 // Pixel dimensions come from createCanvas, not PPI
             })
             : this.canvas.toBuffer('image/jpeg', { quality: options.quality || 0.95 });
 

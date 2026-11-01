@@ -48,6 +48,12 @@ function resolveBinary(name) {
         return { path: bundledPath, bundled: true };
     }
 
+    // A distributed app must never quietly depend on the builder's Homebrew
+    // installation. Sox remains optional: its missing-binary handler uses FFmpeg.
+    if (process.resourcesPath && !process.resourcesPath.includes('node_modules')) {
+        return { path: null, bundled: false };
+    }
+
     // 2. Fall back to system PATH
     try {
         const cmd = process.platform === 'win32' ? `where ${name}` : `which ${name}`;

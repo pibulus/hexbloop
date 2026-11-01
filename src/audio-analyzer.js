@@ -18,9 +18,9 @@ class AudioAnalyzer {
             waveform: [],
             energy: 0,
             peaks: [],
-            // These would require more complex analysis:
-            tempo: 120, // Default BPM
-            brightness: 0.5 // Spectral centroid normalized
+            tempo: null, // No beat claim without a confident onset envelope
+            brightness: null, // Frequency-domain energy centroid
+            analysisAvailable: false
         };
 
         try {
@@ -41,11 +41,14 @@ class AudioAnalyzer {
 
             try {
                 // Stream audio data with a memory cap instead of buffering entire file
-                // Downsample to 2kHz mono - keeps memory under ~1MB even for long files
+                // 22.05kHz retains the high frequencies needed for brightness
                 const waveformBuffer = await this.extractWaveformStream(inputPath);
                 features.waveform = this.extractWaveformPeaks(waveformBuffer, samples);
                 features.energy = this.calculateEnergy(features.waveform);
                 features.peaks = this.findPeaks(features.waveform);
+                features.brightness = this.calculateSpectralBrightness(waveformBuffer, 22050);
+                features.tempo = this.estimateTempo(waveformBuffer, 22050);
+                features.analysisAvailable = true;
             } catch (waveformError) {
                 // If waveform extraction fails, generate synthetic data
                 console.log('⚠️ Using synthetic waveform data');
@@ -53,29 +56,9 @@ class AudioAnalyzer {
                 features.energy = 0.5;
             }
 
-            // Estimate tempo based on peak intervals (simplified)
-            // Guard: a NaN/zero duration would ripple NaN into tempo and artwork math
             if (!Number.isFinite(features.duration) || features.duration <= 0) {
                 features.duration = 0;
             }
-            if (features.duration > 0 && features.peaks.length > 1) {
-                const intervals = [];
-                for (let i = 1; i < features.peaks.length && i < 10; i++) {
-                    intervals.push(features.peaks[i] - features.peaks[i-1]);
-                }
-                if (intervals.length > 0) {
-                    const avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-                    const samplesPerSecond = samples / features.duration;
-                    const beatsPerSecond = samplesPerSecond / avgInterval;
-                    features.tempo = Math.round(beatsPerSecond * 60);
-                    features.tempo = Math.max(60, Math.min(180, features.tempo)); // Clamp to reasonable range
-                }
-            }
-
-            // Estimate brightness (simplified - based on high frequency presence)
-            const highFreqSamples = features.waveform.slice(Math.floor(samples * 0.7));
-            const highEnergy = this.calculateEnergy(highFreqSamples);
-            features.brightness = Math.min(1, highEnergy * 2);
 
         } catch (error) {
             console.log('⚠️ Audio analysis failed, using defaults:', error.message);
@@ -84,6 +67,54 @@ class AudioAnalyzer {
         }
 
         return features;
+    }
+
+    static calculateSpectralBrightness(buffer, sampleRate) {
+        const samples = new Float32Array(buffer.buffer, buffer.byteOffset, Math.floor(buffer.length / 4));
+        const size = 2048;
+        if (samples.length < size) return null;
+        const frequencies = [125, 250, 440, 750, 1200, 2000, 3000, 4400, 6000, 8500];
+        let weighted = 0, total = 0;
+        const windows = Math.min(12, Math.floor(samples.length / size));
+        for (let w = 0; w < windows; w++) {
+            const start = Math.floor(w * (samples.length - size) / Math.max(1, windows - 1));
+            for (const hz of frequencies) {
+                // Goertzel energy at actual frequency bins, not time positions.
+                const coefficient = 2 * Math.cos(2 * Math.PI * hz / sampleRate);
+                let s1 = 0, s2 = 0;
+                for (let i = 0; i < size; i++) {
+                    const s = samples[start + i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (size - 1))) + coefficient * s1 - s2;
+                    s2 = s1; s1 = s;
+                }
+                const power = Math.max(0, s1 * s1 + s2 * s2 - coefficient * s1 * s2);
+                weighted += power * hz;
+                total += power;
+            }
+        }
+        return total > 1e-9 ? Math.min(1, weighted / total / 8500) : null;
+    }
+
+    static estimateTempo(buffer, sampleRate) {
+        const samples = new Float32Array(buffer.buffer, buffer.byteOffset, Math.floor(buffer.length / 4));
+        if (samples.length < sampleRate * 8) return null;
+        const hop = 512, frame = 1024, rms = [];
+        for (let start = 0; start + frame < samples.length; start += hop) {
+            let sum = 0;
+            for (let i = 0; i < frame; i++) sum += samples[start + i] ** 2;
+            rms.push(Math.sqrt(sum / frame));
+        }
+        const onset = rms.slice(1).map((value, index) => Math.max(0, value - rms[index]));
+        if (onset.filter(value => value > 0.005).length < 6) return null;
+        const scores = [];
+        for (let bpm = 70; bpm <= 180; bpm++) {
+            const lag = Math.round(60 * sampleRate / (bpm * hop));
+            let score = 0;
+            for (let i = lag; i < onset.length; i++) score += onset[i] * onset[i - lag];
+            scores.push({ bpm, score });
+        }
+        const average = scores.reduce((sum, item) => sum + item.score, 0) / scores.length;
+        const best = scores.reduce((a, b) => b.score > a.score ? b : a);
+        return average > 0 && best.score > average * 1.4 ? best.bpm : null;
     }
 
     /**
@@ -99,7 +130,7 @@ class AudioAnalyzer {
             const ffmpegBin = binaries.ffmpeg.path || 'ffmpeg';
             const proc = spawn(ffmpegBin, [
                 '-i', inputPath,
-                '-af', 'aresample=2000,highpass=f=200,lowpass=f=3000',
+                '-ar', '22050', '-t', '15',
                 '-ac', '1',           // Mono - halves memory
                 '-f', 'f32le',
                 '-acodec', 'pcm_f32le',
@@ -224,9 +255,9 @@ class AudioAnalyzer {
         }
         
         // Use audio features
-        if (energy > 0.7 && tempo > 120) return 'energetic';
-        if (energy < 0.3 && tempo < 100) return 'calm';
-        if (energy > 0.5 && tempo > 140) return 'intense';
+        if (Number.isFinite(tempo) && energy > 0.7 && tempo > 120) return 'energetic';
+        if (Number.isFinite(tempo) && energy < 0.3 && tempo < 100) return 'calm';
+        if (Number.isFinite(tempo) && energy > 0.5 && tempo > 140) return 'intense';
         
         return 'neutral';
     }

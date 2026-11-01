@@ -5,8 +5,8 @@
  * of bug where a stage silently produces the wrong container, mangled tags,
  * or falls back without anyone noticing.
  *
- * Runs under plain node (no Electron) via a minimal electron stub. Skips
- * cleanly if ffprobe isn't installed.
+ * Runs under plain node (no Electron) via a minimal electron stub. Fails
+ * if ffprobe is missing; an untested pipeline is not a green test.
  */
 
 const path = require('path');
@@ -17,10 +17,14 @@ const Module = require('module');
 
 const REPO = path.join(__dirname, '..');
 const FIXTURE = path.join(__dirname, 'fixtures', 'test.wav');
-const OUT = path.join(__dirname, 'output', 'e2e');
+// Never touch test/output or a shared /tmp settings file; both may contain
+// work from a previous session. Only our own mkdtemp tree is disposable.
+const TEST_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'hexbloop-e2e-'));
+const OUT = path.join(TEST_ROOT, 'output');
+process.on('exit', () => fs.rmSync(TEST_ROOT, { recursive: true, force: true }));
 
 // --- Minimal electron stub so the pipeline can run headless ---
-const stubUserData = path.join(os.tmpdir(), 'hexbloop-e2e-userdata');
+const stubUserData = path.join(TEST_ROOT, 'userdata');
 fs.mkdirSync(stubUserData, { recursive: true });
 const electronStub = {
     app: {
@@ -37,8 +41,7 @@ const electronStub = {
 const origResolve = Module._resolveFilename;
 Module._resolveFilename = function (request, ...args) {
     if (request === 'electron') {
-        const stubPath = path.join(os.tmpdir(), 'hexbloop-electron-stub.js');
-        fs.writeFileSync(stubPath, `module.exports = ${JSON.stringify(null)};`);
+        const stubPath = path.join(TEST_ROOT, 'hexbloop-electron-stub.js');
         // Cache the object directly instead of round-tripping through a file
         require.cache[stubPath] = { id: stubPath, filename: stubPath, loaded: true, exports: electronStub };
         return stubPath;
@@ -113,15 +116,8 @@ async function runCase(name, settingsPatch, expect) {
 async function main() {
     console.log('\n🔮 HEXBLOOP E2E PIPELINE TEST\n' + '='.repeat(60));
 
-    if (!haveFfprobe()) {
-        console.log('  ⏭️  ffprobe not available — skipping E2E (install: brew install ffmpeg)');
-        console.log('\n🎉 E2E skipped (no ffprobe).\n');
-        process.exit(0);
-    }
-    if (!fs.existsSync(FIXTURE)) {
-        console.log('  ⏭️  fixture missing — run the audio-processing test first to generate it');
-        process.exit(0);
-    }
+    if (!haveFfprobe()) throw new Error('ffprobe missing; E2E cannot verify output');
+    if (!fs.existsSync(FIXTURE)) throw new Error('fixture missing; E2E cannot verify output');
 
     fs.mkdirSync(OUT, { recursive: true });
 
@@ -141,30 +137,59 @@ async function main() {
     await runCase('flac no-master', { processing: { mastering: false }, output: { format: 'flac' } },
         { container: 'flac', albumHasSpace: true });
 
-    // All stages off → still a valid tagged file
+    // DSP/art off with metadata still on → valid tagged file
     await runCase('mp3 all-stages-off',
         { processing: { compressing: false, mastering: false, coverArt: false }, output: { format: 'mp3' } },
         { container: 'mp3', albumHasSpace: true, artwork: false });
 
-    // Legacy/unknown format that slipped past validation → resolveOutputFormat
-    // guards it back to mp3 at processing time. (updateSettings would reject
-    // 'ogg' now, so poke the in-memory settings directly to simulate a
-    // legacy on-disk value that coerceSettings hasn't yet cleaned.)
+    // Clean Mac: no sox, no Homebrew path. The FFmpeg compression fallback
+    // must actually produce audio, not merely catch a missing spawn.
+    const { sox } = require(path.join(REPO, 'src/binary-resolver'));
+    const originalSox = sox.path;
+    sox.path = null;
+    try {
+        await runCase('no-sox fallback',
+            { processing: { coverArt: false, metadata: false }, output: { format: 'mp3' } },
+            { container: 'mp3', artwork: false });
+    } finally {
+        sox.path = originalSox;
+    }
+
+    // Rename only, source format: byte-identical WAV.
+    const hiResInput = path.join(TEST_ROOT, '48k-24bit.wav');
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi',
+        '-i', 'sine=frequency=440:duration=1', '-ar', '48000', '-c:a', 'pcm_s24le', hiResInput]);
+    const pm = getPreferencesManager();
+    await pm.whenReady();
+    await pm.resetToDefaults();
+    await pm.updateSettings({ processing: { compressing: false, mastering: false,
+        coverArt: false, metadata: false, renaming: true },
+    output: { format: 'source', sampleRate: 0 } });
+    const passthrough = path.join(OUT, '48k-24bit.wav');
+    await AudioProcessor.processFile(hiResInput, passthrough);
+    const info = probe(passthrough);
+    if (fs.readFileSync(hiResInput).equals(fs.readFileSync(passthrough)) &&
+        info.streams[0].sample_rate === '48000' && info.streams[0].bits_per_sample === 24 &&
+        !(info.format.tags?.artist || info.format.tags?.ARTIST)) {
+        console.log('  ✅ 48k/24-bit rename-only WAV pass-through'); results.passed++;
+    } else {
+        console.log('  ❌ 48k/24-bit pass-through changed audio or tags'); results.failed++;
+    }
+
+    // Invalid direct in-memory mutation fails closed instead of encoding under
+    // a misleading extension. Saved settings are coerced before use.
     {
         const pm = getPreferencesManager();
         await pm.whenReady();
         await pm.resetToDefaults();
         pm.getSettings().output.format = 'ogg';
-        const outputPath = path.join(OUT, 'unknown-format-fallback.mp3');
-        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-        await AudioProcessor.processFile(FIXTURE, outputPath);
-        const info = probe(outputPath);
-        if (info.format.format_name.includes('mp3')) {
-            console.log('  ✅ unknown-format fallback');
-            results.passed++;
-        } else {
-            console.log(`  ❌ unknown-format fallback: got ${info.format.format_name}`);
+        const outputPath = path.join(OUT, 'invalid-format.mp3');
+        try {
+            await AudioProcessor.processFile(FIXTURE, outputPath);
             results.failed++;
+        } catch {
+            if (!fs.existsSync(outputPath)) results.passed++;
+            else results.failed++;
         }
     }
 

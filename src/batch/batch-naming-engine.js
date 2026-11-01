@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const NameGenerator = require('../name-generator');
 const LunarProcessor = require('../lunar-processor');
+const { resolveUniqueOutputPath } = require('../shared/output-path');
 
 class BatchNamingEngine {
     constructor(settings = {}) {
@@ -89,7 +90,7 @@ class BatchNamingEngine {
         
         // Add numbering if enabled and not already in name
         if (this.settings.numberingStyle !== 'none' && 
-            this.settings.namingScheme !== 'sequential') {
+            !['sequential', 'timestamp'].includes(this.settings.namingScheme)) {
             const number = this.generateNumber(index);
             if (number) {
                 parts.push(number);
@@ -143,11 +144,11 @@ class BatchNamingEngine {
         
         const timeStr = [
             String(date.getHours()).padStart(2, '0'),
-            String(date.getMinutes()).padStart(2, '0'),
-            String(date.getSeconds()).padStart(2, '0')
+            String(date.getMinutes()).padStart(2, '0')
         ].join('');
-        
-        return `hexbloop${this.settings.separator}${dateStr}${this.settings.separator}${timeStr}`;
+
+        const position = this.generateNumber(index) || String(index + 1).padStart(this.settings.numberingPadding, '0');
+        return `hexbloop${this.settings.separator}${dateStr}${this.settings.separator}${timeStr}${this.settings.separator}${position}`;
     }
     
     /**
@@ -373,14 +374,20 @@ class BatchNamingEngine {
      * @param {string[]} filePaths - Array of file paths
      * @param {string} outputFormat - Desired output format (mp3, wav, flac, etc.)
      */
-    previewBatch(filePaths, outputFormat = 'mp3') {
+    previewBatch(filePaths, outputFormat = 'mp3', outputDirectory = null) {
         const sessionFolder = this.generateSessionFolder({ increment: false });
+        const directory = outputDirectory && sessionFolder ? path.join(outputDirectory, sessionFolder) : outputDirectory;
+        const taken = new Set();
 
         return filePaths.map((filePath, index) => {
             const name = this.generateName(filePath, index, filePaths.length);
+            const format = typeof outputFormat === 'function' ? outputFormat(filePath) : outputFormat;
+            const generated = directory
+                ? path.basename(resolveUniqueOutputPath(directory, name, format, taken))
+                : `${name}.${format}`;
             return {
                 original: path.basename(filePath),
-                generated: `${name}.${outputFormat}`,
+                generated,
                 folder: sessionFolder
             };
         });

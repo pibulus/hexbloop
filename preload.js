@@ -10,8 +10,14 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
     processAudio: (filePaths) => ipcRenderer.invoke('process-audio', filePaths),
     selectFiles: () => ipcRenderer.invoke('select-files'),
+    selectFolders: () => ipcRenderer.invoke('select-folders'),
+    openOutput: () => ipcRenderer.invoke('open-output'),
+    selectPreviewPair: (original, processed) => ipcRenderer.invoke('select-preview-pair', original, processed),
     openPreferences: () => ipcRenderer.invoke('open-preferences'),
     getSettings: () => ipcRenderer.invoke('get-settings'),
+    setMainSwitch: (name, enabled) => ipcRenderer.invoke('set-main-switch', name, enabled),
+    setOutputFormat: (format) => ipcRenderer.invoke('set-output-format', format),
+    onSettingsChanged: (callback) => ipcRenderer.on('settings-changed', (_event, settings) => callback(settings)),
 
     // Read an audio file's bytes so the renderer can A/B play it via a Blob URL
     // (webSecurity + CSP block <audio> from loading file:// paths directly)

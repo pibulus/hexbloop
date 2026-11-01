@@ -11,7 +11,9 @@ const {
     DEFAULT_SETTINGS,
     validateSettings,
     coerceSettings,
-    mergeWithDefaults
+    mergeWithDefaults,
+    migrateLegacySettings,
+    SETTINGS_VERSION
 } = require('../shared/settings-schema');
 
 class PreferencesManager {
@@ -20,6 +22,8 @@ class PreferencesManager {
         this.settingsPath = path.join(this.userDataPath, 'hexbloop-settings.json');
         this.backupPath = path.join(this.userDataPath, 'hexbloop-settings.backup.json');
         this.currentSettings = null;
+        this.listeners = new Set();
+        this.writeQueue = Promise.resolve();
 
         // Initialize settings on startup. Keep the promise so callers can
         // await a guaranteed-loaded state (avoids a boot race where a file
@@ -61,12 +65,13 @@ class PreferencesManager {
             const userSettings = JSON.parse(settingsData);
             
             // Merge with defaults to ensure all fields exist
-            this.currentSettings = mergeWithDefaults(userSettings);
+            const migrated = migrateLegacySettings(userSettings);
+            this.currentSettings = mergeWithDefaults(migrated);
 
             // Coerce invalid values back to THEIR defaults (never wipe the
             // user's whole config over one bad key)
             const coerced = coerceSettings(this.currentSettings);
-            if (coerced.length > 0) {
+            if (coerced.length > 0 || JSON.stringify(userSettings) !== JSON.stringify(this.currentSettings)) {
                 console.warn('⚠️ Reset invalid settings to defaults:', coerced.join(', '));
                 await this.saveSettings();
             }
@@ -78,8 +83,9 @@ class PreferencesManager {
                 console.log('🔄 Attempting to restore from backup...');
                 const backupData = await fs.readFile(this.backupPath, 'utf8');
                 const backupSettings = JSON.parse(backupData);
-                this.currentSettings = mergeWithDefaults(backupSettings);
-                await this.saveSettings();
+                this.currentSettings = mergeWithDefaults(migrateLegacySettings(backupSettings));
+                coerceSettings(this.currentSettings);
+                await this.saveSettings(this.currentSettings, false);
                 return this.currentSettings;
             }
             throw error;
@@ -89,29 +95,33 @@ class PreferencesManager {
     /**
      * Save current settings to disk with backup
      */
-    async saveSettings() {
+    async saveSettings(next = this.currentSettings, backup = true) {
+        const errors = validateSettings(next);
+        if (errors.length) throw new Error(`Settings validation failed: ${errors.join(', ')}`);
+        const temporary = `${this.settingsPath}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
         try {
-            // Create backup of current settings
-            if (await this.fileExists(this.settingsPath)) {
+            await fs.mkdir(this.userDataPath, { recursive: true });
+            await fs.writeFile(temporary, JSON.stringify(next, null, 2), 'utf8');
+            if (backup && await this.fileExists(this.settingsPath)) {
                 await fs.copyFile(this.settingsPath, this.backupPath);
             }
-            
-            // Validate before saving
-            const errors = validateSettings(this.currentSettings);
-            if (errors.length > 0) {
-                throw new Error(`Settings validation failed: ${errors.join(', ')}`);
+            await fs.rename(temporary, this.settingsPath);
+            this.currentSettings = next;
+            for (const listener of this.listeners) {
+                try { listener(next); } catch (error) { console.error('Settings listener failed:', error); }
             }
-            
-            // Save to disk with pretty formatting
-            const settingsJson = JSON.stringify(this.currentSettings, null, 2);
-            await fs.writeFile(this.settingsPath, settingsJson, 'utf8');
-            
             console.log('💾 Mystical preferences saved successfully');
-            return true;
+            return next;
         } catch (error) {
+            await fs.rm(temporary, { force: true }).catch(() => {});
             console.error('❌ Failed to save mystical preferences:', error);
             throw error;
         }
+    }
+
+    onChange(listener) {
+        this.listeners.add(listener);
+        return () => this.listeners.delete(listener);
     }
     
     /**
@@ -143,49 +153,49 @@ class PreferencesManager {
      * Update specific setting by path
      */
     async updateSetting(settingPath, value) {
-        const pathParts = settingPath.split('.');
-        const settings = { ...this.getSettings() };
-        
-        // Navigate to the parent object
-        let current = settings;
-        for (let i = 0; i < pathParts.length - 1; i++) {
-            if (!(pathParts[i] in current)) {
-                current[pathParts[i]] = {};
+        const write = async () => {
+            const parts = settingPath.split('.');
+            const settings = structuredClone(this.getSettings());
+            let current = settings;
+            for (const part of parts.slice(0, -1)) {
+                if (!current[part] || typeof current[part] !== 'object') throw new Error('Unknown setting');
+                current = current[part];
             }
-            current = current[pathParts[i]];
-        }
-        
-        // Set the value
-        current[pathParts[pathParts.length - 1]] = value;
-        
-        return this.updateSettings(settings);
+            if (!(parts.at(-1) in current)) throw new Error('Unknown setting');
+            current[parts.at(-1)] = value;
+            return this.saveSettings(settings);
+        };
+        this.writeQueue = this.writeQueue.then(write, write);
+        return this.writeQueue;
     }
     
     /**
      * Update multiple settings at once
      */
     async updateSettings(newSettings) {
-        try {
-            // Merge new settings with current settings
-            this.currentSettings = mergeWithDefaults({
-                ...this.currentSettings,
-                ...newSettings
-            });
-            
-            await this.saveSettings();
-            return this.currentSettings;
-        } catch (error) {
-            console.error('❌ Failed to update mystical preferences:', error);
-            throw error;
-        }
+        const write = async () => {
+            const settings = structuredClone(this.getSettings());
+            const apply = (target, patch) => {
+                for (const [key, value] of Object.entries(patch)) {
+                    if (value && typeof value === 'object' && !Array.isArray(value) && target[key] && typeof target[key] === 'object') {
+                        apply(target[key], value);
+                    } else target[key] = value;
+                }
+            };
+            apply(settings, newSettings);
+            return this.saveSettings(settings);
+        };
+        this.writeQueue = this.writeQueue.then(write, write);
+        return this.writeQueue;
     }
     
     /**
      * Reset to default settings
      */
     async resetToDefaults() {
-        this.currentSettings = { ...DEFAULT_SETTINGS };
-        await this.saveSettings();
+        const write = () => this.saveSettings(structuredClone(DEFAULT_SETTINGS));
+        this.writeQueue = this.writeQueue.then(write, write);
+        await this.writeQueue;
         console.log('🔄 Mystical preferences reset to defaults');
         return this.currentSettings;
     }
@@ -201,13 +211,14 @@ class PreferencesManager {
                 compressing: settings.processing.compressing,
                 mastering: settings.processing.mastering,
                 coverArt: settings.processing.coverArt,
-                naming: settings.processing.naming
+                metadata: settings.processing.metadata,
+                renaming: settings.processing.renaming
             },
-            metadata: settings.processing.naming === 'custom' ? {
-                artist: settings.metadata.artist || 'Unknown Artist',
-                album: settings.metadata.album || 'Unknown Album',
-                year: settings.metadata.year || new Date().getFullYear(),
-                genre: settings.metadata.genre || 'Mystical Audio'
+            metadata: settings.metadata.mode === 'custom' ? {
+                artist: settings.metadata.artist,
+                album: settings.metadata.album,
+                year: settings.metadata.year,
+                genre: settings.metadata.genre
             } : null
         };
     }
@@ -229,7 +240,7 @@ class PreferencesManager {
      */
     async exportSettings() {
         return {
-            version: '1.0.0',
+            version: `${SETTINGS_VERSION}.0`,
             timestamp: new Date().toISOString(),
             settings: this.getSettings()
         };
@@ -243,15 +254,16 @@ class PreferencesManager {
             throw new Error('Invalid import data: missing settings');
         }
         
-        const mergedSettings = mergeWithDefaults(importData.settings);
+        const mergedSettings = mergeWithDefaults(migrateLegacySettings(importData.settings));
         const errors = validateSettings(mergedSettings);
         
         if (errors.length > 0) {
             throw new Error(`Import validation failed: ${errors.join(', ')}`);
         }
         
-        this.currentSettings = mergedSettings;
-        await this.saveSettings();
+        const write = () => this.saveSettings(mergedSettings);
+        this.writeQueue = this.writeQueue.then(write, write);
+        await this.writeQueue;
         console.log('📥 Mystical preferences imported successfully');
         return this.currentSettings;
     }

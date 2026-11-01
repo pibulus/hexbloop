@@ -74,6 +74,10 @@ class PreferencesController {
         
         // Set up window focus/blur effects
         this.setupWindowEffects();
+        window.preferencesAPI.onSettingsChanged(settings => {
+            this.currentSettings = settings;
+            this.updateUI();
+        });
         
         // Initial UI state update
         this.updateUI();
@@ -95,7 +99,9 @@ class PreferencesController {
         const settingElements = document.querySelectorAll('[data-setting]');
         settingElements.forEach(element => {
             const settingPath = element.dataset.setting;
-            this.settingElements.set(settingPath, element);
+            // Radios share a setting path but must each receive a listener and
+            // render pass; the Map previously retained only the last radio.
+            this.settingElements.set(element.type === 'radio' ? `${settingPath}:${element.value}` : settingPath, element);
         });
         
         // Get action buttons
@@ -115,7 +121,8 @@ class PreferencesController {
         this.setupTabSwitching();
         
         // Setting change handlers
-        this.settingElements.forEach((element, settingPath) => {
+        this.settingElements.forEach((element) => {
+            const settingPath = element.dataset.setting;
             if (element.type === 'checkbox') {
                 element.addEventListener('change', (e) => {
                     this.updateSetting(settingPath, e.target.checked);
@@ -191,9 +198,9 @@ class PreferencesController {
         this.elements.closeBtn.addEventListener('click', () => this.closeWindow());
         this.elements.chooseFolderBtn.addEventListener('click', () => this.chooseOutputFolder());
         
-        // Custom metadata visibility based on naming mode
-        const namingRadios = document.querySelectorAll('input[name="naming"]');
-        namingRadios.forEach(radio => {
+        // Both radios bind independently, not through one Map key.
+        const metadataRadios = document.querySelectorAll('input[name="metadata-mode"]');
+        metadataRadios.forEach(radio => {
             radio.addEventListener('change', () => this.updateCustomMetadataVisibility());
         });
 
@@ -222,7 +229,8 @@ class PreferencesController {
         }
         
         // Update all form elements with current settings
-        this.settingElements.forEach((element, settingPath) => {
+        this.settingElements.forEach((element) => {
+            const settingPath = element.dataset.setting;
             const value = this.getSettingValue(settingPath);
             
             if (element.type === 'checkbox') {
@@ -411,9 +419,6 @@ class PreferencesController {
             const result = await window.preferencesAPI.updateSetting(settingPath, sanitizedValue);
             
             if (result.success) {
-                // Update local settings cache
-                this.setSettingValue(settingPath, sanitizedValue);
-                
                 // Add visual feedback
                 this.showSettingUpdated(settingPath);
 
@@ -430,11 +435,20 @@ class PreferencesController {
             } else {
                 console.error(`Failed to update ${settingPath}:`, result.error);
                 this.showError(`Failed to update setting: ${result.error}`);
+                await this.restorePersistedSettings();
             }
         } catch (error) {
             console.error(`Error updating ${settingPath}:`, error);
             this.showError(`Error updating setting: ${error.message}`);
+            await this.restorePersistedSettings();
         }
+    }
+
+    async restorePersistedSettings() {
+        try {
+            this.currentSettings = await window.preferencesAPI.getSettings();
+            this.updateUI();
+        } catch (error) { console.error('Could not restore settings display:', error); }
     }
     
     setSettingValue(settingPath, value) {
@@ -454,8 +468,7 @@ class PreferencesController {
     }
     
     updateCustomMetadataVisibility() {
-        const namingMode = this.getSettingValue('processing.naming');
-        const isCustomMode = namingMode === 'custom';
+        const isCustomMode = this.getSettingValue('metadata.mode') === 'custom';
         
         if (isCustomMode) {
             this.elements.customMetadataSection.classList.remove('disabled');
@@ -616,7 +629,11 @@ class PreferencesController {
             'processing.compressing',
             'processing.mastering', 
             'processing.coverArt',
+            'processing.metadata',
+            'processing.renaming',
+            'processing.rename', // v1 preliminary builds
             'processing.naming',
+            'metadata.mode',
             'metadata.artist',
             'metadata.album',
             'metadata.year',
@@ -679,6 +696,9 @@ class PreferencesController {
             }
         }
         
+        if (Number.isInteger(sourceSettings?.settingsVersion)) {
+            sanitized.settingsVersion = sourceSettings.settingsVersion;
+        }
         return { settings: sanitized };
     }
     
@@ -736,8 +756,8 @@ class PreferencesController {
     
     showError(message) {
         console.error(`Error: ${message}`);
-        // Could implement toast notifications here
-        alert(message); // Simple fallback for now
+        const status = document.getElementById('settings-status');
+        if (status) status.textContent = message;
     }
     
     /**

@@ -10,15 +10,19 @@ const path = require('path');
 /**
  * Default settings for the mystical construct
  */
+const SETTINGS_VERSION = 2;
 const DEFAULT_SETTINGS = {
+    settingsVersion: SETTINGS_VERSION,
     processing: {
         compressing: true,      // Sox effects (lunar-influenced distortion, filters)
         mastering: true,        // FFmpeg mastering (EQ, compression, limiting)
         coverArt: true,         // Procedural artwork generation
-        naming: 'mystical'      // 'mystical' | 'custom' | 'original'
+        metadata: true,
+        renaming: true
     },
     metadata: {
-        artist: '',            // Custom artist name (used when naming === 'custom')
+        mode: 'generated',     // 'generated' | 'custom' — independent of renaming
+        artist: '',
         album: '',             // Custom album name
         year: new Date().getFullYear(),  // Custom year
         genre: 'Mystical Audio'  // Custom genre
@@ -35,7 +39,7 @@ const DEFAULT_SETTINGS = {
         folderScheme: 'date'          // 'date' | 'lunar' | 'counter' | 'none'
     },
     output: {
-        format: 'mp3',                // 'mp3' | 'wav' | 'flac' — the formats the whole pipeline supports
+        format: 'source',             // 'source' = keep container; other choices are explicit conversion
         quality: 'high',              // 'low' | 'medium' | 'high' | 'maximum'
         mp3Bitrate: 192,              // kbps for MP3 (192k = high quality compressed)
         sampleRate: 0                 // 0 = preserve original, or 44100, 48000, etc.
@@ -62,13 +66,16 @@ const DEFAULT_SETTINGS = {
  * Settings validation schema
  */
 const SETTINGS_SCHEMA = {
+    settingsVersion: 'number',
     processing: {
         compressing: 'boolean',
         mastering: 'boolean',
         coverArt: 'boolean',
-        naming: ['mystical', 'custom', 'original']
+        metadata: 'boolean',
+        renaming: 'boolean'
     },
     metadata: {
+        mode: ['generated', 'custom'],
         artist: 'string',
         album: 'string',
         year: 'number',
@@ -88,7 +95,7 @@ const SETTINGS_SCHEMA = {
     output: {
         // Only formats supported end-to-end (mastering + tagging + artwork);
         // matches the preferences UI dropdown and AudioProcessor.SUPPORTED_OUTPUT_FORMATS
-        format: ['mp3', 'wav', 'flac'],
+        format: ['source', 'mp3', 'wav', 'flac'],
         quality: ['low', 'medium', 'high', 'maximum'],
         mp3Bitrate: 'number',
         sampleRate: 'number'
@@ -211,6 +218,36 @@ function mergeWithDefaults(userSettings) {
     return deepMerge(DEFAULT_SETTINGS, userSettings || {});
 }
 
+/** Migrate v1 before merge/coercion. Never override already-valid independent keys. */
+function migrateLegacySettings(raw = {}) {
+    const settings = JSON.parse(JSON.stringify(raw));
+    const legacy = settings.processing?.naming;
+    if (settings.settingsVersion !== SETTINGS_VERSION) {
+        const mapping = {
+            mystical: { renaming: true, metadata: true, mode: 'generated' },
+            custom: { renaming: false, metadata: true, mode: 'custom' },
+            original: { renaming: false, metadata: false, mode: 'generated' }
+        }[legacy] || { renaming: true, metadata: true, mode: 'generated' };
+        settings.processing ||= {};
+        if (typeof settings.processing.renaming !== 'boolean') {
+            settings.processing.renaming = typeof settings.processing.rename === 'boolean'
+                ? settings.processing.rename : mapping.renaming;
+        }
+        if (typeof settings.processing.metadata !== 'boolean') settings.processing.metadata = mapping.metadata;
+        settings.metadata ||= {};
+        if (!['generated', 'custom'].includes(settings.metadata.mode)) settings.metadata.mode = mapping.mode;
+        // Old MP3 was the implicit default. No way to distinguish a chosen MP3
+        // from that default: prefer preservation to a surprise transcode.
+        if (!settings.output || settings.output.format === 'mp3') {
+            settings.output = { ...settings.output, format: 'source' };
+        }
+        settings.settingsVersion = SETTINGS_VERSION;
+    }
+    delete settings.processing?.naming;
+    delete settings.processing?.rename;
+    return settings;
+}
+
 /**
  * Get processing stages based on current settings
  */
@@ -226,18 +263,21 @@ function getEnabledProcessingStages(settings) {
     if (settings.processing.coverArt) {
         stages.push('artwork');
     }
-    if (settings.processing.naming !== 'original') {
+    if (settings.processing.metadata) {
         stages.push('metadata');
     }
+    if (settings.processing.renaming) stages.push('rename');
     
     return stages;
 }
 
 module.exports = {
+    SETTINGS_VERSION,
     DEFAULT_SETTINGS,
     SETTINGS_SCHEMA,
     validateSettings,
     coerceSettings,
     mergeWithDefaults,
+    migrateLegacySettings,
     getEnabledProcessingStages
 };

@@ -5,8 +5,7 @@
  */
 
 class LunarProcessor {
-    static getMoonPhase() {
-        const now = new Date();
+    static getMoonPhase(now = new Date()) {
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
         const day = now.getDate();
@@ -21,10 +20,15 @@ class LunarProcessor {
         
         return {
             phase: phase,
-            illumination: Math.abs(Math.cos(phase * Math.PI * 2)),
+            illumination: this.illuminationForPhase(phase),
             name: this.getPhaseName(phase),
             influence: this.getPhaseInfluence(phase)
         };
+    }
+
+    static illuminationForPhase(phase) {
+        // Synodic phase: new=0, quarters=0.5, full=1.
+        return (1 - Math.cos(phase * Math.PI * 2)) / 2;
     }
     
     static getPhaseName(phase) {
@@ -127,8 +131,7 @@ class LunarProcessor {
     }
     
     // === Time of Day Modifiers ===
-    static getTimeInfluence() {
-        const now = new Date();
+    static getTimeInfluence(now = new Date()) {
         const hour = now.getHours();
         
         if (hour >= 0 && hour < 6) {
@@ -168,9 +171,9 @@ class LunarProcessor {
         }
     }
     
-    static getInfluencedParameters() {
-        const moonPhase = this.getMoonPhase();
-        const timeInfluence = this.getTimeInfluence();
+    static getInfluencedParameters(now = new Date()) {
+        const moonPhase = this.getMoonPhase(now);
+        const timeInfluence = this.getTimeInfluence(now);
         
         // Combine moon + time influences
         const base = moonPhase.influence;

@@ -1,0 +1,28 @@
+{
+  "ffmpeg": {
+    "sha256": "",
+    "source": "",
+    "version": "",
+    "buildFlags": "",
+    "dependencies": "",
+    "license": "",
+    "notices": "",
+    "obligations": "",
+    "reviewer": "",
+    "reviewDate": "",
+    "redistributionReview": "blocked"
+  },
+  "ffprobe": {
+    "sha256": "",
+    "source": "",
+    "version": "",
+    "buildFlags": "",
+    "dependencies": "",
+    "license": "",
+    "notices": "",
+    "obligations": "",
+    "reviewer": "",
+    "reviewDate": "",
+    "redistributionReview": "blocked"
+  }
+}

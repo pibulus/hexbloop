@@ -146,15 +146,6 @@ class NameGenerator {
         "1999", "2000", "Y2K", "808s",
     ];
 
-    // Zalgo marks for glitch text
-    static zalgo = [
-        '\u0315', '\u0316', '\u0317', '\u0318', '\u0319', '\u031A', '\u031B',
-        '\u031C', '\u031D', '\u031E', '\u031F', '\u0320', '\u0321', '\u0322',
-        '\u0323', '\u0324', '\u0325', '\u0326', '\u0327', '\u0328', '\u0329',
-        '\u032A', '\u032B', '\u032C', '\u032D', '\u032E', '\u032F', '\u0330',
-        '\u0300', '\u0301', '\u0302', '\u0303', '\u0304', '\u0305', '\u0306',
-    ];
-
     // Geometric symbols
     static geometricSymbols = [
         '△', '▽', '◇', '◯', '□', '▪', '▫', '•', '°', '∞',
@@ -299,14 +290,6 @@ class NameGenerator {
             result = `${sym}_${result}_${sym}`;
         }
 
-        // 4%: Glitch/zalgo a random word (rare, fun surprise)
-        if (r() < 0.04) {
-            const parts = result.split('_');
-            const idx = Math.floor(r() * parts.length);
-            parts[idx] = this.applyZalgo(parts[idx], r);
-            result = parts.join('_');
-        }
-
         // 8%: Geometric symbol prefix
         if (r() < 0.08) {
             result = `${this.pick(this.geometricSymbols, r)}_${result}`;
@@ -322,20 +305,6 @@ class NameGenerator {
             result = result.toUpperCase();
         }
 
-        return result;
-    }
-
-    static applyZalgo(word, randomFunc = Math.random) {
-        let result = '';
-        for (const char of word) {
-            result += char;
-            if (randomFunc() < 0.3) {
-                const count = Math.floor(randomFunc() * 3) + 1;
-                for (let i = 0; i < count; i++) {
-                    result += this.pick(this.zalgo, randomFunc);
-                }
-            }
-        }
         return result;
     }
 

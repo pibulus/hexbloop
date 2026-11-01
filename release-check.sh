@@ -1,145 +1,53 @@
 #!/bin/bash
-
-# Release gate for Hexbloop's Developer ID DMG. Ported from Spellbreak/RackOff, plus
-# the two checks that are specific to how THIS app broke before:
-#
-#   1. The bundled audio engine. Hexbloop shells out to ffmpeg/ffprobe/sox. If they
-#      are not inside the app, it resolves them off the BUILD machine's PATH and dies
-#      on every clean Mac — silently, because a missing binary only reaches a
-#      console.log. The 2026-07 audit found the shipped DMG had no vendor dir at all.
-#   2. Gatekeeper on the app INSIDE the mounted DMG. spctl on the disk image itself
-#      mis-assesses and is a known false flag; the app bundle inside is the real test.
-
+# Check the exact app and DMG, not a stale first glob match. Never notarizes.
 set -uo pipefail
+cd "$(dirname "$0")" || exit 1
+VERSION=$(node -p 'require("./package.json").version') || exit 1
+APP="dist/mac-arm64/Hexbloop.app"
+DMG="${1:-dist/Hexbloop-${VERSION}-arm64.dmg}"
+FAIL=0
+check() {
+    if "$@"; then printf 'PASS: %s\n' "$*"; else printf 'FAIL: %s\n' "$*"; FAIL=$((FAIL+1)); fi
+}
 
-APP_NAME="Hexbloop"
-BUNDLE_ID="com.hexbloop.audio"
-APP_BUNDLE="dist/mac-arm64/${APP_NAME}.app"
-DMG_PATH="$(ls dist/${APP_NAME}-*.dmg 2>/dev/null | head -1)"
-
-PASS_COUNT=0
-WARN_COUNT=0
-FAIL_COUNT=0
-
-pass() { PASS_COUNT=$((PASS_COUNT + 1)); printf "✅ %s\n" "$1"; }
-warn() { WARN_COUNT=$((WARN_COUNT + 1)); printf "⚠️  %s\n" "$1"; }
-fail() { FAIL_COUNT=$((FAIL_COUNT + 1)); printf "❌ %s\n" "$1"; }
-
-if [[ ! -d "$APP_BUNDLE" ]]; then
-    fail "App bundle missing: ${APP_BUNDLE} (run 'npm run dist' first)"
-    printf "\nRelease check: %d pass, %d warn, %d fail\n" "$PASS_COUNT" "$WARN_COUNT" "$FAIL_COUNT"
+if [[ ! -d "$APP" || ! -f "$DMG" || "$(basename "$DMG")" != "Hexbloop-${VERSION}-arm64.dmg" ]]; then
+    echo "FAIL: expected ${APP} and exact ${DMG} (Hexbloop-${VERSION}-arm64.dmg)" >&2
     exit 1
 fi
-pass "App bundle exists: ${APP_BUNDLE}"
 
-ACTUAL_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "${APP_BUNDLE}/Contents/Info.plist" 2>/dev/null)
-if [[ "$ACTUAL_ID" == "$BUNDLE_ID" ]]; then
-    pass "Bundle identifier is ${BUNDLE_ID}"
-else
-    # The shipped 2025 build had the literal id "Electron" — the tell that
-    # electron-builder never applied the app's own config.
-    fail "Bundle identifier is '${ACTUAL_ID}', expected '${BUNDLE_ID}'"
-fi
+check python3 scripts/release-binaries.py "$APP/Contents/Resources/vendor/mac" "$APP/Contents/Resources/app.asar.unpacked/node_modules/canvas/build/Release" "$APP"
+check codesign --verify --deep --strict "$APP"
+SIGNATURE=$(codesign -dvv "$APP" 2>&1)
+[[ "$SIGNATURE" == *'Authority=Developer ID Application'* && "$SIGNATURE" == *'flags='*'runtime'* ]] || { echo 'FAIL: Developer ID hardened runtime missing'; FAIL=$((FAIL+1)); }
+check xcrun stapler validate "$APP"
+check xcrun stapler validate "$DMG"
+check spctl -a -vvv -t exec "$APP"
 
-# --- the audio engine has to actually be in the box ---
-RESOURCES="${APP_BUNDLE}/Contents/Resources/vendor/mac"
-
-# ffmpeg and ffprobe are load-bearing: mastering, conversion and duration all go
-# through them, and nothing covers for them. Missing = the download is inert.
-for bin in ffmpeg ffprobe; do
-    if [[ -x "${RESOURCES}/${bin}" ]]; then
-        pass "Bundled ${bin} is present and executable"
+MOUNT=$(mktemp -d "${TMPDIR:-/tmp}/hexbloop-check.XXXXXX") || exit 1
+MOUNTED=0
+cleanup() {
+    if [[ "$MOUNTED" == 1 ]]; then hdiutil detach "$MOUNT" -quiet || true; fi
+    rmdir "$MOUNT" 2>/dev/null || true
+}
+trap cleanup EXIT
+if hdiutil attach "$DMG" -mountpoint "$MOUNT" -nobrowse -readonly -quiet; then
+    MOUNTED=1
+    INNER="$MOUNT/Hexbloop.app"
+    if [[ -d "$INNER" ]]; then
+        check python3 scripts/release-binaries.py "$INNER/Contents/Resources/vendor/mac" "$INNER/Contents/Resources/app.asar.unpacked/node_modules/canvas/build/Release" "$INNER"
+        for relative in Contents/Info.plist Contents/Resources/app.asar Contents/_CodeSignature/CodeResources; do
+            check cmp -s "$APP/$relative" "$INNER/$relative"
+        done
+        check codesign --verify --deep --strict "$INNER"
+        check xcrun stapler validate "$INNER"
+        check spctl -a -vvv -t exec "$INNER"
     else
-        fail "Bundled ${bin} is MISSING — the app falls back to the build machine's PATH and does nothing on a clean Mac (run: npm run vendor:setup)"
+        echo 'FAIL: DMG has no Hexbloop.app' >&2
+        FAIL=$((FAIL+1))
     fi
-done
-
-# sox is optional by design. It colours the compression stage, and processSox()
-# catches its spawn failure and hands the stage to ffmpeg instead
-# (audio-processor.js fallbackToFFmpeg). Worth knowing about, not worth blocking on.
-if [[ -x "${RESOURCES}/sox" ]]; then
-    pass "Bundled sox is present and executable"
 else
-    warn "sox is not bundled — the compression stage falls back to ffmpeg. Optional flavour, not a blocker"
+    echo 'FAIL: DMG could not be mounted' >&2
+    FAIL=$((FAIL+1))
 fi
-
-if codesign --verify --deep --strict "$APP_BUNDLE" >/tmp/hexbloop-codesign.log 2>&1; then
-    pass "App code signature verifies"
-else
-    fail "App code signature does not verify"
-    sed 's/^/   /' /tmp/hexbloop-codesign.log
-fi
-
-codesign -dvv "$APP_BUNDLE" >/tmp/hexbloop-codesign-details.log 2>&1
-if grep -q "Authority=Developer ID Application" /tmp/hexbloop-codesign-details.log; then
-    pass "App is signed with Developer ID Application"
-else
-    fail "App is not signed with a Developer ID Application certificate"
-fi
-
-if grep -q "flags=.*runtime" /tmp/hexbloop-codesign-details.log; then
-    pass "Hardened runtime is enabled"
-else
-    fail "Hardened runtime is not enabled"
-fi
-
-if spctl -a -vvv -t exec "$APP_BUNDLE" >/tmp/hexbloop-spctl-app.log 2>&1; then
-    pass "Gatekeeper accepts the app"
-else
-    warn "Gatekeeper does not accept the app yet"
-    sed 's/^/   /' /tmp/hexbloop-spctl-app.log
-fi
-
-if [[ -n "$DMG_PATH" && -f "$DMG_PATH" ]]; then
-    pass "DMG exists: ${DMG_PATH}"
-
-    if xcrun stapler validate "$DMG_PATH" >/tmp/hexbloop-stapler.log 2>&1; then
-        pass "DMG has a valid stapled notarization ticket"
-    else
-        # electron-builder logs "skipped macOS notarization" and still exits 0, so
-        # this is the only thing standing between a green build and a "damaged app"
-        # dialog on someone else's Mac.
-        fail "DMG has NO stapled notarization ticket (xcrun notarytool submit --keychain-profile AC_PASSWORD, then xcrun stapler staple)"
-        sed 's/^/   /' /tmp/hexbloop-stapler.log
-    fi
-
-    # Mount and test the app INSIDE — spctl on the image itself is the known false flag.
-    MOUNT_POINT=$(mktemp -d)
-    if hdiutil attach "$DMG_PATH" -mountpoint "$MOUNT_POINT" -nobrowse -quiet >/dev/null 2>&1; then
-        INNER_APP="${MOUNT_POINT}/${APP_NAME}.app"
-        if [[ -d "$INNER_APP" ]]; then
-            if spctl -a -vvv -t exec "$INNER_APP" >/tmp/hexbloop-spctl-inner.log 2>&1; then
-                pass "Gatekeeper accepts the app INSIDE the mounted DMG (the test that matters)"
-            else
-                fail "Gatekeeper rejects the app inside the DMG — this is what a downloader gets"
-                sed 's/^/   /' /tmp/hexbloop-spctl-inner.log
-            fi
-
-            if [[ -x "${INNER_APP}/Contents/Resources/vendor/mac/ffmpeg" ]]; then
-                pass "The DMG's own copy carries the bundled engine"
-            else
-                fail "The DMG's copy has NO bundled ffmpeg — the download is inert"
-            fi
-        else
-            fail "No ${APP_NAME}.app found inside the DMG"
-        fi
-        hdiutil detach "$MOUNT_POINT" -quiet >/dev/null 2>&1
-    else
-        warn "Could not mount the DMG to test the app inside it"
-    fi
-    rmdir "$MOUNT_POINT" 2>/dev/null
-else
-    fail "No DMG found in dist/"
-fi
-
-rm -f /tmp/hexbloop-codesign.log \
-    /tmp/hexbloop-codesign-details.log \
-    /tmp/hexbloop-spctl-app.log \
-    /tmp/hexbloop-spctl-inner.log \
-    /tmp/hexbloop-stapler.log
-
-printf "\nRelease check: %d pass, %d warn, %d fail\n" "$PASS_COUNT" "$WARN_COUNT" "$FAIL_COUNT"
-
-if [[ "$FAIL_COUNT" -gt 0 ]]; then
-    exit 1
-fi
+echo "Release check: $FAIL failure(s)"
+[[ $FAIL -eq 0 ]]

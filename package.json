@@ -6,11 +6,17 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --inspect=5858",
-    "build": "electron-builder",
-    "test": "node test/audio-processing.test.js && node test/name-generation.test.js && node test/artwork-generation.test.js && node test/output-path.test.js && node test/release-hardening.test.js",
+    "build": "npm run vendor:setup && electron-builder --mac dmg --arm64 --publish never",
+    "test": "node test/audio-processing.test.js && node test/name-generation.test.js && node test/artwork-generation.test.js && node test/output-path.test.js && node test/release-hardening.test.js && node test/controls.test.js",
+    "test:controls": "node test/controls.test.js",
+    "test:phase-b": "node test/controls.test.js && node test/phase-b-matrix.test.js",
+    "test:phase-c": "node test/phase-c.test.js",
+    "test:phase-d": "node test/phase-d-discovery.test.js && node test/phase-d-main.test.js && NODE_PATH=\"$(npm root -g)\" node test/phase-d-ui.test.js",
+    "benchmark:phase-d": "node test/phase-d-benchmark.test.js",
+    "benchmark:phase-d:electron": "electron test/electron-benchmark.js",
     "test:e2e": "node test/pipeline-e2e.test.js",
-    "dist": "npm run vendor:setup && electron-builder --mac",
-    "dist:all": "npm run vendor:setup && electron-builder --mac --win --linux",
+    "dist": "npm run build",
+    "dist:all": "echo 'Commercial release is arm64 macOS only; use npm run dist' >&2; exit 1",
     "clean": "rm -rf node_modules package-lock.json",
     "clean:install": "npm run clean && npm install",
     "postinstall": "electron-builder install-app-deps",
@@ -35,6 +41,8 @@
   "build": {
     "appId": "com.hexbloop.audio",
     "productName": "Hexbloop",
+    "afterSign": "scripts/notarize-release.js",
+    "afterAllArtifactBuild": "scripts/staple-release.js",
     "directories": {
       "output": "dist"
     },
@@ -63,9 +71,12 @@
       "!assets/manifest.json"
     ],
     "mac": {
+      "target": [{ "target": "dmg", "arch": ["arm64"] }],
+      "minimumSystemVersion": "12.0",
       "category": "public.app-category.music",
       "icon": "assets/icon.icns",
       "hardenedRuntime": true,
+      "notarize": false,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",

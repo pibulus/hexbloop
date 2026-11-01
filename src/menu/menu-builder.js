@@ -93,19 +93,24 @@ class MenuBuilder {
                         click: () => this.selectOfferings()
                     },
                     {
+                        label: 'Choose Audio Folder...',
+                        accelerator: 'CmdOrCtrl+Shift+O',
+                        click: () => this.selectAudioFolder()
+                    },
+                    {
                         type: 'separator'
                     },
                     {
                         label: 'Audio Processing',
                         submenu: [
                             {
-                                label: 'Audio Effects',
+                                label: 'Compress · Lunar tape color',
                                 type: 'checkbox',
                                 checked: this.preferencesManager.getSetting('processing.compressing'),
                                 click: (menuItem) => this.toggleProcessingOption('processing.compressing', menuItem.checked)
                             },
                             {
-                                label: 'Audio Mastering',
+                                label: 'Master · EQ and loudness',
                                 type: 'checkbox',
                                 checked: this.preferencesManager.getSetting('processing.mastering'),
                                 click: (menuItem) => this.toggleProcessingOption('processing.mastering', menuItem.checked)
@@ -117,25 +122,29 @@ class MenuBuilder {
                                 click: (menuItem) => this.toggleProcessingOption('processing.coverArt', menuItem.checked)
                             },
                             {
+                                label: 'Metadata', type: 'checkbox',
+                                checked: this.preferencesManager.getSetting('processing.metadata'),
+                                click: item => this.toggleProcessingOption('processing.metadata', item.checked)
+                            },
+                            {
+                                label: 'Rename', type: 'checkbox',
+                                checked: this.preferencesManager.getSetting('processing.renaming'),
+                                click: item => this.toggleProcessingOption('processing.renaming', item.checked)
+                            },
+                            {
                                 type: 'separator'
                             },
                             {
-                                label: 'Generated Output Names',
+                                label: 'Generated metadata',
                                 type: 'radio',
-                                checked: this.preferencesManager.getSetting('processing.naming') === 'mystical',
-                                click: () => this.setNamingMode('mystical')
+                                checked: this.preferencesManager.getSetting('metadata.mode') === 'generated',
+                                click: () => this.setMetadataMode('generated')
                             },
                             {
-                                label: 'Custom Metadata Tags',
+                                label: 'Custom metadata',
                                 type: 'radio',
-                                checked: this.preferencesManager.getSetting('processing.naming') === 'custom',
-                                click: () => this.setNamingMode('custom')
-                            },
-                            {
-                                label: 'Keep Original Filenames',
-                                type: 'radio',
-                                checked: this.preferencesManager.getSetting('processing.naming') === 'original',
-                                click: () => this.setNamingMode('original')
+                                checked: this.preferencesManager.getSetting('metadata.mode') === 'custom',
+                                click: () => this.setMetadataMode('custom')
                             }
                         ]
                     },
@@ -155,7 +164,7 @@ class MenuBuilder {
                 submenu: [
                     {
                         label: 'Show Output Folder',
-                        accelerator: 'CmdOrCtrl+Shift+O',
+                        accelerator: 'CmdOrCtrl+Alt+O',
                         click: () => this.showOutputFolder()
                     },
                     {
@@ -242,7 +251,6 @@ class MenuBuilder {
         ];
         
         const menu = Menu.buildFromTemplate(template);
-        Menu.setApplicationMenu(menu);
         return menu;
     }
     
@@ -252,15 +260,16 @@ class MenuBuilder {
     showAbout() {
         const detail = `Version ${app.getVersion()}
 
-Transform your audio files with lunar-influenced processing algorithms. Features include audio effects, mastering, artwork generation, and mystical naming.
+Five independent stages: Master, Compress, Cover Art, Metadata, Rename.
+Format selection is separate from lunar tape color.
 
 🌙 Real-time moon phase calculations affect audio processing
-🎵 Professional Sox + FFmpeg audio pipeline
+Audio pipeline: Sox when available, FFmpeg fallback
 🎨 Procedural artwork generation for each track
 ⬟ Geometric naming system based on hexagonal principles
 
-Drag audio files onto the hexagonal interface or use File > Open Audio Files.
-Output files appear in ~/Documents/HexbloopOutput/
+Drop audio on the hex or open audio files from the File menu.
+Output destination appears in the main window.
 
 Built with mystical precision and technical excellence.
 Hexbloop Audio Labs © ${new Date().getFullYear()}`;
@@ -315,6 +324,17 @@ Hexbloop Audio Labs © ${new Date().getFullYear()}`;
             window.webContents.send('file-dropped', result.filePaths);
         }
     }
+
+    async selectAudioFolder() {
+        const window = this.getWindow();
+        if (!window) return;
+        const result = await dialog.showOpenDialog(window, {
+            properties: ['openDirectory', 'multiSelections'], title: 'Choose Audio Folder'
+        });
+        if (!result.canceled && result.filePaths.length) {
+            window.webContents.send('file-dropped', result.filePaths);
+        }
+    }
     
     /**
      * Toggle processing option and update menu checkboxes
@@ -326,26 +346,21 @@ Hexbloop Audio Labs © ${new Date().getFullYear()}`;
             await this.preferencesManager.updateSetting(settingPath, enabled);
             console.log(`🔮 ${settingPath} ${enabled ? 'enabled' : 'disabled'}`);
             
-            // Rebuild menu to update checkboxes
-            this.updateMenu();
         } catch (error) {
             console.error('❌ Failed to update processing option:', error);
+            this.updateMenu();
         }
     }
     
     /**
-     * Set naming mode and update radio buttons in menu
-     * @param {string} mode - 'mystical', 'custom', or 'original'
+     * Select metadata style without changing any processing switch.
      */
-    async setNamingMode(mode) {
+    async setMetadataMode(mode) {
         try {
-            await this.preferencesManager.updateSetting('processing.naming', mode);
-            console.log(`🔮 Naming mode set to: ${mode}`);
-            
-            // Rebuild menu to update radio buttons
-            this.updateMenu();
+            await this.preferencesManager.updateSetting('metadata.mode', mode);
         } catch (error) {
-            console.error('❌ Failed to update naming mode:', error);
+            console.error('❌ Failed to update metadata mode:', error);
+            this.updateMenu();
         }
     }
     
@@ -360,9 +375,9 @@ Hexbloop Audio Labs © ${new Date().getFullYear()}`;
             this.getWindow()?.webContents.send('toggle-ambient-audio', enabled);
 
             console.log(`🔮 Ambient audio ${enabled ? 'enabled' : 'disabled'}`);
-            this.updateMenu();
         } catch (error) {
             console.error('❌ Failed to toggle ambient audio:', error);
+            this.updateMenu();
         }
     }
 
@@ -451,7 +466,6 @@ Hexbloop Audio Labs © ${new Date().getFullYear()}`;
         if (response.response === 0) {
             try {
                 await this.preferencesManager.resetToDefaults();
-                this.updateMenu();
 
                 const doneOptions = {
                     type: 'info',

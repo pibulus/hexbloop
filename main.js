@@ -20,6 +20,8 @@ const { MenuBuilder } = require('./src/menu/menu-builder');
 const { getPreferencesManager } = require('./src/menu/preferences');
 const { PreferencesWindow } = require('./src/menu/preferences-window');
 const { resolveUniqueOutputPath } = require('./src/shared/output-path');
+const { planProcessing } = require('./src/shared/processing-plan');
+const { discoverAudioPaths, SUPPORTED_EXTENSIONS } = require('./src/shared/discover-audio');
 
 let mainWindow;
 let preferencesWindow;
@@ -27,11 +29,13 @@ let preferencesWindow;
 // Paths the renderer is allowed to read back for A/B playback: only files
 // this session actually processed (inputs) or produced (outputs). Prevents
 // the renderer from asking the main process to read arbitrary disk paths.
-const playbackAllowlist = new Set();
+const playbackAllowlist = new Map(); // Selected A/B pair and canonical targets, at most two
+let playbackPairs = [];
+let lastOutputPath = null;
 
 // A/B playback loads a file fully into renderer memory (original + processed
 // at once), so cap what we'll hand back — a multi-hour WAV would OOM the tab.
-const MAX_PLAYBACK_BYTES = 200 * 1024 * 1024; // 200MB
+const MAX_PLAYBACK_BYTES = 24 * 1024 * 1024;
 
 // === Window Management ===
 function createWindow() {
@@ -56,12 +60,20 @@ function createWindow() {
         show: false
     });
 
-    mainWindow.loadFile('src/renderer/index.html');
+    mainWindow.loadFile(path.join(__dirname, 'src/renderer/index.html'));
     
     // Initialize menu system
     const menuBuilder = new MenuBuilder(mainWindow);
     const menu = menuBuilder.buildMenu();
     require('electron').Menu.setApplicationMenu(menu);
+    const preferencesManager = getPreferencesManager();
+    const unsubscribe = preferencesManager.onChange(settings => {
+        menuBuilder.updateMenu();
+        for (const window of BrowserWindow.getAllWindows()) {
+            if (!window.isDestroyed()) window.webContents.send('settings-changed', settings);
+        }
+    });
+    preferencesManager.whenReady().then(() => menuBuilder.updateMenu());
 
     // Show window when ready to prevent visual flash
     mainWindow.once('ready-to-show', () => {
@@ -110,6 +122,7 @@ function createWindow() {
     // On macOS the app keeps running after the window closes — clear the
     // reference so menu/IPC handlers don't touch a destroyed window
     mainWindow.on('closed', () => {
+        unsubscribe();
         mainWindow = null;
     });
 }
@@ -187,11 +200,23 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     
     // Get user preferences for batch processing
     const preferencesManager = getPreferencesManager();
+    await preferencesManager.whenReady();
     const settings = preferencesManager.getSettings();
+    if (planProcessing(settings, filePaths?.[0] || 'source.wav').noOp) {
+        return [{ success: false, skipped: true, reason: 'No stages active' }];
+    }
+    const discovery = await discoverAudioPaths(filePaths, { outputDirectory: settings.ui.outputFolder });
+    results.push(...discovery.skipped);
+    const discoveredPaths = discovery.files;
+    if (!discoveredPaths.length) return results.length ? results :
+        [{ success: false, skipped: true, reason: 'No supported audio files' }];
+    playbackAllowlist.clear();
+    playbackPairs = [];
+    lastOutputPath = null;
     
     // Initialize batch naming engine with user preferences
     const namingEngine = new BatchNamingEngine(settings.batch);
-    const keepOriginalFilenames = settings.processing.naming === 'original';
+    const keepOriginalFilenames = !settings.processing.renaming;
     
     // Determine output directory (with optional session folder)
     // Use the user's configured output folder; fallback matches settings-schema default
@@ -213,29 +238,22 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
     const manifest = sessionFolder ? {
         timestamp: new Date().toISOString(),
         moonPhase: namingEngine.moonPhase,
-        fileCount: filePaths.length,
+        fileCount: discoveredPaths.length,
         settings: settings.batch,
-        files: []
+        files: discovery.skipped.map(entry => ({ original: entry.fileName, skipped: true, reason: entry.reason }))
     } : null;
 
     // Track output paths so two files in a batch (or a rerun with 'keep
     // original filenames') can never silently overwrite each other
     const takenOutputs = new Set();
 
-    for (let i = 0; i < filePaths.length; i++) {
-        const filePath = filePaths[i];
+    for (let i = 0; i < discoveredPaths.length; i++) {
+        const filePath = discoveredPaths[i];
         try {
-            // Memory management: hint GC between files in large batches
-            // Canvas buffers and audio data can accumulate significantly
-            if (i > 0 && i % 5 === 0 && global.gc) {
-                global.gc();
-                console.log(`🧹 GC hint after ${i} files`);
-            }
-
             // Send progress update
             event.sender.send('processing-progress', {
                 current: i + 1,
-                total: filePaths.length,
+                total: discoveredPaths.length,
                 fileName: path.basename(filePath),
                 status: 'processing'
             });
@@ -259,37 +277,36 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             
             // Validate audio file extension
             // Expanded support for all sox and ffmpeg compatible formats
-            const validExtensions = [
-                // Core formats (well-tested)
-                '.mp3', '.wav', '.m4a', '.aiff', '.aif', '.flac', '.ogg', '.aac',
-                // Additional lossless formats
-                '.ape', '.alac', '.wv',  // APE, ALAC, WavPack
-                // Additional lossy formats
-                '.opus', '.wma', '.mka',  // Opus, Windows Media, Matroska
-                // Legacy/specialty formats
-                '.au', '.snd', '.voc', '.8svx', '.amb', '.caf'  // Various legacy
-            ];
             const ext = path.extname(resolvedPath).toLowerCase();
-            if (!validExtensions.includes(ext)) {
-                throw new Error(`Unsupported audio format: ${ext}. Supported: ${validExtensions.slice(0, 8).join(', ')} and more.`);
+            if (!SUPPORTED_EXTENSIONS.has(ext)) {
+                throw new Error(`Unsupported audio format: ${ext}`);
             }
             
             // Generate output filename according to the current naming mode
             const generatedName = keepOriginalFilenames
                 ? path.parse(resolvedPath).name
-                : namingEngine.generateName(resolvedPath, i, filePaths.length);
-            const outputFormat = AudioProcessor.resolveOutputFormat(settings);
+                : namingEngine.generateName(resolvedPath, i, discoveredPaths.length);
+            const outputFormat = AudioProcessor.resolveOutputFormat(settings, resolvedPath);
 
             // Uniquify: never clobber an existing file or a batch sibling
-            const outputPath = resolveUniqueOutputPath(
-                outputDirectory, generatedName, outputFormat, takenOutputs
-            );
+            const outputPath = resolveUniqueOutputPath(outputDirectory, generatedName, outputFormat,
+                takenOutputs, candidate => fs.existsSync(candidate) || (
+                    settings.processing.coverArt && !['mp3', 'flac'].includes(outputFormat) &&
+                    fs.existsSync(path.join(path.dirname(candidate), `${path.parse(candidate).name}_cover.png`))));
             const finalName = path.parse(outputPath).name;
 
-            console.log(`🎵 Processing ${i + 1}/${filePaths.length}: ${path.basename(resolvedPath)} -> ${path.basename(outputPath)}`);
+            console.log(`🎵 Processing ${i + 1}/${discoveredPaths.length}: ${path.basename(resolvedPath)} -> ${path.basename(outputPath)}`);
 
             // Process the audio file
-            await AudioProcessor.processFile(resolvedPath, outputPath);
+            const numbered = discoveredPaths.length > 1 && (settings.batch.numberingStyle !== 'none' ||
+                settings.batch.namingScheme === 'sequential');
+            const outcome = await AudioProcessor.processFile(resolvedPath, outputPath, {
+                settings, trackNumber: numbered ? i + 1 : null
+            });
+            if (outcome.skipped) {
+                results.push({ success: false, skipped: true, reason: outcome.reason });
+                continue;
+            }
             
             // Check if file was actually created
             if (!fs.existsSync(outputPath)) {
@@ -304,8 +321,7 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
             });
 
             // Allow the renderer to read these two back for A/B playback
-            playbackAllowlist.add(resolvedPath);
-            playbackAllowlist.add(path.resolve(outputPath));
+            playbackPairs.push({ original: resolvedPath, processed: path.resolve(outputPath) });
 
             // Update manifest if session folders are enabled
             if (manifest) {
@@ -355,15 +371,10 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
         const memInfo = process.memoryUsage();
         const heapMB = Math.round(memInfo.heapUsed / 1024 / 1024);
         const rssMB = Math.round(memInfo.rss / 1024 / 1024);
-        console.log(`📊 Batch complete - Memory: ${heapMB}MB heap, ${rssMB}MB RSS (${filePaths.length} files)`);
+        console.log(`📊 Batch complete - Node process: ${heapMB}MB heap, ${rssMB}MB RSS (${discoveredPaths.length} discovered files; excludes children)`);
     } catch (e) { /* non-critical */ }
 
-    // Show processed files in Finder/Explorer
-    if (firstSuccessfulOutput) {
-        const successCount = results.filter(r => r.success).length;
-        console.log(`📁 Opening output folder for ${successCount} processed file${successCount !== 1 ? 's' : ''}`);
-        shell.showItemInFolder(firstSuccessfulOutput);
-    }
+    lastOutputPath = firstSuccessfulOutput;
 
     return results;
 });
@@ -371,22 +382,16 @@ ipcMain.handle('process-audio', async (event, filePaths) => {
 // Preview batch naming without processing
 ipcMain.handle('preview-batch-naming', async (event, filePaths) => {
     const preferencesManager = getPreferencesManager();
+    await preferencesManager.whenReady();
     const settings = preferencesManager.getSettings();
-    const namingEngine = new BatchNamingEngine(settings.batch);
-    const outputFormat = AudioProcessor.resolveOutputFormat(settings);
-    const keepOriginalFilenames = settings.processing.naming === 'original';
-
-    if (keepOriginalFilenames) {
-        const sessionFolder = namingEngine.generateSessionFolder({ increment: false });
-
-        return filePaths.map(filePath => ({
-            original: path.basename(filePath),
-            generated: `${path.parse(filePath).name}.${outputFormat}`,
-            folder: sessionFolder
-        }));
-    }
-
-    return namingEngine.previewBatch(filePaths, outputFormat);
+    const keepOriginalFilenames = !settings.processing.renaming;
+    const namingSettings = keepOriginalFilenames
+        ? { ...settings.batch, namingScheme: 'preserve', prefix: '', suffix: '',
+            preserveOriginal: false, numberingStyle: 'none' }
+        : settings.batch;
+    const namingEngine = new BatchNamingEngine(namingSettings);
+    return namingEngine.previewBatch(filePaths,
+        filePath => AudioProcessor.resolveOutputFormat(settings, filePath), settings.ui.outputFolder);
 });
 
 ipcMain.handle('select-files', async () => {
@@ -394,9 +399,7 @@ ipcMain.handle('select-files', async () => {
         properties: ['openFile', 'multiSelections'],
         filters: [
             { name: 'Audio Files', extensions: [
-                'mp3', 'wav', 'm4a', 'aiff', 'aif', 'flac', 'ogg', 'aac',
-                'opus', 'wma', 'ape', 'alac', 'wv', 'mka',
-                'au', 'snd', 'voc', '8svx', 'amb', 'caf'
+                ...[...SUPPORTED_EXTENSIONS].map(ext => ext.slice(1))
             ]},
             { name: 'Common Formats', extensions: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg'] },
             { name: 'All Files', extensions: ['*'] }
@@ -409,6 +412,37 @@ ipcMain.handle('select-files', async () => {
         : await dialog.showOpenDialog(dialogOptions);
 
     return result.filePaths;
+});
+
+ipcMain.handle('select-folders', async () => {
+    const parent = getMainWindow();
+    const options = { properties: ['openDirectory', 'multiSelections'], title: 'Choose Audio Folder' };
+    const result = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
+    return result.filePaths;
+});
+
+ipcMain.handle('open-output', async () => {
+    if (lastOutputPath && fs.existsSync(lastOutputPath)) {
+        shell.showItemInFolder(lastOutputPath);
+        return true;
+    }
+    const folder = getPreferencesManager().getSetting('ui.outputFolder');
+    if (folder && fs.existsSync(folder)) {
+        return (await shell.openPath(folder)) === '';
+    }
+    return false;
+});
+
+ipcMain.handle('select-preview-pair', (_event, originalPath, processedPath) => {
+    const original = path.resolve(originalPath || '');
+    const processed = path.resolve(processedPath || '');
+    if (!playbackPairs.some(pair => pair.original === original && pair.processed === processed)) {
+        throw new Error('Preview pair is not part of the current batch');
+    }
+    playbackAllowlist.clear();
+    playbackAllowlist.set(original, fs.realpathSync(original));
+    playbackAllowlist.set(processed, fs.realpathSync(processed));
+    return true;
 });
 
 // Read an audio file's bytes for in-app A/B playback.
@@ -439,22 +473,27 @@ ipcMain.handle('read-audio-file', async (event, filePath) => {
             throw new Error('File not found');
         }
 
+        const link = fs.lstatSync(resolvedPath);
+        if (link.isSymbolicLink() || fs.realpathSync(resolvedPath) !== playbackAllowlist.get(resolvedPath)) {
+            throw new Error('Preview path changed since processing');
+        }
         const stats = fs.statSync(resolvedPath);
         if (!stats.isFile()) {
             throw new Error('Path is not a file');
         }
 
-        // Cap size — both A/B sides load fully into renderer memory at once
+        // One side loads on demand. Large files stay on disk; no two-by-200 MB IPC.
         if (stats.size > MAX_PLAYBACK_BYTES) {
-            throw new Error(`File too large for in-app playback (${Math.round(stats.size / 1024 / 1024)}MB)`);
+            throw new Error(`Preview unavailable above 24 MB (${Math.round(stats.size / 1024 / 1024)} MB)`);
         }
 
         const ext = path.extname(resolvedPath).toLowerCase();
         const mime = AUDIO_MIME_TYPES[ext] || 'application/octet-stream';
         const buffer = await fs.promises.readFile(resolvedPath);
+        if (buffer.length > MAX_PLAYBACK_BYTES) throw new Error('Preview grew beyond 24 MB');
 
         // Return as ArrayBuffer-friendly payload for the renderer
-        return { success: true, mime, data: buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) };
+        return { success: true, mime, data: buffer };
     } catch (error) {
         console.error('❌ Failed to read audio file for playback:', error.message);
         return { success: false, error: error.message };
@@ -473,6 +512,7 @@ ipcMain.on('toggle-ambient-audio', (event, enabled) => {
 ipcMain.handle('get-settings', async () => {
     try {
         const preferencesManager = getPreferencesManager();
+        await preferencesManager.whenReady();
         return preferencesManager.getSettings();
     } catch (error) {
         console.error('❌ Failed to get settings for renderer:', error);
@@ -480,6 +520,24 @@ ipcMain.handle('get-settings', async () => {
         const { DEFAULT_SETTINGS } = require('./src/shared/settings-schema');
         return DEFAULT_SETTINGS;
     }
+});
+
+const MAIN_SWITCHES = new Set(['mastering', 'compressing', 'coverArt', 'metadata', 'renaming']);
+ipcMain.handle('set-main-switch', async (_event, name, enabled) => {
+    if (!MAIN_SWITCHES.has(name) || typeof enabled !== 'boolean') {
+        throw new Error('Invalid processing switch');
+    }
+    const preferencesManager = getPreferencesManager();
+    await preferencesManager.whenReady();
+    await preferencesManager.updateSetting(`processing.${name}`, enabled);
+    return preferencesManager.getSettings();
+});
+ipcMain.handle('set-output-format', async (_event, format) => {
+    if (!['source', 'mp3', 'wav', 'flac'].includes(format)) throw new Error('Invalid output format');
+    const preferencesManager = getPreferencesManager();
+    await preferencesManager.whenReady();
+    await preferencesManager.updateSetting('output.format', format);
+    return preferencesManager.getSettings();
 });
 
 // === Preferences IPC Handlers ===
@@ -502,6 +560,7 @@ function handlePreferencesError(operation, error) {
 ipcMain.handle('preferences-get-settings', async () => {
     try {
         const preferencesManager = getPreferencesManager();
+        await preferencesManager.whenReady();
         return preferencesManager.getSettings();
     } catch (error) {
         console.error('❌ Failed to get settings:', error);
@@ -524,6 +583,7 @@ ipcMain.handle('preferences-update-setting', async (event, settingPath, value) =
         }
         
         const preferencesManager = getPreferencesManager();
+        await preferencesManager.whenReady();
         await preferencesManager.updateSetting(settingPath, value);
         return { success: true };
     } catch (error) {

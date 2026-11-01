@@ -10,6 +10,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('preferencesAPI', {
     // Settings management
     getSettings: () => ipcRenderer.invoke('preferences-get-settings'),
+    onSettingsChanged: (callback) => ipcRenderer.on('settings-changed', (_event, settings) => callback(settings)),
     updateSetting: (settingPath, value) => ipcRenderer.invoke('preferences-update-setting', settingPath, value),
     updateSettings: (newSettings) => ipcRenderer.invoke('preferences-update-settings', newSettings),
     resetToDefaults: () => ipcRenderer.invoke('preferences-reset-defaults'),
