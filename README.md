@@ -50,7 +50,7 @@ A chaotic naming engine built on large word banks and 15+ patterns:
 
 ## 💾 Buy
 
-The signed, notarized build is sold at **https://hexbloop.app** (A$29, one-time,
+The signed, notarized build is sold at **https://hexbloop.app** (A$49, one-time,
 Apple Silicon, macOS 15+). Release notes and checksums live on the
 [GitHub release](https://github.com/pibulus/hexbloop/releases).
 
