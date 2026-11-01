@@ -53,7 +53,7 @@ const { summarizeBatch } = require('../src/renderer/batch-receipt');
     await page.locator('#skippedToggle').click();
     assert((await page.locator('#receiptIssues').textContent()).includes('Decoder unavailable'));
     assert((await page.locator('#receiptIssues').textContent()).includes('Symlink not followed'));
-    assert.strictEqual(await page.locator('#receiptPosition').textContent(), '01/28 · song-0.wav');
+    assert.strictEqual(await page.locator('#receiptPosition').textContent(), '1/28 · song-0.wav');
     await page.locator('#skippedToggle').click();
     assert(await page.locator('#previousFile').isDisabled());
     assert(await page.locator('#nextFile').isEnabled());
@@ -79,7 +79,7 @@ const { summarizeBatch } = require('../src/renderer/batch-receipt');
     await page.keyboard.press('a');
     await page.evaluate(() => window.hexbloopMystic.abAudio.dispatchEvent(new Event('loadedmetadata')));
     await page.locator('#nextFile').click();
-    await page.waitForFunction(() => document.getElementById('receiptPosition').textContent.startsWith('02/28'));
+    await page.waitForFunction(() => document.getElementById('receiptPosition').textContent.startsWith('2/28'));
     await page.locator('#nextFile').click();
     await page.waitForFunction(() => document.getElementById('previewStatus').title.includes('above 24 MB'));
     assert(await page.locator('#batchReceipt').isVisible());
@@ -99,7 +99,7 @@ const { summarizeBatch } = require('../src/renderer/batch-receipt');
     assert.strictEqual(await page.evaluate(() => window.__activeUrls.size), 0);
     assert(await page.locator('#batchReceipt').isVisible());
     assert.strictEqual(await page.evaluate(() => window.__ambientRestored), true);
-    await page.locator('#newFiles').click(); // Cancelled picker retains receipt.
+    await page.locator('#hexStack').click(); // Cancelled picker retains receipt.
     assert(await page.locator('#batchReceipt').isVisible());
     await page.emulateMedia({ reducedMotion: 'reduce' });
     assert.strictEqual(await page.locator('#hexOuter').evaluate(element => getComputedStyle(element).animationName), 'none');

@@ -6,46 +6,47 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self';">
     <title>HEXBLOOP</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="hud.css">
 </head>
 <body>
     <div class="app-container">
         <!-- Mystical background -->
         <div class="background"></div>
-        <div class="processing-switches" role="group" aria-label="Processing controls">
+        <div class="top-hud hud" id="topHUD">
+        <div class="module-switches" role="group" aria-label="Processing controls">
             <label class="processing-switch" data-hint="EQ · loudness"><input type="checkbox" role="switch" data-main-switch="mastering" aria-label="Master · EQ and loudness"><span>Master</span></label>
             <label class="processing-switch" data-hint="Lunar tape color"><input type="checkbox" role="switch" data-main-switch="compressing" aria-label="Compress · lunar tape color"><span>Compress</span></label>
             <label class="processing-switch" data-hint="Image or sidecar"><input type="checkbox" role="switch" data-main-switch="coverArt" aria-label="Artwork · image or sidecar"><span>Artwork</span></label>
             <label class="processing-switch" data-hint="Text tags"><input type="checkbox" role="switch" data-main-switch="metadata" aria-label="Metadata · text tags"><span>Metadata</span></label>
             <label class="processing-switch" data-hint="New filename"><input type="checkbox" role="switch" data-main-switch="renaming" aria-label="Rename · new filename"><span>Rename</span></label>
         </div>
-        <div class="quick-output" role="group" aria-label="Output format">
-            <span>Format</span>
+        <details class="format-menu" id="formatMenu">
+            <summary aria-label="Output format">Format: <span id="currentFormat">Source</span><span class="format-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="format-options" role="group" aria-label="Output format">
             <label><input type="radio" name="quick-format" value="source"><span>Source</span></label>
             <label><input type="radio" name="quick-format" value="mp3"><span>MP3</span></label>
             <label><input type="radio" name="quick-format" value="wav"><span>WAV</span></label>
             <label><input type="radio" name="quick-format" value="flac"><span>FLAC</span></label>
-            <span id="formatDetail" class="format-detail">Source format retained</span>
+            </div>
+        </details>
         </div>
         <p id="idleState" class="idle-state" role="status" aria-live="polite"></p>
-        <div class="drop-hint" id="dropHint"><span>Drop audio or folders into the hex</span><div class="browse-split"><span>Browse:</span><button type="button" id="browseFiles">Files</button><button type="button" id="chooseFolder">Folder</button></div></div>
-        <div id="idleRail" class="idle-rail">
+        <p id="firstRunHint" class="first-run-hint" hidden>Drop audio or a folder · click to browse<span>Originals stay untouched.</span></p>
+        <div id="idleRail" class="idle-rail hud">
         <button type="button" class="output-destination" id="outputDestination" title="Open output folder" aria-label="Open output folder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 2h9v10H3z"/></svg><span id="outputPathText">Output folder</span><span aria-hidden="true">↗</span></button>
         </div>
-        <section class="batch-receipt" id="batchReceipt" aria-label="Batch receipt" hidden>
-            <header class="receipt-top">
+        <section class="batch-receipt hud" id="batchReceipt" aria-label="Batch receipt" hidden>
                 <div class="receipt-count"><span class="ready-dot" aria-hidden="true"></span><strong id="receiptSummary">0 ready</strong><button id="skippedToggle" type="button" aria-expanded="false" aria-controls="skippedPopover" hidden>0 skipped ▾</button></div>
-                <div class="receipt-track"><span id="receiptPosition"></span><span id="previewStatus" role="status" aria-live="polite"></span></div>
-            </header>
             <div class="skipped-popover" id="skippedPopover" hidden><strong>Skipped files</strong><ul id="receiptIssues" aria-label="Skipped files and reasons"></ul></div>
-            <nav class="receipt-actions" aria-label="Playback and batch controls">
                 <div class="transport-audio">
                     <button id="previousFile" type="button" aria-label="Previous track" title="Previous track"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v14M19 5l-12 7 12 7z"/></svg></button>
                     <button id="pauseAB" type="button" aria-label="Play or pause" title="Play / Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-play" d="M7 4l13 8-13 8z"/><path class="icon-pause" d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></button>
                     <button id="nextFile" type="button" aria-label="Next track" title="Next track"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 5v14M5 5l12 7-12 7z"/></svg></button>
                 </div>
+                <span id="receiptPosition" class="receipt-track"></span>
+                <span id="previewStatus" class="sr-only" role="status" aria-live="polite"></span>
                 <button id="flipAB" class="ab-pill" type="button" aria-label="Flip original and processed audio" title="Flip A/B"><span data-side="original">A</span><i>/</i><span data-side="processed">B</span></button>
-                <div class="transport-actions"><button id="newFiles" type="button" aria-label="Add new files">+ Add</button><button id="openOutput" type="button" aria-label="Open output folder">Output ↗</button><div id="utilitySlot"></div></div>
-            </nav>
+                <div class="transport-actions"><button id="openOutput" type="button" aria-label="Open output folder">Output ↗</button><div id="utilitySlot"></div></div>
         </section>
         
         <!-- Hexagonal interface - no text, pure magic -->
@@ -73,7 +74,7 @@
         
         <!-- Ambient audio toggle -->
         <div class="utility-rail" id="utilityRail">
-            <button type="button" class="ambient-toggle" id="ambientToggle" aria-label="Ambient audio" title="Ambient audio"><span class="toggle-icon" id="toggleIcon">♪</span></button>
+            <button type="button" class="ambient-toggle" id="ambientToggle" aria-label="Ambient audio" title="Ambient audio" hidden><span class="toggle-icon" id="toggleIcon">♪</span></button>
             <button type="button" class="settings-button" id="settingsButton" aria-label="Preferences" title="Preferences"><span class="settings-icon" id="settingsIcon">⚙</span></button>
         </div>
         

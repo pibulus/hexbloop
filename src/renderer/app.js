@@ -75,6 +75,8 @@ class HexbloopMystic {
         this.initBatchControls();
         document.getElementById('idleRail').appendChild(document.getElementById('utilityRail'));
         this.initProcessingSwitches();
+        this.initHUD();
+        document.getElementById('firstRunHint').hidden = localStorage.getItem('hexbloop-first-output') === 'done';
 
         console.log('🔥 Mystical hexagon awakened - ready for sacrifices 🤘');
     }
@@ -100,19 +102,10 @@ class HexbloopMystic {
     }
 
     initBatchControls() {
-        document.getElementById('browseFiles').addEventListener('click', async () => {
-            const paths = await window.electronAPI.selectFiles();
-            if (paths?.length) await this.processFiles(paths);
-        });
-        document.getElementById('chooseFolder').addEventListener('click', async () => {
-            const paths = await window.electronAPI.selectFolders();
-            if (paths?.length) await this.processFiles(paths);
-        });
         document.getElementById('previousFile').addEventListener('click', () => this.selectBatchPair(this.selectedPairIndex - 1));
         document.getElementById('nextFile').addEventListener('click', () => this.selectBatchPair(this.selectedPairIndex + 1));
         document.getElementById('flipAB').addEventListener('click', () => this.flipAB());
         document.getElementById('pauseAB').addEventListener('click', () => this.pauseAB());
-        document.getElementById('newFiles').addEventListener('click', () => this.newFiles());
         document.getElementById('skippedToggle').addEventListener('click', () => {
             const popover = document.getElementById('skippedPopover');
             popover.hidden = !popover.hidden;
@@ -129,6 +122,34 @@ class HexbloopMystic {
         });
     }
 
+    initHUD() {
+        const huds = [...document.querySelectorAll('.hud')];
+        const format = document.getElementById('formatMenu');
+        const closePopovers = () => {
+            format.open = false;
+            document.getElementById('skippedPopover').hidden = true;
+            document.getElementById('skippedToggle').setAttribute('aria-expanded', 'false');
+        };
+        document.addEventListener('pointermove', event => {
+            for (const hud of huds) {
+                const box = hud.getBoundingClientRect();
+                hud.classList.toggle('is-near', event.clientX >= box.left - 24 && event.clientX <= box.right + 24 &&
+                    event.clientY >= box.top - 24 && event.clientY <= box.bottom + 24);
+            }
+        });
+        document.addEventListener('pointerdown', event => {
+            if (!event.target.closest('.format-menu, #skippedToggle, #skippedPopover')) closePopovers();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                const restoreFocus = format.open ? format.querySelector('summary') :
+                    !document.getElementById('skippedPopover').hidden ? document.getElementById('skippedToggle') : null;
+                closePopovers();
+                restoreFocus?.focus();
+            }
+        });
+    }
+
     async initProcessingSwitches() {
         const controls = [...document.querySelectorAll('[data-main-switch]')];
         const formats = [...document.querySelectorAll('input[name="quick-format"]')];
@@ -136,9 +157,8 @@ class HexbloopMystic {
             this.currentSettings = settings;
             controls.forEach(control => { control.checked = Boolean(settings.processing[control.dataset.mainSwitch]); });
             formats.forEach(control => { control.checked = control.value === settings.output.format; });
-            document.getElementById('formatDetail').textContent = settings.output.format === 'source'
-                ? 'Source format retained · other sources → FLAC with DSP'
-                : `${settings.output.format.toUpperCase()} · explicit conversion`;
+            document.getElementById('currentFormat').textContent = settings.output.format === 'source'
+                ? 'Source' : settings.output.format.toUpperCase();
             const active = ['mastering', 'compressing', 'coverArt', 'metadata', 'renaming']
                 .some(key => settings.processing[key]);
             document.getElementById('idleState').textContent = !active && settings.output.format === 'source' &&
@@ -150,7 +170,6 @@ class HexbloopMystic {
         try { render(await window.electronAPI.getSettings()); }
         catch (error) { console.error('Processing settings unavailable:', error); }
         window.electronAPI.onSettingsChanged(render);
-        document.getElementById('dropHint').hidden = localStorage.getItem('hexbloop-first-output') === 'done';
         controls.forEach(control => control.addEventListener('change', async () => {
             control.disabled = true;
             try { render(await window.electronAPI.setMainSwitch(control.dataset.mainSwitch, control.checked)); }
@@ -163,7 +182,11 @@ class HexbloopMystic {
             control.disabled = true;
             try { render(await window.electronAPI.setOutputFormat(control.value)); }
             catch (error) { render(await window.electronAPI.getSettings()); console.error('Format not saved:', error); }
-            finally { control.disabled = false; }
+            finally {
+                control.disabled = false;
+                document.getElementById('formatMenu').open = false;
+                document.querySelector('#formatMenu summary').focus();
+            }
         }));
     }
     
@@ -380,9 +403,8 @@ class HexbloopMystic {
 
             this.progressIndicator.classList.add('active');
 
-            // Let the hexagon speak through its geometric nature
-            const hexagonalPhrase = this.generateHexagonalPhrase(current, total);
-            this.progressText.textContent = `${String(current).padStart(2, '0')} / ${total} · ${hexagonalPhrase} · ${fileName}`;
+            this.progressText.textContent = `Blooping ${current} of ${total} · ${fileName}`;
+            this.progressText.title = this.progressText.textContent;
             
             // Progressive pentagram ceremony - starts slow, peaks, then settles
             const progress = current / total;
@@ -499,13 +521,7 @@ class HexbloopMystic {
     async onClick() {
         if (this.isProcessing) return;
 
-        // If a result is loaded, the hexagon is a player — tap flips A/B.
-        if (this.hasABResult) {
-            this.flipAB();
-            return;
-        }
-
-        // Otherwise it's the offering gesture — pick files to process.
+        // The hex stays the drop/browse target, even after a batch completes.
         try {
             const paths = await window.electronAPI.selectFiles();
             if (paths && paths.length > 0) {
@@ -566,7 +582,6 @@ class HexbloopMystic {
         if (this.abBlob?.url) URL.revokeObjectURL(this.abBlob.url);
         this.abBlob = null;
         this.abState = side;
-        this.previewStatus.textContent = `Loading ${side} · ${this.selectedPairIndex + 1} of ${this.successfulPairs.length}`;
         this._updateABGlow();
         try {
             const blob = await this._fetchBlobUrl(side === 'original' ? pair.originalFile : pair.outputFile);
@@ -711,16 +726,12 @@ class HexbloopMystic {
         await this.loadABResult(index);
     }
 
-    async newFiles() {
-        this.clearAB();
-        this.previewStatus.textContent = 'Playback stopped · Flip A/B to listen';
-        this.setReceiptVisible(false);
-        const paths = await window.electronAPI.selectFiles();
-        if (paths?.length) await this.processFiles(paths);
-        else this.setReceiptVisible(true);
-    }
-
     showReceipt(results) {
+        // Progress and the completed transport must never share the screen.
+        if (this.isProcessing) {
+            this.isProcessing = false;
+            this.stopProcessing();
+        }
         const receipt = window.HexbloopBatchReceipt.summarizeBatch(results);
         this.successfulPairs = receipt.ready;
         this.selectedPairIndex = 0;
@@ -739,7 +750,7 @@ class HexbloopMystic {
             list.appendChild(item);
         }
         this.setReceiptVisible(true);
-        this.previewStatus.textContent = receipt.ready.length ? 'Loading first A/B pair' : 'No audio ready';
+        this.previewStatus.textContent = receipt.ready.length ? '' : 'No audio ready';
         this.renderReceiptPosition();
         return receipt;
     }
@@ -749,7 +760,7 @@ class HexbloopMystic {
         const label = pair?.outputFile?.split(/[\\/]/).pop() || '';
         const position = document.getElementById('receiptPosition');
         position.textContent = pair
-            ? `${String(this.selectedPairIndex + 1).padStart(2, '0')}/${this.successfulPairs.length} · ${label}` : '';
+            ? `${this.selectedPairIndex + 1}/${this.successfulPairs.length} · ${label}` : '';
         position.title = label;
         document.getElementById('previousFile').disabled = this.selectedPairIndex <= 0;
         document.getElementById('nextFile').disabled = this.selectedPairIndex >= this.successfulPairs.length - 1;
@@ -781,7 +792,7 @@ class HexbloopMystic {
             const receipt = this.showReceipt(results);
             if (receipt.ready.length > 0) {
                 localStorage.setItem('hexbloop-first-output', 'done');
-                document.getElementById('dropHint').hidden = true;
+                document.getElementById('firstRunHint').hidden = true;
                 if (!receipt.issues.length) this.showSuccess();
                 await this.loadABResult(0);
             } else {
@@ -794,8 +805,10 @@ class HexbloopMystic {
             console.error('❌ Mystical transformation failed:', error);
             this.showReceipt([{ success: false, fileName: 'Batch', error: 'Processing paused · Output unchanged' }]);
         } finally {
-            this.isProcessing = false;
-            this.stopProcessing();
+            if (this.isProcessing) {
+                this.isProcessing = false;
+                this.stopProcessing();
+            }
         }
     }
     
@@ -806,6 +819,7 @@ class HexbloopMystic {
         this.processingGlow.classList.add('active');
         this.progressIndicator.classList.add('active');
         this.hexStack.classList.add('processing'); // Enhanced particles during processing
+        this.progressText.textContent = 'Blooping…';
     }
     
     stopProcessing() {

@@ -1,0 +1,136 @@
+/* HUD chrome lives here; style.css retains the existing hex/audio atmosphere. */
+.hud {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    width: max-content;
+    max-width: calc(100vw - 48px);
+    height: 40px;
+    padding: 4px 8px;
+    gap: 6px;
+    border: 1px solid rgba(255, 254, 247, .10);
+    border-radius: 12px;
+    background: rgba(18, 13, 26, .65);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 24px rgba(18, 13, 26, .18);
+    color: rgba(255, 254, 247, .92);
+    font: 12px -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    opacity: .55;
+    transition: opacity 250ms ease;
+    z-index: 112;
+}
+.hud:is(:hover, .is-near), .hud:has(:focus-visible), .hud:has(details[open]), .hud:has([aria-expanded="true"]) { opacity: 1; }
+.hud button, .hud summary, .hud .processing-switch span, .format-options label span {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 6px;
+    color: inherit;
+    font: inherit;
+    padding: 6px 8px;
+    height: 30px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 150ms ease, color 150ms ease;
+}
+.hud button:hover:not(:disabled), .hud summary:hover, .hud .processing-switch:hover span, .format-options label:hover span {
+    background: rgba(255, 254, 247, .08);
+}
+.hud button:focus-visible, .hud summary:focus-visible, .hud input:focus-visible + span {
+    outline: 2px solid #e879f9;
+    outline-offset: 2px;
+}
+.hud button:disabled { opacity: .3; cursor: default; }
+/* Override legacy ID-based transport fills without rest-state inner boxes. */
+.hud:is(#topHUD, #batchReceipt, #idleRail) button,
+#topHUD .processing-switch input + span { border: 0; background: transparent; box-shadow: none; }
+.hud:is(#topHUD, #batchReceipt, #idleRail) button:hover:not(:disabled),
+#topHUD .processing-switch:hover input + span { background: rgba(255, 254, 247, .08); }
+.hud [hidden] { display: none; }
+.top-hud { top: 32px; }
+.module-switches { display: flex; gap: 2px; }
+.processing-switch { position: relative; cursor: pointer; }
+.processing-switch input, .format-options input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.hud .processing-switch span {
+    display: inline-flex; align-items: center; min-height: 0; font-weight: 500;
+    color: rgba(255, 254, 247, .35);
+}
+.hud .processing-switch span::before {
+    content: ''; width: 5px; height: 5px; margin-right: 7px; border-radius: 50%;
+    background: rgba(255, 254, 247, .2); box-shadow: none;
+}
+.hud .processing-switch input:checked + span { color: rgba(255, 254, 247, .92); }
+.hud .processing-switch input:checked + span::before { background: #e879f9; box-shadow: 0 0 7px rgba(232, 121, 249, .65); }
+.processing-switch::after { display: none; }
+.format-menu { position: relative; border-left: 1px solid rgba(255, 254, 247, .10); padding-left: 6px; }
+.format-menu summary { display: flex; align-items: center; gap: 5px; list-style: none; color: rgba(255, 254, 247, .55); }
+.format-menu summary::-webkit-details-marker { display: none; }
+#currentFormat { min-width: 41px; color: rgba(255, 254, 247, .92); }
+.format-chevron { margin-left: 3px; }
+.format-options, .skipped-popover {
+    position: absolute; width: 150px; padding: 6px; border-radius: 10px;
+    background: rgba(25, 18, 34, .96); border: 1px solid rgba(255, 254, 247, .10);
+    box-shadow: 0 10px 30px rgba(18, 13, 26, .4);
+}
+.format-options { top: calc(100% + 10px); right: 0; }
+.format-options label { display: block; cursor: pointer; }
+.format-options label span { display: flex; align-items: center; justify-content: space-between; }
+.format-options input:checked + span { color: #e879f9; }
+.format-options input:checked + span::after { content: '✓'; }
+.idle-rail, .batch-receipt { bottom: 24px; }
+.hud .output-destination {
+    position: static; transform: none; display: flex; align-items: center; gap: 7px;
+    max-width: min(400px, calc(100vw - 150px)); backdrop-filter: none;
+    -webkit-backdrop-filter: none; color: rgba(255, 254, 247, .7);
+}
+.output-destination svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; flex: none; }
+#outputPathText { overflow: hidden; text-overflow: ellipsis; }
+.hud .utility-rail { position: static; padding: 0; margin: 0; border: 0; display: flex; }
+.hud .utility-rail button { position: static; inset: auto; width: 30px; padding: 0; }
+.hud .settings-icon { font-size: 16px; color: inherit; }
+.idle-state { position: absolute; left: 50%; transform: translateX(-50%); bottom: 84px; color: #f4c2d7; font-size: 12px; }
+.app-container:is(.has-receipt, .is-processing) .idle-rail,
+.app-container.is-processing .batch-receipt { display: none; }
+.batch-receipt { flex-direction: row; max-height: none; overflow: visible; gap: 8px; }
+.batch-receipt[hidden] { display: none; }
+.receipt-count, .transport-audio, .transport-actions { display: flex; align-items: center; flex: none; gap: 4px; }
+.receipt-count { order: 0; border-right: 1px solid rgba(255, 254, 247, .10); padding-right: 10px; font-size: 11px; }
+#receiptSummary { font-weight: 500; white-space: nowrap; }
+.ready-dot { width: 5px; height: 5px; border-radius: 50%; background: #80d2b3; box-shadow: 0 0 6px rgba(128, 210, 179, .5); }
+.hud #skippedToggle { color: #fbbf24; padding: 4px 2px; font-size: 11px; }
+#skippedToggle::before { content: '·'; padding-right: 5px; color: rgba(255, 254, 247, .35); }
+.transport-audio { order: 0; gap: 0; }
+.hud .transport-audio button { width: 26px; padding: 5px; display: grid; place-items: center; }
+.transport-audio svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; stroke-width: 1; }
+#pauseAB[data-playing="true"] .icon-play, #pauseAB:not([data-playing="true"]) .icon-pause { display: none; }
+.batch-receipt #receiptPosition {
+    order: 0; display: block; flex: 0 1 auto; width: auto; min-width: 0;
+    max-width: 220px; line-height: 30px; font: 11px/30px -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255, 254, 247, .75);
+}
+.hud #flipAB { order: 0; display: flex; align-items: center; gap: 4px; padding: 4px 7px; }
+.hud #flipAB span, .hud #flipAB[data-playing="false"] span { padding: 0; background: transparent !important; box-shadow: none; color: rgba(255, 254, 247, .35) !important; }
+.hud #flipAB[data-side="original"] span[data-side="original"],
+.hud #flipAB[data-side="processed"] span[data-side="processed"] { color: #e879f9 !important; font-weight: 700; }
+.hud #flipAB i { font-style: normal; color: rgba(255, 254, 247, .2); }
+.transport-actions { order: 0; border-left: 1px solid rgba(255, 254, 247, .10); padding-left: 6px; }
+.skipped-popover { left: 0; bottom: calc(100% + 10px); top: auto; width: min(350px, calc(100vw - 48px)); max-height: 190px; padding: 12px; }
+.skipped-popover ul { margin-top: 8px; max-height: 140px; overflow: auto; list-style: none; color: #d3bdcf; }
+.skipped-popover li { margin-top: 5px; white-space: normal; font-size: 11px; }
+.progress-indicator { bottom: 34px; max-width: calc(100vw - 80px); }
+.progress-text { display: block; font: 12px/20px -apple-system, BlinkMacSystemFont, sans-serif; color: rgba(255, 254, 247, .75); text-shadow: none; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-container.has-receipt .progress-indicator { display: none; }
+.sr-only, #previewStatus { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; pointer-events: none; }
+.first-run-hint { position: absolute; top: calc(50% + 185px); left: 50%; transform: translateX(-50%); font: 12px/21px -apple-system, BlinkMacSystemFont, sans-serif; color: #a99ab2; text-align: center; white-space: nowrap; pointer-events: none; }
+.first-run-hint span { display: block; font-size: 11px; color: #7f718a; }
+.first-run-hint[hidden], .app-container:is(.is-processing, .has-receipt) .first-run-hint { display: none; }
+@media (max-width: 850px) {
+    .top-hud { gap: 4px; padding-inline: 6px; }
+    .hud .processing-switch span { padding-inline: 7px; font-size: 11px; }
+    .batch-receipt { gap: 5px; }
+    .batch-receipt #receiptPosition { max-width: 150px; }
+}
+@media (prefers-reduced-motion: reduce) { .hud { transition: none; } }
