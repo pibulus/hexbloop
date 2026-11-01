@@ -35,7 +35,7 @@ if hdiutil attach "$DMG" -mountpoint "$MOUNT" -nobrowse -readonly -quiet; then
     INNER="$MOUNT/Hexbloop.app"
     if [[ -d "$INNER" ]]; then
         check python3 scripts/release-binaries.py "$INNER/Contents/Resources/vendor/mac" "$INNER/Contents/Resources/app.asar.unpacked/node_modules/canvas/build/Release" "$INNER"
-        for relative in Contents/Info.plist Contents/Resources/app.asar Contents/_CodeSignature/CodeResources; do
+        for relative in Contents/Info.plist Contents/Resources/app.asar Contents/_CodeSignature/CodeResources Contents/Resources/vendor/mac/ffmpeg Contents/Resources/vendor/mac/ffprobe Contents/Resources/vendor/mac/provenance.json; do
             check cmp -s "$APP/$relative" "$INNER/$relative"
         done
         check codesign --verify --deep --strict "$INNER"

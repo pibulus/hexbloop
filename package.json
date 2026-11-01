@@ -7,6 +7,7 @@
     "start": "electron .",
     "dev": "electron . --inspect=5858",
     "build": "npm run vendor:setup && electron-builder --mac dmg --arm64 --publish never",
+    "build:local-candidate": "node scripts/build-local-candidate.js",
     "test": "node test/audio-processing.test.js && node test/name-generation.test.js && node test/artwork-generation.test.js && node test/output-path.test.js && node test/release-hardening.test.js && node test/controls.test.js",
     "test:controls": "node test/controls.test.js",
     "test:phase-b": "node test/controls.test.js && node test/phase-b-matrix.test.js",
@@ -15,6 +16,8 @@
     "benchmark:phase-d": "node test/phase-d-benchmark.test.js",
     "benchmark:phase-d:electron": "electron test/electron-benchmark.js",
     "test:e2e": "node test/pipeline-e2e.test.js",
+    "test:release-provenance": "python3 -B test/release-provenance.test.py && node test/prepare-release.test.js",
+    "test:local-packaged": "NODE_PATH=\"$(npm root -g)\" node test/local-packaged.test.js",
     "dist": "npm run build",
     "dist:all": "echo 'Commercial release is arm64 macOS only; use npm run dist' >&2; exit 1",
     "clean": "rm -rf node_modules package-lock.json",
@@ -41,6 +44,7 @@
   "build": {
     "appId": "com.hexbloop.audio",
     "productName": "Hexbloop",
+    "afterPack": "scripts/prepare-release.js",
     "afterSign": "scripts/notarize-release.js",
     "afterAllArtifactBuild": "scripts/staple-release.js",
     "directories": {
@@ -72,7 +76,7 @@
     ],
     "mac": {
       "target": [{ "target": "dmg", "arch": ["arm64"] }],
-      "minimumSystemVersion": "12.0",
+      "minimumSystemVersion": "15.0",
       "category": "public.app-category.music",
       "icon": "assets/icon.icns",
       "hardenedRuntime": true,

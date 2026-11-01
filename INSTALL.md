@@ -54,7 +54,7 @@ open /Applications/Hexbloop.app
 
 ## System Requirements
 
-- **macOS:** 12.0 (Monterey) or later
+- **macOS:** 15.0 (Sequoia) or later on Apple Silicon
 - **Architecture:** Apple Silicon (M1/M2/M3) native
 - **Dependencies:**
   - `sox` (currently required for the full audio chain)

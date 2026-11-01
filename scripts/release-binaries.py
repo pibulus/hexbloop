@@ -13,8 +13,71 @@ import subprocess
 import sys
 import tempfile
 import shutil
+import struct
 
 failures = []
+MIN_MACOS = (15, 0)
+TEAM_ID = 'V433H655PN'
+SOURCE_VENDOR = Path(__file__).resolve().parents[1] / 'vendor' / 'mac'
+
+
+def signing_payload(file):
+    """Compare copies, never mutate release inputs or sign anything.
+
+    Apple's signature removal leaves __LINKEDIT vmsize dependent on signature
+    allocation. Ignore ONLY that segment's virtual allocation after removal;
+    all other remaining bytes (including code/load commands) must match.
+    Raw source SHA-256 and strict Developer ID verification remain separate gates.
+    """
+    with tempfile.TemporaryDirectory(prefix='hexpayload') as temp:
+        probe = Path(temp) / 'binary'
+        shutil.copyfile(file, probe)
+        run('codesign', '--remove-signature', str(probe))
+        data = bytearray(probe.read_bytes())
+    if len(data) < 32 or data[:4] != b'\xcf\xfa\xed\xfe':
+        raise ValueError('expected thin little-endian 64-bit Mach-O')
+    count, size = struct.unpack_from('<II', data, 16)
+    end = 32 + size
+    if end > len(data):
+        raise ValueError('truncated load commands')
+    offset = 32
+    linkedit = 0
+    for _ in range(count):
+        if offset + 8 > end:
+            raise ValueError('truncated load command')
+        command, length = struct.unpack_from('<II', data, offset)
+        if length < 8 or offset + length > end:
+            raise ValueError('invalid load command size')
+        if command == 0x1d:
+            raise ValueError('signature load command remains after removal')
+        if command == 0x19 and length >= 72 and data[offset+8:offset+24].rstrip(b'\0') == b'__LINKEDIT':
+            _, vmsize, fileoff, filesize = struct.unpack_from('<QQQQ', data, offset+24)
+            if fileoff + filesize != len(data) or vmsize < filesize:
+                raise ValueError('invalid stripped __LINKEDIT extent')
+            struct.pack_into('<Q', data, offset+32, 0)
+            linkedit += 1
+        offset += length
+    if offset != end or linkedit != 1:
+        raise ValueError('invalid Mach-O command table / __LINKEDIT count')
+    return hashlib.sha256(data).hexdigest()
+
+
+def verify_signed_binary(file, source):
+    run('codesign', '--verify', '--strict', str(file))
+    details = subprocess.run(['codesign', '-dvv', str(file)], text=True, capture_output=True)
+    signature = details.stdout + details.stderr
+    if (details.returncode or 'Authority=Developer ID Application:' not in signature or
+            f'TeamIdentifier={TEAM_ID}\n' not in signature or
+            not re.search(r'flags=.*\bruntime\b', signature)):
+        raise ValueError('expected-team Developer ID hardened signature required')
+    if signing_payload(file) != signing_payload(source):
+        raise ValueError('signed payload differs from pinned pre-sign source')
+
+
+def reports_nonfree(license_text, version_text):
+    # --disable-nonfree is a safe configure choice, not evidence of nonfree code.
+    return ('not legally redistributable' in license_text.lower() or
+            re.search(r'(?<![\w-])--enable-nonfree(?:\s|$)', version_text.lower()) is not None)
 
 
 def fail(message):
@@ -59,8 +122,8 @@ def inspect_macho(file):
         if not versions:
             fail(f'{file}: no verifiable macOS minimum load command')
         for version in versions:
-            if tuple(map(int, version.split('.')[:2])) > (12, 0):
-                fail(f'{file}: requires macOS {version}, target is 12.0')
+            if tuple(map(int, version.split('.')[:2])) > MIN_MACOS:
+                fail(f'{file}: requires macOS {version}, target is 15.0')
         for line in dependencies.splitlines()[1:]:
             dep = line.strip().split(' (', 1)[0]
             if dep.startswith('./') and (file.parent / dep).exists():
@@ -96,13 +159,19 @@ def walk_macho(root):
         print(f'Inspected {found} Mach-O files in {root}')
 
 
-def vendor_gate(vendor):
-    manifest_path = vendor / 'provenance.json'
+def vendor_gate(vendor, source=None):
+    manifest_path = (source or vendor) / 'provenance.json'
     try:
         manifest = json.loads(manifest_path.read_text())
     except (OSError, ValueError) as error:
         fail(f'{manifest_path}: missing/invalid provenance manifest ({error})')
         manifest = {}
+    if source:
+        try:
+            if (vendor / 'provenance.json').read_bytes() != manifest_path.read_bytes():
+                fail(f'{vendor}: packaged provenance differs from pre-sign source')
+        except OSError as error:
+            fail(str(error))
     for name in ('ffmpeg', 'ffprobe'):
         file = vendor / name
         record = manifest.get(name, {})
@@ -112,7 +181,13 @@ def vendor_gate(vendor):
         if not inspect_macho(file):
             fail(f'{file}: not a Mach-O binary')
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
-        if not re.fullmatch('[0-9a-f]{64}', record.get('sha256', '')) or digest != record['sha256']:
+        if source:
+            try:
+                verify_signed_binary(file, source / name)
+                print(f'Signed SHA-256: {digest}  {file}')
+            except (RuntimeError, OSError, ValueError) as error:
+                fail(f'{file}: {error}')
+        elif not re.fullmatch('[0-9a-f]{64}', record.get('sha256', '')) or digest != record['sha256']:
             fail(f'{file}: SHA-256 does not match pinned provenance')
         for key in ('source', 'version', 'buildFlags', 'dependencies', 'license', 'notices', 'obligations', 'reviewer', 'reviewDate'):
             if not record.get(key):
@@ -122,7 +197,7 @@ def vendor_gate(vendor):
         try:
             license_text = run(str(file), '-L').lower()
             version_text = run(str(file), '-version').lower()
-            if 'not legally redistributable' in license_text or 'nonfree' in version_text or '--enable-nonfree' in version_text:
+            if reports_nonfree(license_text, version_text):
                 fail(f'{file}: FFmpeg reports nonfree/nonredistributable build')
             if '--enable-gpl' in version_text and 'gpl' not in str(record.get('license', '')).lower():
                 fail(f'{file}: GPL build without matching license record')
@@ -139,15 +214,20 @@ def vendor_gate(vendor):
 if __name__ == '__main__':
     if len(sys.argv) not in (3, 4):
         sys.exit('usage: release-binaries.py <vendor/mac> <canvas/Release> [app bundle]')
-    vendor_gate(Path(sys.argv[1]))
+    if len(sys.argv) == 4:
+        # Never substitute a signed-output hash for the pinned source hash.
+        vendor_gate(SOURCE_VENDOR)
+        vendor_gate(Path(sys.argv[1]), SOURCE_VENDOR)
+    else:
+        vendor_gate(Path(sys.argv[1]))
     walk_macho(Path(sys.argv[2]))
     if len(sys.argv) == 4:
         app = Path(sys.argv[3])
         plist = app / 'Contents' / 'Info.plist'
         try:
             minimum = run('/usr/libexec/PlistBuddy', '-c', 'Print LSMinimumSystemVersion', str(plist)).strip()
-            if minimum != '12.0':
-                fail(f'{plist}: LSMinimumSystemVersion is {minimum}, expected 12.0')
+            if minimum != '15.0':
+                fail(f'{plist}: LSMinimumSystemVersion is {minimum}, expected 15.0')
         except RuntimeError as error:
             fail(str(error))
         walk_macho(app / 'Contents')

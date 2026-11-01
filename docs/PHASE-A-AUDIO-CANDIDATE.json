@@ -1,0 +1,134 @@
+{
+  "status": "TECHNICAL CANDIDATE ONLY \u2014 NOT APPROVED FOR DISTRIBUTION",
+  "candidateDirectory": "/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb",
+  "toolchain": {
+    "hostArchitecture": "arm64",
+    "hostMacOS": "26.5.1",
+    "clang": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+    "sdkVersion": "26.5"
+  },
+  "buildRecipeSha256": "197ae8d0fb89e9b9839a7607d47405b6dda88c920a12399e8afed4b934f94612",
+  "artifacts": {
+    "ffmpeg": {
+      "sha256": "7faf3f9548a9920d0e702a1c680cfca70819b79dd2e9bfb04b507302becf5abd",
+      "source": [
+        {
+          "project": "FFmpeg",
+          "version": "6.1.6",
+          "url": "https://ffmpeg.org/releases/ffmpeg-6.1.6.tar.xz",
+          "sha256": "d4fcb164028dd3beee5d92c0ac72e46aac6973c75ea12dc14de07bf8f407370a",
+          "signatureFingerprint": "FCF986EA15E6E293A5644F10B4322F04D67658D8",
+          "license": "LGPL-2.1-or-later"
+        },
+        {
+          "project": "LAME",
+          "version": "3.100",
+          "url": "https://sourceforge.net/projects/lame/files/lame/3.100/lame-3.100.tar.gz/download",
+          "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
+          "license": "LGPL-2.0-or-later",
+          "verification": "HTTPS source download + pinned SHA-256; no upstream signature verified"
+        }
+      ],
+      "version": "6.1.6",
+      "buildFlags": "--prefix=/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix --arch=arm64 --target-os=darwin --cc=/usr/bin/clang --enable-static --disable-shared --disable-gpl --disable-nonfree --disable-version3 --disable-autodetect --enable-zlib --fatal-warnings --disable-network --disable-ffplay --disable-doc --disable-debug --disable-devices --enable-indev=lavfi --disable-postproc --enable-libmp3lame --pkg-config-flags=--static --disable-encoders --enable-encoder='libmp3lame,flac,pcm_s16le,pcm_s24le,pcm_f32le,pcm_s16be,pcm_s24be,pcm_s32be,png,mjpeg,rawvideo' --extra-cflags='-O2 -arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -I/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/include' --extra-ldflags='-arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -L/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/lib'",
+      "architecture": "arm64",
+      "macosMinimums": [
+        "12.0"
+      ],
+      "dependencies": [
+        "/usr/lib/libSystem.B.dylib",
+        "/usr/lib/libz.1.dylib",
+        "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+        "/System/Library/Frameworks/CoreVideo.framework/Versions/A/CoreVideo",
+        "/System/Library/Frameworks/CoreMedia.framework/Versions/A/CoreMedia"
+      ],
+      "license": "FFmpeg reports LGPL v2.1-or-later; LAME static linkage requires review",
+      "notices": [
+        "FFmpeg LICENSE.md",
+        "FFmpeg COPYING.LGPLv2.1",
+        "LAME COPYING",
+        "LAME source-file copyright notices",
+        "System zlib supplied by macOS"
+      ],
+      "obligations": [
+        "Human review of LGPL static-link/relink obligations and patent considerations",
+        "Retain exact source archives, flags, toolchain versions and relink/build inputs",
+        "Ship required notices and corresponding source/relink materials with paid distribution",
+        "Do not impose license terms incompatible with LGPL; review app/site notices"
+      ],
+      "redistributionReview": "pending-human-review",
+      "reviewer": "",
+      "reviewDate": "",
+      "cleanMontereyTest": "BLOCKED: no clean macOS 12 machine tested",
+      "binaryLicenseOutput": "ffmpeg is free software; you can redistribute it and/or\nmodify it under the terms of the GNU Lesser General Public\nLicense as published by the Free Software Foundation; either\nversion 2.1 of the License, or (at your option) any later version.\n\nffmpeg is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU\nLesser General Public License for more details.\n\nYou should have received a copy of the GNU Lesser General Public\nLicense along with ffmpeg; if not, write to the Free Software\nFoundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA\nffmpeg version 6.1.6 Copyright (c) 2000-2026 the FFmpeg developers\n  built with Apple clang version 21.0.0 (clang-2100.1.1.101)\n  configuration: --prefix=/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix --arch=arm64 --target-os=darwin --cc=/usr/bin/clang --enable-static --disable-shared --disable-gpl --disable-nonfree --disable-version3 --disable-autodetect --enable-zlib --fatal-warnings --disable-network --disable-ffplay --disable-doc --disable-debug --disable-devices --enable-indev=lavfi --disable-postproc --enable-libmp3lame --pkg-config-flags=--static --disable-encoders --enable-encoder='libmp3lame,flac,pcm_s16le,pcm_s24le,pcm_f32le,pcm_s16be,pcm_s24be,pcm_s32be,png,mjpeg,rawvideo' --extra-cflags='-O2 -arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -I/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/include' --extra-ldflags='-arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -L/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/lib'\n  libavutil      58. 29.100 / 58. 29.100\n  libavcodec     60. 31.102 / 60. 31.102\n  libavformat    60. 16.101 / 60. 16.101\n  libavdevice    60.  3.100 / 60.  3.100\n  libavfilter     9. 12.100 /  9. 12.100\n  libswscale      7.  5.100 /  7.  5.100\n  libswresample   4. 12.100 /  4. 12.100\n"
+    },
+    "ffprobe": {
+      "sha256": "697db624fcbeaa308def6c074df1dca67cea07e8baa5a5e3d845a436cc402b62",
+      "source": [
+        {
+          "project": "FFmpeg",
+          "version": "6.1.6",
+          "url": "https://ffmpeg.org/releases/ffmpeg-6.1.6.tar.xz",
+          "sha256": "d4fcb164028dd3beee5d92c0ac72e46aac6973c75ea12dc14de07bf8f407370a",
+          "signatureFingerprint": "FCF986EA15E6E293A5644F10B4322F04D67658D8",
+          "license": "LGPL-2.1-or-later"
+        },
+        {
+          "project": "LAME",
+          "version": "3.100",
+          "url": "https://sourceforge.net/projects/lame/files/lame/3.100/lame-3.100.tar.gz/download",
+          "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
+          "license": "LGPL-2.0-or-later",
+          "verification": "HTTPS source download + pinned SHA-256; no upstream signature verified"
+        }
+      ],
+      "version": "6.1.6",
+      "buildFlags": "--prefix=/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix --arch=arm64 --target-os=darwin --cc=/usr/bin/clang --enable-static --disable-shared --disable-gpl --disable-nonfree --disable-version3 --disable-autodetect --enable-zlib --fatal-warnings --disable-network --disable-ffplay --disable-doc --disable-debug --disable-devices --enable-indev=lavfi --disable-postproc --enable-libmp3lame --pkg-config-flags=--static --disable-encoders --enable-encoder='libmp3lame,flac,pcm_s16le,pcm_s24le,pcm_f32le,pcm_s16be,pcm_s24be,pcm_s32be,png,mjpeg,rawvideo' --extra-cflags='-O2 -arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -I/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/include' --extra-ldflags='-arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -L/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/lib'",
+      "architecture": "arm64",
+      "macosMinimums": [
+        "12.0"
+      ],
+      "dependencies": [
+        "/usr/lib/libSystem.B.dylib",
+        "/usr/lib/libz.1.dylib",
+        "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+        "/System/Library/Frameworks/CoreVideo.framework/Versions/A/CoreVideo",
+        "/System/Library/Frameworks/CoreMedia.framework/Versions/A/CoreMedia"
+      ],
+      "license": "FFmpeg reports LGPL v2.1-or-later; LAME static linkage requires review",
+      "notices": [
+        "FFmpeg LICENSE.md",
+        "FFmpeg COPYING.LGPLv2.1",
+        "LAME COPYING",
+        "LAME source-file copyright notices",
+        "System zlib supplied by macOS"
+      ],
+      "obligations": [
+        "Human review of LGPL static-link/relink obligations and patent considerations",
+        "Retain exact source archives, flags, toolchain versions and relink/build inputs",
+        "Ship required notices and corresponding source/relink materials with paid distribution",
+        "Do not impose license terms incompatible with LGPL; review app/site notices"
+      ],
+      "redistributionReview": "pending-human-review",
+      "reviewer": "",
+      "reviewDate": "",
+      "cleanMontereyTest": "BLOCKED: no clean macOS 12 machine tested",
+      "binaryLicenseOutput": "ffprobe is free software; you can redistribute it and/or\nmodify it under the terms of the GNU Lesser General Public\nLicense as published by the Free Software Foundation; either\nversion 2.1 of the License, or (at your option) any later version.\n\nffprobe is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU\nLesser General Public License for more details.\n\nYou should have received a copy of the GNU Lesser General Public\nLicense along with ffprobe; if not, write to the Free Software\nFoundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA\nffprobe version 6.1.6 Copyright (c) 2007-2026 the FFmpeg developers\n  built with Apple clang version 21.0.0 (clang-2100.1.1.101)\n  configuration: --prefix=/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix --arch=arm64 --target-os=darwin --cc=/usr/bin/clang --enable-static --disable-shared --disable-gpl --disable-nonfree --disable-version3 --disable-autodetect --enable-zlib --fatal-warnings --disable-network --disable-ffplay --disable-doc --disable-debug --disable-devices --enable-indev=lavfi --disable-postproc --enable-libmp3lame --pkg-config-flags=--static --disable-encoders --enable-encoder='libmp3lame,flac,pcm_s16le,pcm_s24le,pcm_f32le,pcm_s16be,pcm_s24be,pcm_s32be,png,mjpeg,rawvideo' --extra-cflags='-O2 -arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -I/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/include' --extra-ldflags='-arch arm64 -mmacosx-version-min=12.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -L/private/var/folders/qz/qk7f1ygs4wvgly4_zgwzycmc0000gn/T/opencode/hexbloop-a2-cih6txjb/audio-prefix/lib'\n  libavutil      58. 29.100 / 58. 29.100\n  libavcodec     60. 31.102 / 60. 31.102\n  libavformat    60. 16.101 / 60. 16.101\n  libavdevice    60.  3.100 / 60.  3.100\n  libavfilter     9. 12.100 /  9. 12.100\n  libswscale      7.  5.100 /  7.  5.100\n  libswresample   4. 12.100 /  4. 12.100\n"
+    }
+  },
+  "tests": {
+    "phaseB": "96 masks/formats + 3 codecs + custom metadata + covered-source + IPC/menu passed",
+    "phaseC": "passed",
+    "pipelineE2E": "8 passed, 0 failed",
+    "runtime": "candidate FFmpeg and ffprobe, developer Sox disabled; current host only; existing macOS-15 canvas dependencies still used",
+    "releaseGate": "FAIL as required: pending human approval plus current canvas native failures"
+  },
+  "remainingGates": [
+    "human redistribution/static-link source and relink review",
+    "whole Monterey-compatible canvas dependency set",
+    "clean Apple Silicon Monterey runtime",
+    "package and mounted DMG audit",
+    "signing/notarization only after blockers cleared"
+  ],
+  "notInstalled": true
+}
