@@ -179,6 +179,42 @@ class NameGenerator {
         return array[Math.floor(randomFunc() * array.length)];
     }
 
+    /**
+     * Turn a user's word bank (newline/comma separated) into clean name parts.
+     * Letters and digits from any script survive; punctuation becomes nothing.
+     */
+    static parseCustomWords(raw) {
+        if (Array.isArray(raw)) raw = raw.join('\n');
+        if (!raw || typeof raw !== 'string') return [];
+        const words = String(raw)
+            .split(/[\n,]+/)
+            .map(word => word.trim()
+                .replace(/[^\p{L}\p{N} _-]/gu, '')
+                .replace(/\s+/g, '_'))
+            .filter(word => word.length >= 2 && word.length <= 24);
+        const seen = new Set();
+        return words.filter(word => {
+            const key = word.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        }).slice(0, 200);
+    }
+
+    /** Build a name from the user's words instead of the built-in banks. */
+    static buildCustomName(words, randomFunc = Math.random) {
+        const pick = () => words[Math.floor(randomFunc() * words.length)];
+        const first = this.capitalize(pick());
+        if (words.length > 1 && randomFunc() < 0.65) {
+            let second = pick();
+            for (let i = 0; i < 4 && second.toLowerCase() === first.toLowerCase(); i++) {
+                second = pick();
+            }
+            return `${first}_${second.toLowerCase()}`;
+        }
+        return first;
+    }
+
     static pickWeighted(array, randomFunc = Math.random, weightFn = null) {
         if (!weightFn) return this.pick(array, randomFunc);
         const weights = array.map(w => Math.max(1, weightFn(w)));
@@ -343,9 +379,14 @@ class NameGenerator {
 
         // ---- Select generation strategy ----
         const roll = rng() * 100;
+        const customWords = this.parseCustomWords(metadata.customWords);
 
         let name;
-        if (roll < 35) {
+        let usedCustomWords = false;
+        if (customWords.length && rng() < 0.45) {
+            name = this.buildCustomName(customWords, rng);
+            usedCustomWords = true;
+        } else if (roll < 35) {
             // Compound name from word banks (most common)
             name = this.buildCompoundName(rng);
         } else if (roll < 55) {
@@ -365,8 +406,9 @@ class NameGenerator {
             name = this.buildCompoundName(rng);
         }
 
-        // Apply mutations once
-        name = this.mutate(name, rng);
+        // Explicit word-bank names stay exactly as chosen; mutations are for
+        // the built-in chaos banks.
+        if (!usedCustomWords) name = this.mutate(name, rng);
 
         // Sanitize
         name = this.sanitize(name);

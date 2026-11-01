@@ -183,6 +183,17 @@ class PreferencesController {
                     // Reset border color
                     element.style.borderColor = '';
                 });
+            } else if (element.tagName === 'TEXTAREA') {
+                const debouncedUpdate = debounce((value) => {
+                    this.updateSetting(settingPath, value);
+                }, UI_CONSTANTS.DEBOUNCE_DELAY);
+                this.debouncedUpdates.set(settingPath, debouncedUpdate);
+                element.addEventListener('input', (e) => debouncedUpdate(e.target.value));
+                element.addEventListener('blur', (e) => {
+                    const pending = this.debouncedUpdates.get(settingPath);
+                    if (pending) pending.cancel();
+                    this.updateSetting(settingPath, e.target.value);
+                });
             } else if (element.tagName === 'SELECT') {
                 element.addEventListener('change', (e) => {
                     this.updateSetting(settingPath, e.target.value);
@@ -253,11 +264,24 @@ class PreferencesController {
                 if (displayElement) {
                     displayElement.textContent = (value || 50) + '%';
                 }
+            } else if (element.tagName === 'TEXTAREA') {
+                const debouncedUpdate = debounce((value) => {
+                    this.updateSetting(settingPath, value);
+                }, UI_CONSTANTS.DEBOUNCE_DELAY);
+                this.debouncedUpdates.set(settingPath, debouncedUpdate);
+                element.addEventListener('input', (e) => debouncedUpdate(e.target.value));
+                element.addEventListener('blur', (e) => {
+                    const pending = this.debouncedUpdates.get(settingPath);
+                    if (pending) pending.cancel();
+                    this.updateSetting(settingPath, e.target.value);
+                });
             } else if (element.tagName === 'SELECT') {
                 if (value !== undefined && value !== null) {
                     element.value = value;
                 }
             } else if (element.type === 'text' || element.type === 'number') {
+                element.value = value || '';
+            } else if (element.tagName === 'TEXTAREA') {
                 element.value = value || '';
             }
         });
@@ -382,6 +406,11 @@ class PreferencesController {
             return Math.min(192000, Math.max(0, num));
         }
         
+        if (settingPath === 'batch.customWords') {
+            if (typeof value !== 'string') return '';
+            return value.replace(INPUT_VALIDATION.DANGEROUS_CHARS, '').slice(0, 2000);
+        }
+
         // Handle metadata fields
         if (settingPath.startsWith('metadata.')) {
             if (settingPath === 'metadata.year') {

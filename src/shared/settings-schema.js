@@ -36,7 +36,8 @@ const DEFAULT_SETTINGS = {
         separator: '_',               // Character between naming elements
         preserveOriginal: false,      // Include original filename in output
         sessionFolders: false,        // Organize into session folders
-        folderScheme: 'date'          // 'date' | 'lunar' | 'counter' | 'none'
+        folderScheme: 'date',         // 'date' | 'lunar' | 'counter' | 'none'
+        customWords: ''               // Newline/comma separated words for generated names
     },
     output: {
         format: 'source',             // 'source' = keep container; other choices are explicit conversion
@@ -90,7 +91,8 @@ const SETTINGS_SCHEMA = {
         separator: 'string',
         preserveOriginal: 'boolean',
         sessionFolders: 'boolean',
-        folderScheme: ['date', 'lunar', 'counter', 'none']
+        folderScheme: ['date', 'lunar', 'counter', 'none'],
+        customWords: 'string'
     },
     output: {
         // Only formats supported end-to-end (mastering + tagging + artwork);

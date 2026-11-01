@@ -69,7 +69,7 @@ class BatchNamingEngine {
                 break;
                 
             default:
-                baseName = NameGenerator.generateMystical({ moonPhase: this.moonPhase });
+                baseName = NameGenerator.generateMystical({ moonPhase: this.moonPhase, customWords: this.settings.customWords });
         }
         
         // Build final name with optional elements
@@ -115,9 +115,10 @@ class BatchNamingEngine {
      * Generate mystical name using lunar/temporal influences
      */
     generateMysticalName(index) {
-        return NameGenerator.generateMystical({ 
+        return NameGenerator.generateMystical({
             moonPhase: this.moonPhase,
-            batchIndex: index 
+            batchIndex: index,
+            customWords: this.settings.customWords
         });
     }
     
@@ -155,7 +156,7 @@ class BatchNamingEngine {
      * Generate hybrid name (mystical + numbering)
      */
     generateHybridName(index) {
-        return NameGenerator.generateMystical({ moonPhase: this.moonPhase, batchIndex: index });
+        return NameGenerator.generateMystical({ moonPhase: this.moonPhase, batchIndex: index, customWords: this.settings.customWords });
     }
     
     /**

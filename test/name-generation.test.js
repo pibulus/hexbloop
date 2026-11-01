@@ -297,6 +297,26 @@ async function runTests() {
         testResults.failed++;
     }
 
+    // Test: user-supplied word bank
+    console.log('\n📝 Testing Custom Word Bank...');
+    try {
+        const customWords = 'moss, brick\nstatic\nmoss';
+        assert.deepStrictEqual(NameGenerator.parseCustomWords(customWords), ['moss', 'brick', 'static']);
+
+        let hits = 0;
+        for (let seed = 1; seed <= 40; seed++) {
+            const name = NameGenerator.generateMystical({ seed, customWords });
+            validateFilename(name);
+            if (/moss|brick|static/i.test(name)) hits++;
+        }
+        assert(hits >= 8, `word bank rarely used: ${hits}/40`);
+        console.log(`  ✅ ${hits}/40 seeded names drew from the custom bank`);
+        testResults.passed++;
+    } catch (error) {
+        console.log(`  ❌ Error: ${error.message}`);
+        testResults.failed++;
+    }
+
     // Results Summary
     console.log('\n' + '='.repeat(60));
     console.log('\n📊 TEST RESULTS:');

@@ -5,7 +5,7 @@ body { background: #17131e; color: #eee6ef; font: 13px/1.5 -apple-system, BlinkM
 .settings-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px 12px; border-bottom: 1px solid rgba(255,254,247,.08); }
 button, summary { color: inherit; border: 0; background: transparent; border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }
 button:hover, summary:hover { background: rgba(255,254,247,.06); }
-:is(button, summary, input, select):focus-visible { outline: 2px solid #e879f9; outline-offset: 3px; }
+:is(button, summary, input, select, textarea):focus-visible { outline: 2px solid #e879f9; outline-offset: 3px; }
 .tab-bar { display: flex; gap: 18px; }
 .tab-button { padding: 6px 0; color: #a99ab2; border-radius: 0; border-bottom: 2px solid transparent; }
 .tab-button.active { color: #fffef7; border-bottom-color: #e879f9; }
@@ -14,7 +14,9 @@ button:hover, summary:hover { background: rgba(255,254,247,.06); }
 .setting-row { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border: 0; border-bottom: 1px solid rgba(255,254,247,.07); }
 .setting-row:last-child { border-bottom: 0; }
 small { display: block; font-size: 11px; color: #b5a6bc; margin-top: 3px; }
-select, input[type="text"], input[type="number"] { color: #eee6ef; background: #211a29; border: 1px solid rgba(255,254,247,.10); border-radius: 6px; min-height: 30px; padding: 4px 8px; font: inherit; }
+select, input[type="text"], input[type="number"], textarea { color: #eee6ef; background: #211a29; border: 1px solid rgba(255,254,247,.10); border-radius: 6px; min-height: 30px; padding: 4px 8px; font: inherit; }
+textarea { width: 200px; min-height: 64px; resize: vertical; line-height: 1.4; }
+.naming-row { align-items: flex-start; padding-block: 14px; }
 select { width: 200px; }
 /* Native controls render as white boxes on this surface; draw our own. */
 input[type="checkbox"], input[type="radio"] { appearance: none; -webkit-appearance: none; margin: 0; flex: none; cursor: pointer; vertical-align: middle; }
